@@ -123,6 +123,22 @@ The vault setup function accepts two optional arguments:
 - `encrypted_dir`: Directory for encrypted data (default: `~/.securevaultenc`)
 - `mount_point`: Mount point for decrypted access (default: `~/securevault`)
 
+For detailed usage, security considerations, and troubleshooting, see [`VAULT-GUIDE.md`](VAULT-GUIDE.md).
+
+#### Quick Vault Usage
+
+```bash
+# Mount vault (if not auto-mounted)
+gocryptfs ~/.securevaultenc ~/securevault
+
+# Use like normal directory
+echo "secret data" > ~/securevault/file.txt
+cat ~/securevault/file.txt
+
+# Unmount when done
+fusermount -u ~/securevault
+```
+
 ### Standalone Installers
 
 For legacy or specific use cases, standalone installer scripts are available:

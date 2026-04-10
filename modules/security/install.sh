@@ -142,13 +142,14 @@ install_tetragon() {
 
     helm upgrade --install tetragon cilium/tetragon \
         --namespace "$namespace" \
-        --set tetragon.hostProcPath=/procHost \
-        --wait >/dev/null 2>&1 || {
+        --set tetragon.hostProcPath=/procHost >/dev/null 2>&1 || {
         log_error "Failed to install Tetragon"
         return 1
     }
 
-    kubectl -n "$namespace" rollout status ds/tetragon --timeout=60s || {
+    # Timer visualization could be better
+    # Async/await flow if possible
+    kubectl -n "$namespace" rollout status ds/tetragon --timeout=20s || {
         log_warn "Tetragon rollout did not complete within timeout"
     }
 
