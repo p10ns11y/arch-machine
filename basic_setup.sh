@@ -22,7 +22,7 @@ command -v code >/dev/null && VSCODE_OK=1 || VSCODE_OK=0
 command -v docker >/dev/null && DOCKER_OK=1 || DOCKER_OK=0
 [[ "$SHELL" = */zsh ]] && ZSH=1 || ZSH=0
 
-echo "   ROCm detected        : $( ((ROCM_OK)) && echo "YES (gfx1152)" || echo "NO" )"
+echo "   Detected        : $( ((ROCM_OK)) && echo "YES (gfx1152)" || echo "NO" )"
 echo "   Conda/Mamba present  : $( ((CONDA_INSTALLED)) && echo "YES" || echo "NO" )"
 echo "   VS Code              : $( ((VSCODE_OK)) && echo "YES" || echo "NO" )"
 echo "   Docker               : $( ((DOCKER_OK)) && echo "YES" || echo "NO" )"
@@ -33,21 +33,58 @@ echo
 echo "2. Installing/updating system packages..."
 sudo pacman -Syu --noconfirm --quiet
 
-# Remove power-profiles-daemon if present (conflicts with tlp)
+# 3 Remove power-profiles-daemon if present (conflicts with tlp)
 if pacman -Qi power-profiles-daemon &>/dev/null; then
     echo "   Removing power-profiles-daemon (conflicts with tlp)..."
     sudo pacman -Rdd --noconfirm power-profiles-daemon || true
 fi
 
-
 sudo pacman -S --quiet --needed base-devel git curl wget reflector rocm-hip-sdk rocm-opencl-sdk rocminfo code docker tlp tlp-rdw ufw zsh
 
-# Enable services
+# 4. Language version management – mise + uv (idempotent, minimal)
+echo "→ Ensuring mise (Python + Node + Rust versions) + uv..."
+if ! command -v mise &>/dev/null; then
+  curl https://mise.jdx.dev/install.sh | sh
+  echo 'eval "$(mise activate bash)"' >> ~/.bashrc   # or fish/zsh equivalent
+  source ~/.bashrc
+  echo "✓ mise installed"
+else
+  mise self-update --yes || true
+  echo "✓ mise already present"
+fi
+
+# 5. Install core versions (change as needed – idempotent)
+echo "→ Installing mostly needed versions of Python, Node, and Rust needed for projects"
+mise install python@3.12 python@3.13 python@3.14 node@22 node@lts rust@stable
+echo "✓ Setting stable and LTS (Long Term Support) versions as global"
+mise use -g python@3.14 node@lts rust@stable
+echo "✓ Global versions pinned"
+
+
+# 6. uv (Python packaging + venvs + version management)
+if ! command -v uv &>/dev/null; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  echo "✓ uv installed (replaces virtualenv/pip)"
+else
+  uv self-update || true
+  echo "✓ uv already present"
+fi
+
+# 7. Example project setup (run per project)
+# cd my-agent-project
+# mise use python@3.12          # project-specific
+# uv venv                       # fast virtualenv
+# uv pip install xurl      # blazing fast
+
+echo "✓ Language management ready - mise + uv only"
+
+
+# 8. Enable services
 sudo systemctl enable --now docker ufw tlp
 sudo systemctl enable tlp-suspend.service 2>/dev/null || true   # ignore if missing
 sudo usermod -aG docker,video,render "$USER"
 
-# 4. Create/recreate the AI environment with ROCm
+# 9. Create/recreate the AI environment with ROCm
 if [ ! -d "$HOME/miniconda/envs/ai-amd" ]; then
     echo "Creating fresh ai-amd environment with PyTorch + ROCm..."
     conda create -y -n ai-amd python=3.12 jupyterlab numpy pandas matplotlib seaborn scikit-learn xgboost lightgbm polars duckdb optuna
@@ -55,12 +92,12 @@ if [ ! -d "$HOME/miniconda/envs/ai-amd" ]; then
     conda install -y -c conda-forge wandb
     pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.4/
   else
-    echo "ai-amd environment already exists – updating..."
+    echo "ai-amd environment already exists - updating..."
     conda update -y -n ai-amd --all
 fi
 
 # Not affiliated with X's xAI yet!
-# xAI experimental env with pip PyTorch (official ROCm way) with latest python version
+# 10. xAI experimental env with pip PyTorch (official ROCm way) with latest python version
 if [ ! -d "$HOME/miniconda/envs/xAI-exp" ]; then
     echo "Creating xAI + PyTorch via pip (ROCm official method)..."
     conda create -y -n xAI-exp python=3.14
@@ -72,7 +109,7 @@ if [ ! -d "$HOME/miniconda/envs/xAI-exp" ]; then
     echo "Installing data science packages"
     pip install jupyterlab numpy pandas matplotlib seaborn scikit-learn xgboost duckdb tqdm polars lightgbm
 else
-    echo "xAI-exp exists – updating..."
+    echo "xAI-exp exists - updating..."
     conda update -y -n xAI-exp --all
 fi
 
