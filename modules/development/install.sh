@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # Development tools module installer
 
-# Source libraries
-source "$(dirname "${BASH_SOURCE[0]}")/../lib/logger.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/../lib/installer.sh"
+# Libraries are sourced by main installer script
 
 MODULE_NAME="development"
 CONFIG_FILE="$CONFIG_DIR/tools.yaml"

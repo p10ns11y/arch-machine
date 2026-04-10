@@ -5,9 +5,10 @@ set -euo pipefail
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$SCRIPT_DIR/config"
-LIB_DIR="$SCRIPT_DIR/lib"
-LOGS_DIR="$SCRIPT_DIR/logs"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
+CONFIG_DIR="$ROOT_DIR/config"
+LIB_DIR="$ROOT_DIR/lib"
+LOGS_DIR="$ROOT_DIR/logs"
 REPORTS_DIR="$LOGS_DIR/security-reports"
 
 # Load libraries
@@ -349,7 +350,7 @@ generate_security_report() {
 # Main security audit function
 main() {
     log_section "Security Audit"
-    log "Starting comprehensive security audit..."
+    log_info "Starting comprehensive security audit..."
 
     # Install security tools
     install_security_tools

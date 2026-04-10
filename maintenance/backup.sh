@@ -5,8 +5,9 @@ set -euo pipefail
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="$SCRIPT_DIR/lib"
-BACKUP_DIR="${BACKUP_DIR:-$SCRIPT_DIR/backups/$(date +%Y%m%d-%H%M%S)}"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
+LIB_DIR="$ROOT_DIR/lib"
+BACKUP_DIR="${BACKUP_DIR:-$ROOT_DIR/backups/$(date +%Y%m%d-%H%M%S)}"
 
 # Load libraries
 if [[ -f "$LIB_DIR/logger.sh" ]]; then

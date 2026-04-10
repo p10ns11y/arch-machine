@@ -29,9 +29,19 @@ yaml_get() {
     local file="$1"
     local path="$2"
 
+    # Normalize path - ensure it starts with a dot for root-level keys
+    if [[ "$path" != .* ]]; then
+        path=".$path"
+    fi
+
     case "$YAML_PARSER" in
         yq)
-            yq -r "$path" "$file" 2>/dev/null
+            # For array queries (ending with []), return elements one per line
+            if [[ "$path" == *[] ]]; then
+                yq -r "$path" "$file" 2>/dev/null
+            else
+                yq -r "$path" "$file" 2>/dev/null
+            fi
             ;;
         yq-go)
             yq-go r "$file" "$path" 2>/dev/null

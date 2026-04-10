@@ -5,8 +5,9 @@ set -euo pipefail
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SYSTEMD_DIR="$SCRIPT_DIR/systemd"
-LIB_DIR="$SCRIPT_DIR/lib"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
+SYSTEMD_DIR="$ROOT_DIR/systemd"
+LIB_DIR="$ROOT_DIR/lib"
 
 # Load libraries
 if [[ -f "$LIB_DIR/logger.sh" ]]; then

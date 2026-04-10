@@ -5,9 +5,10 @@ set -euo pipefail
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$SCRIPT_DIR/config"
-LIB_DIR="$SCRIPT_DIR/lib"
-LOGS_DIR="$SCRIPT_DIR/logs"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
+CONFIG_DIR="$ROOT_DIR/config"
+LIB_DIR="$ROOT_DIR/lib"
+LOGS_DIR="$ROOT_DIR/logs"
 
 # Load libraries
 if [[ -f "$LIB_DIR/logger.sh" ]]; then
@@ -227,7 +228,7 @@ display_results() {
 # Main function
 main() {
     log_section "Update Check"
-    log "Checking for available updates..."
+    log_info "Checking for available updates..."
 
     # Initialize results file
     init_update_results

@@ -41,6 +41,15 @@ chmod +x install.sh migrate.sh
 
 # For minimal development setup
 ./install.sh --profile minimal
+
+# List available profiles
+./install.sh --list-profiles
+
+# Show detailed profile information
+./install.sh --show-profile ml-dev
+
+# Validate system readiness
+./install.sh --validate
 ```
 
 ### Post-Installation Setup
@@ -72,6 +81,22 @@ maintenance/cron-setup.sh setup
 - Kubernetes (k3s) with Cilium networking
 - Runtime security monitoring (Tetragon)
 - Encrypted storage vault
+
+## Profile Customization
+
+Each installation profile can be customized by modifying the corresponding YAML file in `config/profiles/`. For example, to change the Python or Node.js versions installed with mise:
+
+```yaml
+customizations:
+  development:
+    mise:
+      versions:
+        python: ["3.12", "3.13", "3.14"]
+        node: ["20", "lts"]
+        rust: ["stable"]
+```
+
+Customizations override the default versions specified in `config/tools.yaml`. Use `./install.sh --show-profile <name>` to see current customizations for any profile.
 
 ## Project Structure
 

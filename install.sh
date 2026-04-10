@@ -17,6 +17,9 @@ DRY_RUN=false
 FORCE=false
 VERBOSE=false
 LOG_LEVEL="INFO"
+VALIDATE_ONLY=false
+LIST_PROFILES_ONLY=false
+SHOW_PROFILE=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -48,6 +51,78 @@ log_warn() {
     echo -e "${YELLOW}[$timestamp] [WARN]${NC} $message"
 }
 
+# List available profiles
+list_profiles() {
+    # Initialize YAML parser if not already done
+    if [[ -z "${YAML_PARSER:-}" ]]; then
+        check_yaml_parser
+    fi
+
+    echo "Available installation profiles:"
+    echo
+    for profile_file in "$PROFILE_CONFIG"/*.yaml; do
+        if [[ -f "$profile_file" ]]; then
+            local profile_name
+            profile_name=$(basename "$profile_file" .yaml)
+            local description
+            description=$(yaml_get "$profile_file" "description")
+            printf "  %-15s %s\n" "$profile_name" "$description"
+        fi
+    done
+    echo
+    echo "Use --show-profile <name> for detailed information."
+}
+
+# Show detailed profile information
+show_profile() {
+    local profile="$1"
+    local profile_file="$PROFILE_CONFIG/$profile.yaml"
+
+    # Initialize YAML parser if not already done
+    if [[ -z "${YAML_PARSER:-}" ]]; then
+        check_yaml_parser
+    fi
+
+    if [[ ! -f "$profile_file" ]]; then
+        log_error "Profile '$profile' not found"
+        list_profiles
+        exit 1
+    fi
+
+    echo "Profile: $profile"
+    echo "File: $profile_file"
+    echo
+
+    local description
+    description=$(yaml_get "$profile_file" "description")
+    echo "Description: $description"
+
+    local version
+    version=$(yaml_get "$profile_file" "version")
+    echo "Version: $version"
+    echo
+
+    echo "Modules to install:"
+    local module_count
+    module_count=$(yaml_get "$profile_file" "includes | length")
+    if [[ "$module_count" != "null" && "$module_count" -gt 0 ]]; then
+        for ((i=0; i<module_count; i++)); do
+            local module
+            module=$(yaml_get "$profile_file" "includes[$i]")
+            echo "  - $module"
+        done
+    fi
+    echo
+
+    # Show customizations if any
+    local customizations
+    customizations=$(yaml_get "$profile_file" "customizations")
+    if [[ "$customizations" != "null" && -n "$customizations" ]]; then
+        echo "Customizations:"
+        yq '.customizations' "$profile_file" | sed 's/^/  /'
+    fi
+}
+
 # Show usage information
 show_usage() {
     cat << EOF
@@ -61,6 +136,9 @@ OPTIONS:
     -d, --dry-run           Show what would be done without making changes
     -f, --force             Force installation even if components exist
     -v, --verbose           Enable verbose logging
+    --validate              Validate system readiness without installing
+    --list-profiles         List all available installation profiles
+    --show-profile PROFILE  Show detailed information about a profile
     -h, --help              Show this help message
 
 PROFILES:
@@ -72,6 +150,7 @@ EXAMPLES:
     $0 --profile minimal --dry-run
     $0 --profile ml-dev --verbose
     $0 --profile security-dev
+    $0 --validate
 
 EOF
 }
@@ -101,6 +180,23 @@ parse_args() {
                 VERBOSE=true
                 LOG_LEVEL="DEBUG"
                 shift
+                ;;
+            --validate)
+                VALIDATE_ONLY=true
+                shift
+                ;;
+            --list-profiles)
+                LIST_PROFILES_ONLY=true
+                shift
+                ;;
+            --show-profile)
+                if [[ $# -lt 2 ]]; then
+                    log_error "--show-profile requires a profile name"
+                    show_usage
+                    exit 1
+                fi
+                SHOW_PROFILE="$2"
+                shift 2
                 ;;
             -h|--help)
                 show_usage
@@ -160,13 +256,15 @@ get_modules_to_install() {
     local profile_file="$PROFILE_CONFIG/$PROFILE.yaml"
     local modules=()
 
-    # Check includes
-    local includes
-    includes=$(yaml_get "$profile_file" "includes[]")
-    if [[ "$includes" != "null" ]]; then
-        while IFS= read -r module; do
+    # Check includes - get each array element
+    local module_count
+    module_count=$(yaml_get "$profile_file" "includes | length")
+    if [[ "$module_count" != "null" && "$module_count" -gt 0 ]]; then
+        for ((i=0; i<module_count; i++)); do
+            local module
+            module=$(yaml_get "$profile_file" "includes[$i]")
             modules+=("$module")
-        done <<< "$includes"
+        done
     fi
 
     echo "${modules[@]}"
@@ -229,6 +327,27 @@ show_completion() {
 # Main installation function
 main() {
     parse_args "$@"
+
+    # Handle special modes that need libraries
+    if [[ "$LIST_PROFILES_ONLY" == "true" || -n "$SHOW_PROFILE" ]]; then
+        load_libraries
+        if [[ "$LIST_PROFILES_ONLY" == "true" ]]; then
+            list_profiles
+            exit 0
+        elif [[ -n "$SHOW_PROFILE" ]]; then
+            show_profile "$SHOW_PROFILE"
+            exit 0
+        fi
+    fi
+
+    # Handle validation-only mode early
+    if [[ "$VALIDATE_ONLY" == "true" ]]; then
+        validate_profile
+        load_libraries
+        run_validation
+        exit $?
+    fi
+
     validate_profile
 
     # Load libraries

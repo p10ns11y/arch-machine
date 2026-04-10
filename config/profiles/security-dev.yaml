@@ -16,7 +16,7 @@ customizations:
     mise:
       versions:
         python: ["3.12", "3.13", "3.14"]
-        node: ["22", "lts"]
+        node: ["20", "lts"]
         rust: ["stable"]
   ml_ai: false
   security:

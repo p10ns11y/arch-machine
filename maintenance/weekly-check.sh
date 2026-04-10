@@ -5,9 +5,10 @@ set -euo pipefail
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$SCRIPT_DIR/config"
-LIB_DIR="$SCRIPT_DIR/lib"
-LOGS_DIR="$SCRIPT_DIR/logs"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
+CONFIG_DIR="$ROOT_DIR/config"
+LIB_DIR="$ROOT_DIR/lib"
+LOGS_DIR="$ROOT_DIR/logs"
 REPORTS_DIR="$LOGS_DIR/reports"
 
 # Load libraries
@@ -328,7 +329,7 @@ cleanup_old_files() {
 # Main maintenance function
 main() {
     log_section "Weekly System Maintenance"
-    log "Started at: $(date)"
+    log_info "Started at: $(date)"
     echo
 
     # Initialize temp files
@@ -364,7 +365,7 @@ main() {
     rm -f /tmp/maintenance_issues.txt /tmp/maintenance_recommendations.txt
 
     log_success "Weekly maintenance completed"
-    log "Finished at: $(date)"
+    log_info "Finished at: $(date)"
 }
 
 # Run main function with all arguments
