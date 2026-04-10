@@ -241,6 +241,182 @@ sudo chown -R $USER:$USER ~/.securevaultenc ~/securevault
 - CPU usage: AES encryption/decryption load
 - Suitable for most desktop workloads
 
+## Recovery and Emergency Access
+
+### Important Security Warning
+
+**Master key recovery should only be used as a last resort.** The master key provides complete access to your encrypted data and bypasses all password protection. Always keep your master key secure and consider it equivalent to your vault password in terms of security sensitivity.
+
+### Forgotten Password Recovery
+
+If you forget your vault password, you can recover access using the master key. However, this requires having previously extracted and securely stored the master key.
+
+#### Extract Master Key (Do This Now - Before You Need It)
+
+```bash
+# Extract master key from existing vault (requires current password)
+gocryptfs -masterkey ~/.securevaultenc
+```
+
+This will output something like:
+```
+Master key: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+```
+
+**CRITICAL**: Store this master key in a separate, highly secure location (different from your vault). Consider:
+- Encrypted password manager
+- Hardware security key (YubiKey)
+- Printed copy in a safe deposit box
+- Multiple secure backups in different locations
+
+#### Recover Using Master Key
+
+When you need to recover access:
+
+```bash
+# Method 1: Create new config with master key
+echo "your-master-key-here" | gocryptfs -masterkey -init ~/.securevaultenc
+
+# Method 2: Direct mount with master key (temporary access)
+echo "your-master-key-here" | gocryptfs -masterkey ~/.securevaultenc ~/securevault
+```
+
+After recovery, immediately change the password:
+
+```bash
+# Change password using master key
+echo -e "your-master-key-here\nnew-password\nnew-password" | gocryptfs -passwd ~/.securevaultenc
+```
+
+### Corrupted Configuration Recovery
+
+If `gocryptfs.conf` or other config files become corrupted:
+
+#### Check Configuration Integrity
+
+```bash
+# Verify config file exists and is readable
+ls -la ~/.securevaultenc/gocryptfs.conf*
+
+# Check if config can be read
+gocryptfs -info ~/.securevaultenc
+```
+
+#### Reconstruct Configuration
+
+If the config is corrupted but you have the master key:
+
+```bash
+# Create new config with master key
+echo "your-master-key-here" | gocryptfs -masterkey -init ~/.securevaultenc
+
+# This will create a new gocryptfs.conf file
+# Your existing encrypted data remains intact
+```
+
+#### Emergency Config Reconstruction
+
+If you don't have the master key but know the password:
+
+```bash
+# Try to recover with password (may work if only config is damaged)
+gocryptfs -passwd ~/.securevaultenc  # This can sometimes repair config
+```
+
+### Complete Vault Reconstruction
+
+If both config and password are lost but you have the master key:
+
+```bash
+# 1. Backup the encrypted directory
+cp -r ~/.securevaultenc ~/.securevaultenc-backup
+
+# 2. Create new vault with master key
+echo "your-master-key-here" | gocryptfs -masterkey -init ~/.securevaultenc
+
+# 3. Test mounting
+echo "your-master-key-here" | gocryptfs -masterkey ~/.securevaultenc ~/securevault
+
+# 4. Verify data integrity
+ls ~/securevault/
+
+# 5. Change to a new password
+echo -e "your-master-key-here\nnew-secure-password\nnew-secure-password" | gocryptfs -passwd ~/.securevaultenc
+```
+
+### Master Key Security Best Practices
+
+#### Storage
+- **Never store master key in the vault itself** - this defeats the purpose
+- Use multiple secure storage methods (defense in depth)
+- Consider splitting the key (Shamir's secret sharing)
+- Regular key rotation (generate new master key periodically)
+
+#### Access Control
+- Limit who knows the master key exists
+- Use different keys for different vaults
+- Document recovery procedures but keep keys separate
+- Consider requiring multiple people for emergency access
+
+#### Emergency Procedures
+- Document master key locations in your disaster recovery plan
+- Test recovery procedures regularly (with test vaults)
+- Have backup access methods (multiple administrators)
+- Consider legal/organizational policies for emergency access
+
+### When Recovery Is Impossible
+
+**If you lose both the password AND the master key:**
+- **Data recovery is impossible** - encryption is mathematically secure
+- Only option is to restore from backups made before encryption
+- This is why regular backups of decrypted data are crucial
+
+### Prevention Strategies
+
+#### Regular Master Key Extraction
+```bash
+# Extract master key quarterly and store securely
+gocryptfs -masterkey ~/.securevaultenc > master_key_backup_$(date +%Y%m%d).txt
+```
+
+#### Backup Strategies
+```bash
+# Backup encrypted data (safe to backup)
+rsync -av ~/.securevaultenc/ /backup/vault-$(date +%Y%m%d)/
+
+# NEVER backup mounted vault - defeats encryption
+# rsync -av ~/securevault/ /backup/  # DON'T DO THIS
+```
+
+#### Password Management
+- Use password manager for vault passwords
+- Enable password change reminders
+- Document password recovery procedures
+- Consider password recovery hints (without compromising security)
+
+### Troubleshooting Recovery
+
+**"gocryptfs: invalid master key"**
+```bash
+# Verify master key format (64 hex characters)
+echo "your-master-key" | wc -c  # Should be 65 (including newline)
+
+# Try with exact format from original extraction
+gocryptfs -masterkey ~/.securevaultenc
+```
+
+**"gocryptfs: config file not found"**
+```bash
+# Config was completely lost - need master key
+echo "master-key" | gocryptfs -masterkey -init ~/.securevaultenc
+```
+
+**Permission Issues During Recovery**
+```bash
+# Ensure you own the vault directory
+sudo chown -R $USER:$USER ~/.securevaultenc
+```
+
 ## Integration with arch-machine
 
 ### Profile Configuration
