@@ -1,0 +1,27 @@
+name: "security-dev"
+description: "Security-focused development setup with Kubernetes hardening"
+version: "1.0.0"
+
+includes:
+  - system.full
+  - development.full
+  - security.full
+
+excludes: []
+
+customizations:
+  system:
+    rocm: false
+  development:
+    mise:
+      versions:
+        python: ["3.12", "3.13", "3.14"]
+        node: ["22", "lts"]
+        rust: ["stable"]
+  ml_ai: false
+  security:
+    kubernetes:
+      k3s: true
+    cilium: true
+    tetragon: true
+    encrypted_storage: true

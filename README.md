@@ -1,119 +1,264 @@
-# Installers
+# arch-machine
 
-Bootstrap scripts for an Arch Linux workstation focused on:
+Modular bootstrap and maintenance system for Arch Linux workstations focused on ML/AI development and security hardening.
 
-- ML/AI development (ROCm + Python tooling)
-- local security hardening with a single-node Kubernetes stack
+## Overview
 
-## What This Repo Contains
+This repository provides a comprehensive system for setting up and maintaining Arch Linux workstations for:
 
-### `basic_setup.sh`
+- **ML/AI Development**: ROCm-accelerated PyTorch, Python tooling, and development environments
+- **Security Hardening**: Kubernetes-based local fortress with runtime monitoring
+- **Automated Maintenance**: Weekly updates, security audits, and system health monitoring
 
-Sets up an Arch machine for daily development and AMD/ROCm ML workflows.
+## Key Features
 
-It:
-
-- updates system packages and installs core tooling (`base-devel`, `git`, `curl`, `wget`, `docker`, `code`, `ufw`, `tlp`, ROCm packages)
-- installs/configures `mise` for Python/Node/Rust runtime management
-- installs/configures `uv` for Python package and virtual environment workflows
-- installs Mambaforge/Conda for optional heavy data-science workflows
-- enables key services (`docker`, `ufw`, `tlp`)
-- adds the current user to `docker`, `video`, and `render` groups
-- creates or updates Conda environments:
-  - `ai-amd` (Python 3.12 + data/ML packages + ROCm PyTorch)
-  - `xAI-exp` (Python 3.14 + data/ML packages + ROCm PyTorch)
-
-Use-case split:
-
-- `mise` + `uv`: default path for day-to-day Python, Node, and Rust development
-- Conda/Mambaforge: optional path when you need heavier scientific/ML stacks or isolated notebook-style environments
-
-### `secure-fortress-phase0-simple.sh`
-
-Sets up a "phase 0" local fortress baseline for runtime visibility and encrypted local storage.
-
-It:
-
-- updates system packages and installs core dependencies (`base-devel`, `git`, `curl`, `jq`, `helm`)
-- installs/configures `mise` + `uv`
-- installs/configures single-node `k3s` (with flannel/network policy disabled for Cilium)
-- configures local kubeconfig for non-root `kubectl` usage
-- installs/updates Cilium and restarts Cilium daemonset
-- installs/updates Tetragon via Helm
-- creates and mounts a `gocryptfs` encrypted vault (`~/.securevaultenc` -> `~/securevault`)
-- runs a short verification block at the end
-
-## Requirements
-
-- Arch Linux
-- internet access
-- `sudo` privileges
-- enough disk space for optional Conda environments and ML packages
+- **Modular Installation**: Choose from different profiles (minimal, ml-dev, security-dev)
+- **Automated Maintenance**: Weekly system updates, security scans, and health checks
+- **Backup & Recovery**: Automatic configuration backups with rollback capabilities
+- **Comprehensive Logging**: Detailed logs and reports for all operations
+- **Migration Support**: Seamless transition from existing installations
 
 ## Quick Start
 
-From this repository directory:
+### First-Time Installation
 
 ```bash
-chmod +x basic_setup.sh secure-fortress-phase0-simple.sh
+# Clone the repository
+git clone <repository-url>
+cd arch-machine
+
+# Make scripts executable
+chmod +x install.sh migrate.sh
+
+# Run migration if you have existing setup (optional)
+./migrate.sh
+
+# Install using ml-dev profile (recommended)
+./install.sh --profile ml-dev
+
+# For security-focused setup
+./install.sh --profile security-dev
+
+# For minimal development setup
+./install.sh --profile minimal
 ```
 
-Run developer/ML setup:
+### Post-Installation Setup
 
 ```bash
-./basic_setup.sh
+# Log out and back in for group changes
+# Set up automated maintenance
+maintenance/systemd-setup.sh setup
+
+# Or use cron if systemd is not available
+maintenance/cron-setup.sh setup
 ```
 
-Run fortress setup:
+## Installation Profiles
+
+### `minimal`
+- Basic development tools (git, python, node, rust)
+- Essential system packages
+- Core development workflow
+
+### `ml-dev` (Recommended)
+- Everything in `minimal`
+- ROCm GPU acceleration
+- ML/AI environments (ai-amd, xAI-exp)
+- Data science packages
+
+### `security-dev`
+- Everything in `minimal`
+- Kubernetes (k3s) with Cilium networking
+- Runtime security monitoring (Tetragon)
+- Encrypted storage vault
+
+## Project Structure
+
+```
+arch-machine/
+├── config/
+│   ├── tools.yaml              # Tool definitions and versions
+│   └── profiles/               # Installation profiles
+├── modules/                    # Installation modules
+│   ├── system/                 # System packages and services
+│   ├── development/            # Development tools (mise, uv, etc.)
+│   ├── ml-ai/                  # ML/AI tools and environments
+│   └── security/               # Security tools (k3s, Cilium, etc.)
+├── maintenance/                # Maintenance and automation
+│   ├── weekly-check.sh         # Weekly maintenance script
+│   ├── check-updates.sh        # Update checking
+│   ├── apply-updates.sh        # Update application
+│   ├── security-audit.sh       # Security scanning
+│   ├── backup.sh               # Backup and rollback
+│   ├── notify.sh               # Notification system
+│   ├── systemd-setup.sh        # Systemd timer setup
+│   └── cron-setup.sh           # Cron job setup
+├── lib/                        # Shared libraries
+│   ├── logger.sh               # Logging functions
+│   ├── installer.sh            # Installation functions
+│   └── validator.sh            # Validation functions
+├── systemd/                    # Systemd units
+├── logs/                       # Log files and reports
+├── install.sh                  # Main installer
+├── migrate.sh                  # Migration helper
+└── README.md
+```
+
+## Maintenance System
+
+The system includes automated weekly maintenance that runs every Monday at 2:00 AM:
+
+### What It Does
+- **System Updates**: Pacman package updates and tool updates
+- **Security Scans**: Rootkit detection, file permission checks, service validation
+- **Health Monitoring**: Disk space, service status, and system health
+- **Cleanup**: Package cache cleanup and log rotation
+- **Reporting**: Detailed reports with recommendations
+
+### Maintenance Reports
+Reports are saved in `logs/reports/` with information about:
+- Updates applied
+- Security issues found
+- System health metrics
+- Recommended actions
+
+### Manual Maintenance
+```bash
+# Check for updates without installing
+maintenance/check-updates.sh
+
+# Apply available updates
+maintenance/apply-updates.sh
+
+# Run security audit
+maintenance/security-audit.sh
+
+# Create backup
+maintenance/backup.sh create
+
+# List available backups
+maintenance/backup.sh list
+
+# Restore from backup
+maintenance/backup.sh restore 20241201-143022
+```
+
+## Backup and Recovery
+
+The system automatically creates backups before major operations:
 
 ```bash
-./secure-fortress-phase0-simple.sh
+# Create manual backup
+maintenance/backup.sh create
+
+# List backups
+maintenance/backup.sh list
+
+# Restore specific backup
+maintenance/backup.sh restore <backup-name>
+
+# Clean old backups (keep 5 most recent)
+maintenance/backup.sh clean 5
 ```
 
-## Recommended Run Order
+## Configuration
 
-If this is a fresh workstation:
+### Custom Profiles
+Create custom installation profiles by editing `config/profiles/*.yaml`:
 
-1. Run `basic_setup.sh`
-2. Log out and back in (or reboot) so group changes apply
-3. Run `secure-fortress-phase0-simple.sh`
-4. Run verification commands below
+```yaml
+name: "custom-profile"
+description: "My custom development setup"
+includes:
+  - system.full
+  - development.full
+customizations:
+  development:
+    mise:
+      versions:
+        python: ["3.12", "3.13"]
+```
+
+### Tool Configuration
+Modify `config/tools.yaml` to change tool versions or add new tools.
+
+## Legacy Scripts
+
+The original scripts are still available for backward compatibility:
+- `basic_setup.sh`: Basic ML/AI development setup
+- `secure-fortress-phase0-simple.sh`: Security hardening setup
+
+These are now considered legacy and may be removed in future versions.
+
+## Requirements
+
+- **Arch Linux** (primary target)
+- **Internet access** for downloads
+- **sudo privileges** for system operations
+- **yq** or **jq** for YAML/JSON processing (auto-installed if missing)
 
 ## Verification
 
-### ROCm / PyTorch
-
-If you are using the Conda-based ML environment:
+After installation, verify your setup:
 
 ```bash
-conda activate ai-amd
-python -c "import torch; print(torch.cuda.is_available())"
+# Run comprehensive validation
+./install.sh --profile <your-profile> --validate
+
+# Check maintenance status
+maintenance/systemd-setup.sh status
+
+# View recent logs
+tail logs/installer.log
 ```
 
-Expected: `True` when ROCm-backed PyTorch is available.
+## Troubleshooting
 
-### Kubernetes / Security Stack
+### Common Issues
 
+1. **Permission Denied**: Ensure scripts are executable (`chmod +x *.sh`)
+
+2. **Missing Dependencies**: Run `./install.sh` again - it will install missing dependencies
+
+3. **Service Failures**: Check systemctl status and logs
+
+4. **GPU Issues**: Verify ROCm installation with `rocminfo`
+
+### Getting Help
+
+1. Check logs in `logs/` directory
+2. Run validation: `./install.sh --validate`
+3. Review maintenance reports in `logs/reports/`
+4. Use backup system to rollback if needed
+
+## Development
+
+### Adding New Tools
+1. Add tool definition to `config/tools.yaml`
+2. Create installation module in `modules/`
+3. Update profile configurations
+4. Test with dry run: `./install.sh --dry-run`
+
+### Testing
 ```bash
-kubectl get nodes
-cilium status --wait
-kubectl -n kube-system get ds tetragon
-mountpoint ~/securevault
+# Dry run installation
+./install.sh --profile ml-dev --dry-run
+
+# Test maintenance scripts
+maintenance/weekly-check.sh --dry-run
 ```
 
-Expected:
+## License
 
-- node is `Ready`
-- Cilium reports healthy/OK
-- Tetragon daemonset is scheduled and ready
-- `mountpoint` exits successfully for `~/securevault`
+See LICENSE file for details.
 
-## Re-run Behavior
+## Contributing
 
-Both scripts are designed to be rerunnable for many steps (`--needed`, conditional checks, `upgrade --install` patterns), but they still perform privileged/system-level operations. Review before each run.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-## Safety Notes
-
-- Run on systems you control and can recover (snapshots/backups recommended).
-- Read each script before execution and adapt for your hardware and policy needs.
-- Keep Kubernetes/security component versions reviewed over time.
+Please ensure all changes include appropriate logging and error handling.

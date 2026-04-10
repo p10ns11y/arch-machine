@@ -1,0 +1,26 @@
+name: "ml-dev"
+description: "ML/AI development setup with ROCm and Python tooling"
+version: "1.0.0"
+
+includes:
+  - system.full
+  - development.full
+  - ml_ai.full
+
+excludes: []
+
+customizations:
+  system:
+    rocm: true
+  development:
+    mise:
+      versions:
+        python: ["3.12", "3.13", "3.14"]
+        node: ["22", "lts"]
+        rust: ["stable"]
+  ml_ai:
+    conda:
+      environments:
+        - ai_amd
+        - xai_exp
+  security: false

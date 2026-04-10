@@ -1,0 +1,22 @@
+name: "minimal"
+description: "Minimal development setup with essential tools"
+version: "1.0.0"
+
+includes:
+  - system.base
+  - development.core
+  - productivity.basic
+
+excludes: []
+
+customizations:
+  system:
+    rocm: false
+  development:
+    mise:
+      versions:
+        python: ["3.12"]
+        node: ["lts"]
+        rust: ["stable"]
+  ml_ai: false
+  security: false

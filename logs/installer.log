@@ -1,0 +1,27 @@
+[2026-04-10 17:15:34] [INFO] 🚀 Starting modular installer
+[2026-04-10 17:15:47] [INFO] 🚀 Starting modular installer
+[2026-04-10 17:15:59] [INFO] 🚀 Starting modular installer
+[2026-04-10 17:16:10] [INFO] 🚀 Starting modular installer
+[2026-04-10 17:16:10] [INFO] Profile: minimal
+[2026-04-10 17:16:10] [INFO] Mode: DRY RUN
+[2026-04-10 17:16:10] [INFO] 
+[2026-04-10 17:16:10] [INFO] ========================================
+[2026-04-10 17:16:10] [INFO] 🚀 Installer Initialization
+[2026-04-10 17:16:10] [INFO] ========================================
+[2026-04-10 17:16:10] [ERROR] Neither yq nor yq-go found. Please install one for YAML processing.
+[2026-04-10 17:20:30] [INFO] 🚀 Starting modular installer
+[2026-04-10 17:20:30] [INFO] Profile: minimal
+[2026-04-10 17:20:30] [INFO] Mode: DRY RUN
+[2026-04-10 17:20:30] [INFO] 
+[2026-04-10 17:20:30] [INFO] ========================================
+[2026-04-10 17:20:30] [INFO] 🚀 Installer Initialization
+[2026-04-10 17:20:30] [INFO] ========================================
+[2026-04-10 17:20:30] [ERROR] Neither yq nor yq-go found. Please install one for YAML processing.
+[2026-04-10 17:44:37] [INFO] 🚀 Starting modular installer
+[2026-04-10 17:44:37] [INFO] Profile: minimal
+[2026-04-10 17:44:37] [INFO] Mode: DRY RUN
+[2026-04-10 17:44:37] [INFO] 
+[2026-04-10 17:44:37] [INFO] ========================================
+[2026-04-10 17:44:37] [INFO] 🚀 Installer Initialization
+[2026-04-10 17:44:37] [INFO] ========================================
+[2026-04-10 17:44:37] [ERROR] Neither yq nor yq-go found. Please install one for YAML processing.

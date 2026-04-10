@@ -1,0 +1,154 @@
+tools:
+  system:
+    packages:
+      - name: base-devel
+        description: "Core development tools"
+        critical: true
+      - name: git
+        description: "Version control system"
+        min_version: "2.40.0"
+        critical: true
+      - name: curl
+        description: "Data transfer utility"
+        critical: true
+      - name: wget
+        description: "Network downloader"
+        critical: true
+      - name: reflector
+        description: "Pacman mirror list generator"
+      - name: docker
+        description: "Container runtime"
+        service: docker
+      - name: tlp
+        description: "Power management"
+        service: tlp
+      - name: ufw
+        description: "Firewall"
+        service: ufw
+      - name: zsh
+        description: "Shell"
+      - name: jq
+        description: "JSON processor"
+      - name: helm
+        description: "Kubernetes package manager"
+      - name: gocryptfs
+        description: "Encrypted filesystem"
+      - name: gnupg
+        description: "GPG encryption"
+      - name: openssh
+        description: "SSH client/server"
+      - name: pinentry
+        description: "GPG pinentry"
+      - name: haveged
+        description: "Entropy daemon"
+        service: haveged
+
+    rocm:
+      packages:
+        - rocm-hip-sdk
+        - rocm-opencl-sdk
+        - rocminfo
+      description: "ROCm compute stack for AMD GPUs"
+
+  development:
+    mise:
+      description: "Runtime version manager"
+      versions:
+        python: ["3.12", "3.13", "3.14"]
+        node: ["22", "lts"]
+        rust: ["stable"]
+      global:
+        python: "3.14"
+        node: "lts"
+        rust: "stable"
+
+    uv:
+      description: "Python package installer"
+      auto_update: true
+      source: "https://astral.sh/uv/install.sh"
+
+    # TODO: IDE installation will be handled separately in future iterations
+    # IDEs require special installation methods (shell scripts, AppImages, etc.)
+    # and will have dedicated installers/updaters
+    # My made up xai coding agent config
+    # xai_produce_machine
+    xai_produce:
+      description: "Product, App, Any user land util producer with dev power mode"
+      auto_update: true
+      source: "https://x.ai"
+
+
+  ml_ai:
+    conda:
+      description: "Conda package manager"
+      installer: "Mambaforge"
+      source: "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh"
+      environments:
+        ai_amd:
+          python: "3.12"
+          packages:
+            - jupyterlab
+            - numpy
+            - pandas
+            - matplotlib
+            - seaborn
+            - scikit-learn
+            - xgboost
+            - lightgbm
+            - polars
+            - duckdb
+            - optuna
+          conda_packages:
+            - wandb
+          pip_packages:
+            - torch
+            - torchvision
+            - torchaudio
+          pip_index: "https://download.pytorch.org/whl/rocm6.4/"
+        xai_exp:
+          python: "3.14"
+          packages:
+            - jupyterlab
+            - numpy
+            - pandas
+            - matplotlib
+            - seaborn
+            - scikit-learn
+            - xgboost
+            - duckdb
+            - tqdm
+            - polars
+            - lightgbm
+          conda_packages:
+            - wandb
+          pip_packages:
+            - torch
+            - torchvision
+            - torchaudio
+          pip_index: "https://download.pytorch.org/whl/rocm6.4/"
+
+  security:
+    kubernetes:
+      k3s:
+        description: "Lightweight Kubernetes"
+        service: k3s
+        config:
+          flannel_backend: "none"
+          disable_network_policy: true
+          disable_traefik: true
+
+    cilium:
+      description: "CNI and network policy"
+      version: "1.19.2"
+      config:
+        kube_proxy_replacement: false
+        ipam_mode: "cluster-pool"
+        cluster_name: "fortress"
+        hubble_enabled: false
+
+    tetragon:
+      description: "Runtime security monitoring"
+      namespace: "kube-system"
+
+  productivity:
+    packages: []
