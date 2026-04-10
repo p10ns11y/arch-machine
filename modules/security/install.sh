@@ -157,34 +157,41 @@ install_tetragon() {
 
 # Setup encrypted vault (gocryptfs)
 setup_encrypted_vault() {
+    local vault_enc="${1:-$HOME/.securevaultenc}"
+    local vault_mount="${2:-$HOME/securevault}"
+
     log_section "Setting up Encrypted Vault"
 
-    local vault_enc="$HOME/.securevaultenc"
-    local vault_mount="$HOME/securevault"
+    # Validate paths
+    if [[ -z "$vault_enc" || -z "$vault_mount" ]]; then
+        log_error "Usage: setup_encrypted_vault [encrypted_dir] [mount_point]"
+        log_error "Example: setup_encrypted_vault ~/.myvault ~/.vault"
+        return 1
+    fi
 
     if [[ -d "$vault_enc" ]]; then
-        log_info "Encrypted vault already initialized"
+        log_info "Encrypted vault already initialized at $vault_enc"
     else
         if [[ "$DRY_RUN" == "true" ]]; then
-            log_info "[DRY RUN] Would initialize encrypted vault"
+            log_info "[DRY RUN] Would initialize encrypted vault at $vault_enc"
         else
             mkdir -p "$vault_enc"
-            log_subsection "Initializing gocryptfs vault (you will be prompted for password)"
+            log_subsection "Initializing gocryptfs vault at $vault_enc (you will be prompted for password)"
             gocryptfs -init -scryptn=15 "$vault_enc" || {
                 log_error "Failed to initialize gocryptfs vault"
                 return 1
             }
-            log_success "Encrypted vault initialized"
+            log_success "Encrypted vault initialized at $vault_enc"
         fi
     fi
 
     if mountpoint -q "$vault_mount"; then
-        log_info "Vault already mounted"
+        log_info "Vault already mounted at $vault_mount"
         return 0
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would mount encrypted vault"
+        log_info "[DRY RUN] Would mount encrypted vault at $vault_mount"
         return 0
     fi
 
@@ -246,5 +253,6 @@ install_security() {
     log_success "Security tools module installation completed ($category)"
 }
 
-# Export main function
+# Export functions for standalone use
+export -f setup_encrypted_vault
 export -f install_security

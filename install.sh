@@ -20,6 +20,8 @@ LOG_LEVEL="INFO"
 VALIDATE_ONLY=false
 LIST_PROFILES_ONLY=false
 SHOW_PROFILE=""
+SETUP_VAULT=false
+VAULT_ARGS=()
 
 # Colors for output
 RED='\033[0;31m'
@@ -139,6 +141,7 @@ OPTIONS:
     --validate              Validate system readiness without installing
     --list-profiles         List all available installation profiles
     --show-profile PROFILE  Show detailed information about a profile
+    --setup-vault [ENC_DIR] [MOUNT_POINT]  Setup encrypted vault (defaults: ~/.securevaultenc ~/securevault)
     -h, --help              Show this help message
 
 PROFILES:
@@ -151,6 +154,7 @@ EXAMPLES:
     $0 --profile ml-dev --verbose
     $0 --profile security-dev
     $0 --validate
+    $0 --setup-vault ~/.myvault ~/.vault
 
 EOF
 }
@@ -197,6 +201,20 @@ parse_args() {
                 fi
                 SHOW_PROFILE="$2"
                 shift 2
+                ;;
+            --setup-vault)
+                SETUP_VAULT=true
+                VAULT_ARGS=()
+                # Parse vault arguments: --setup-vault [enc_dir] [mount_point]
+                if [[ $# -gt 1 && "$2" != -* ]]; then
+                    VAULT_ARGS+=("$2")
+                    shift
+                    if [[ $# -gt 1 && "$2" != -* ]]; then
+                        VAULT_ARGS+=("$2")
+                        shift
+                    fi
+                fi
+                shift
                 ;;
             -h|--help)
                 show_usage
@@ -329,7 +347,7 @@ main() {
     parse_args "$@"
 
     # Handle special modes that need libraries
-    if [[ "$LIST_PROFILES_ONLY" == "true" || -n "$SHOW_PROFILE" ]]; then
+    if [[ "$LIST_PROFILES_ONLY" == "true" || -n "$SHOW_PROFILE" || "$SETUP_VAULT" == "true" ]]; then
         load_libraries
         if [[ "$LIST_PROFILES_ONLY" == "true" ]]; then
             list_profiles
@@ -337,6 +355,11 @@ main() {
         elif [[ -n "$SHOW_PROFILE" ]]; then
             show_profile "$SHOW_PROFILE"
             exit 0
+        elif [[ "$SETUP_VAULT" == "true" ]]; then
+            # Source the security module to get setup_encrypted_vault function
+            source "$MODULES_DIR/security/install.sh"
+            setup_encrypted_vault "${VAULT_ARGS[@]}"
+            exit $?
         fi
     fi
 

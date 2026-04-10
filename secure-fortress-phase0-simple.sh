@@ -144,7 +144,7 @@ echo "✓ <list of files> copied into encrypted vault"
 # 11. 2-minute verification + bulk-upload kill test
 echo "=== 2-MIN VERIFICATION + TEST ==="
 kubectl get nodes | grep Ready && echo "✓ k3s alive"
-sudo cilium status --short | grep OK && echo "✓ Cilium ready"
+cilium status | grep OK && echo "✓ Cilium ready"
 kubectl -n kube-system get ds tetragon | grep 1/1 && echo "✓ Tetragon running"
 mountpoint -q "$VAULT_MOUNT" && echo "✓ gocryptfs vault mounted & encrypted"
 

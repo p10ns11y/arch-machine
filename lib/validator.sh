@@ -97,10 +97,10 @@ validate_mount() {
     local description="${2:-$mount_point}"
 
     if mountpoint -q "$mount_point"; then
-        log_success "Mount point active: $description"
+        log_success "Mount point active: $mount_point: $description"
         return 0
     else
-        log_failure "Mount point not active: $description"
+        log_failure "Mount point not active: $mount_point: $description"
         return 1
     fi
 }
@@ -215,7 +215,7 @@ validate_cilium() {
     fi
 
     # Check Cilium status
-    if cilium status --short | grep -q "OK"; then
+    if cilium status | grep -q "OK"; then
         log_success "Cilium is healthy"
         return 0
     else

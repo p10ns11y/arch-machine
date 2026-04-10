@@ -790,3 +790,444 @@ Not detected (unknown)
 [2026-04-10 19:07:50] [INFO] 🚀 Checking System Package Updates
 [2026-04-10 19:07:50] [INFO] ========================================
 [2026-04-10 19:08:23] [ERROR] Failed to update package databases
+[2026-04-10 19:08:59] [DEBUG] Using YAML parser: yq
+[2026-04-10 19:09:03] [DEBUG] Using YAML parser: yq
+[2026-04-10 19:09:06] [INFO] 
+[2026-04-10 19:09:06] [INFO] ========================================
+[2026-04-10 19:09:06] [INFO] 🚀 Post-Installation Validation
+[2026-04-10 19:09:06] [INFO] ========================================
+[2026-04-10 19:09:06] [INFO] ✅ Package validated: Git
+[2026-04-10 19:09:06] [INFO] ✅ Package validated: Docker
+[2026-04-10 19:09:39] [ERROR] ❌ Service not running: Docker service
+[2026-04-10 19:09:45] [INFO] 🚀 Starting modular installer
+[2026-04-10 19:09:45] [INFO] Profile: security-dev
+[2026-04-10 19:09:45] [INFO] Mode: DRY RUN
+[2026-04-10 19:09:45] [INFO] 
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 🚀 Installer Initialization
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [DEBUG] Using YAML parser: yq
+[2026-04-10 19:09:45] [INFO] 
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 🚀 System Requirements Check
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] ✅ System requirements met
+[2026-04-10 19:09:45] [INFO] ✅ Installer initialized successfully
+[2026-04-10 19:09:45] [INFO] Modules to install: system.full development.full security.full
+[2026-04-10 19:09:45] [INFO] 
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 🚀 Installing system module (full)
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 🚀 System Module Installation (full)
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 🚀 Updating System Packages
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] [DRY RUN] Would update system packages
+[2026-04-10 19:09:45] [INFO] 
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 🚀 Hardware Detection
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] CPU: AMD Ryzen AI 5 340 w/ Radeon 840M
+[2026-04-10 19:09:45] [INFO] GPU: AMD Ryzen AI 5
+Not detected (unknown)
+[2026-04-10 19:09:45] [INFO] RAM: 14Gi
+[2026-04-10 19:09:45] [INFO] Date: April 10, 2026
+[2026-04-10 19:09:45] [INFO] 
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] 🚀 Installing System Packages (full)
+[2026-04-10 19:09:45] [INFO] ========================================
+[2026-04-10 19:09:45] [INFO] [1/16] base-devel
+[2026-04-10 19:09:45] [INFO] Package already installed: base-devel
+[2026-04-10 19:09:46] [INFO] [2/16] git
+[2026-04-10 19:09:46] [INFO] Package already installed: git
+[2026-04-10 19:09:46] [INFO] [3/16] curl
+[2026-04-10 19:09:46] [INFO] Package already installed: curl
+[2026-04-10 19:09:46] [INFO] [4/16] wget
+[2026-04-10 19:09:46] [INFO] Package already installed: wget
+[2026-04-10 19:09:47] [INFO] [5/16] reflector
+[2026-04-10 19:09:47] [INFO] Package already installed: reflector
+[2026-04-10 19:09:47] [INFO] [6/16] docker
+[2026-04-10 19:09:47] [INFO] Package already installed: docker
+[2026-04-10 19:09:47] [INFO] [7/16] tlp
+[2026-04-10 19:09:47] [INFO] Package already installed: tlp
+[2026-04-10 19:09:48] [INFO] [8/16] ufw
+[2026-04-10 19:09:48] [INFO] Package already installed: ufw
+[2026-04-10 19:09:48] [INFO] [9/16] zsh
+[2026-04-10 19:09:48] [INFO] Package already installed: zsh
+[2026-04-10 19:09:49] [INFO] [10/16] jq
+[2026-04-10 19:09:49] [INFO] Package already installed: jq
+[2026-04-10 19:09:50] [INFO] [11/16] helm
+[2026-04-10 19:09:50] [INFO] Package already installed: helm
+[2026-04-10 19:09:50] [INFO] [12/16] gocryptfs
+[2026-04-10 19:09:50] [INFO] 
+[2026-04-10 19:09:50] [INFO] → Installing Encrypted filesystem (gocryptfs)
+[2026-04-10 19:09:50] [INFO] [DRY RUN] Would install: gocryptfs
+[2026-04-10 19:09:51] [INFO] [13/16] gnupg
+[2026-04-10 19:09:51] [INFO] Package already installed: gnupg
+[2026-04-10 19:09:52] [INFO] [14/16] openssh
+[2026-04-10 19:09:52] [INFO] Package already installed: openssh
+[2026-04-10 19:09:53] [INFO] [15/16] pinentry
+[2026-04-10 19:09:53] [INFO] Package already installed: pinentry
+[2026-04-10 19:09:54] [INFO] [16/16] haveged
+[2026-04-10 19:09:54] [INFO] Package already installed: haveged
+[2026-04-10 19:09:54] [INFO] ✅ System packages installation completed (full)
+[2026-04-10 19:09:54] [INFO] 
+[2026-04-10 19:09:54] [INFO] ========================================
+[2026-04-10 19:09:54] [INFO] 🚀 Installing ROCm Packages
+[2026-04-10 19:09:54] [INFO] ========================================
+[2026-04-10 19:09:54] [INFO] ROCm installation skipped (category: full)
+[2026-04-10 19:09:54] [INFO] 
+[2026-04-10 19:09:54] [INFO] ========================================
+[2026-04-10 19:09:54] [INFO] 🚀 Enabling System Services
+[2026-04-10 19:09:54] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Enabling service: docker service
+[2026-04-10 19:09:55] [INFO] [DRY RUN] Would enable service: docker
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Enabling service: tlp service
+[2026-04-10 19:09:55] [INFO] [DRY RUN] Would enable service: tlp
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Enabling service: ufw service
+[2026-04-10 19:09:55] [INFO] [DRY RUN] Would enable service: ufw
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Enabling service: haveged service
+[2026-04-10 19:09:55] [INFO] [DRY RUN] Would enable service: haveged
+[2026-04-10 19:09:55] [INFO] ✅ System services configured
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Configuring User Groups
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Adding user sustainableabundance to group docker
+[2026-04-10 19:09:55] [INFO] [DRY RUN] Would add sustainableabundance to docker
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Adding user sustainableabundance to group video
+[2026-04-10 19:09:55] [INFO] [DRY RUN] Would add sustainableabundance to video
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Adding user sustainableabundance to group render
+[2026-04-10 19:09:55] [INFO] [DRY RUN] Would add sustainableabundance to render
+[2026-04-10 19:09:55] [INFO] Note: Log out and back in for group changes to take effect
+[2026-04-10 19:09:55] [INFO] ✅ User groups configured
+[2026-04-10 19:09:55] [INFO] ✅ System module installation completed (full)
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Installing development module (full)
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Development Tools Module Installation (full)
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Installing mise (Runtime Manager)
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] mise already installed
+[2026-04-10 19:09:55] [DEBUG] Could not self-update mise
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Installing Language Versions with mise
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Installing Python 3.12
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Installing Python 3.13
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Installing Python 3.14
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Installing Node 20
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Installing Node lts
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] → Installing Rust stable
+[2026-04-10 19:09:55] [INFO] ✅ Language versions configured
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Installing uv (Python Package Manager)
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] uv already installed
+[2026-04-10 19:09:55] [DEBUG] Could not self-update uv
+[2026-04-10 19:09:55] [INFO] ✅ Development tools module installation completed (full)
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Installing security module (full)
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:55] [INFO] 🚀 Security Tools Module Installation (full)
+[2026-04-10 19:09:55] [INFO] ========================================
+[2026-04-10 19:09:56] [INFO] 
+[2026-04-10 19:09:56] [INFO] ========================================
+[2026-04-10 19:09:56] [INFO] 🚀 Installing k3s (Kubernetes)
+[2026-04-10 19:09:56] [INFO] ========================================
+[2026-04-10 19:10:28] [INFO] [DRY RUN] Would install k3s
+[2026-04-10 19:10:28] [INFO] 
+[2026-04-10 19:10:28] [INFO] ========================================
+[2026-04-10 19:10:28] [INFO] 🚀 Configuring kubeconfig
+[2026-04-10 19:10:28] [INFO] ========================================
+[2026-04-10 19:10:28] [INFO] kubeconfig already configured
+[2026-04-10 19:10:28] [INFO] 
+[2026-04-10 19:10:28] [INFO] ========================================
+[2026-04-10 19:10:28] [INFO] 🚀 Installing Cilium
+[2026-04-10 19:10:28] [INFO] ========================================
+[2026-04-10 19:10:29] [INFO] Cilium already installed
+[2026-04-10 19:10:29] [INFO] 
+[2026-04-10 19:10:29] [INFO] ========================================
+[2026-04-10 19:10:29] [INFO] 🚀 Installing Tetragon
+[2026-04-10 19:10:29] [INFO] ========================================
+[2026-04-10 19:10:29] [INFO] [DRY RUN] Would install Tetragon
+[2026-04-10 19:10:29] [INFO] 
+[2026-04-10 19:10:29] [INFO] ========================================
+[2026-04-10 19:10:29] [INFO] 🚀 Setting up Encrypted Vault
+[2026-04-10 19:10:29] [INFO] ========================================
+[2026-04-10 19:10:29] [INFO] [DRY RUN] Would initialize encrypted vault
+[2026-04-10 19:10:29] [INFO] [DRY RUN] Would mount encrypted vault
+[2026-04-10 19:10:29] [INFO] ✅ Security tools module installation completed (full)
+[2026-04-10 19:10:29] [INFO] 
+[2026-04-10 19:10:29] [INFO] ========================================
+[2026-04-10 19:10:29] [INFO] 🚀 Post-Installation Validation
+[2026-04-10 19:10:29] [INFO] ========================================
+[2026-04-10 19:10:29] [INFO] ✅ Package validated: Git
+[2026-04-10 19:10:29] [INFO] ✅ Package validated: Docker
+[2026-04-10 19:11:01] [ERROR] ❌ Service not running: Docker service
+[2026-04-10 19:11:04] [INFO] 🚀 Starting modular installer
+[2026-04-10 19:11:04] [INFO] Profile: minimal
+[2026-04-10 19:11:04] [INFO] Mode: DRY RUN
+[2026-04-10 19:11:04] [INFO] 
+[2026-04-10 19:11:04] [INFO] ========================================
+[2026-04-10 19:11:04] [INFO] 🚀 Installer Initialization
+[2026-04-10 19:11:04] [INFO] ========================================
+[2026-04-10 19:11:04] [DEBUG] Using YAML parser: yq
+[2026-04-10 19:11:04] [INFO] 
+[2026-04-10 19:11:04] [INFO] ========================================
+[2026-04-10 19:11:04] [INFO] 🚀 System Requirements Check
+[2026-04-10 19:11:04] [INFO] ========================================
+[2026-04-10 19:11:04] [INFO] ✅ System requirements met
+[2026-04-10 19:11:04] [INFO] ✅ Installer initialized successfully
+[2026-04-10 19:11:05] [INFO] Modules to install: system.base development.core productivity.basic
+[2026-04-10 19:11:05] [INFO] 
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] 🚀 Installing system module (base)
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] 
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] 🚀 System Module Installation (base)
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] 
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] 🚀 Updating System Packages
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] [DRY RUN] Would update system packages
+[2026-04-10 19:11:05] [INFO] 
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] 🚀 Hardware Detection
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] CPU: AMD Ryzen AI 5 340 w/ Radeon 840M
+[2026-04-10 19:11:05] [INFO] GPU: AMD Ryzen AI 5
+Not detected (unknown)
+[2026-04-10 19:11:05] [INFO] RAM: 14Gi
+[2026-04-10 19:11:05] [INFO] Date: April 10, 2026
+[2026-04-10 19:11:05] [INFO] 
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:05] [INFO] 🚀 Installing System Packages (base)
+[2026-04-10 19:11:05] [INFO] ========================================
+[2026-04-10 19:11:06] [INFO] [1/4] base-devel
+[2026-04-10 19:11:06] [INFO] Package already installed: base-devel
+[2026-04-10 19:11:06] [INFO] [2/4] git
+[2026-04-10 19:11:06] [INFO] Package already installed: git
+[2026-04-10 19:11:06] [INFO] [3/4] curl
+[2026-04-10 19:11:06] [INFO] Package already installed: curl
+[2026-04-10 19:11:07] [INFO] [4/4] wget
+[2026-04-10 19:11:07] [INFO] Package already installed: wget
+[2026-04-10 19:11:07] [INFO] ✅ System packages installation completed (base)
+[2026-04-10 19:11:07] [INFO] 
+[2026-04-10 19:11:07] [INFO] ========================================
+[2026-04-10 19:11:07] [INFO] 🚀 Installing ROCm Packages
+[2026-04-10 19:11:07] [INFO] ========================================
+[2026-04-10 19:11:07] [INFO] ROCm installation skipped (category: base)
+[2026-04-10 19:11:07] [INFO] 
+[2026-04-10 19:11:07] [INFO] ========================================
+[2026-04-10 19:11:07] [INFO] 🚀 Enabling System Services
+[2026-04-10 19:11:07] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Enabling service: docker service
+[2026-04-10 19:11:08] [INFO] [DRY RUN] Would enable service: docker
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Enabling service: tlp service
+[2026-04-10 19:11:08] [INFO] [DRY RUN] Would enable service: tlp
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Enabling service: ufw service
+[2026-04-10 19:11:08] [INFO] [DRY RUN] Would enable service: ufw
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Enabling service: haveged service
+[2026-04-10 19:11:08] [INFO] [DRY RUN] Would enable service: haveged
+[2026-04-10 19:11:08] [INFO] ✅ System services configured
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Configuring User Groups
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Adding user sustainableabundance to group docker
+[2026-04-10 19:11:08] [INFO] [DRY RUN] Would add sustainableabundance to docker
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Adding user sustainableabundance to group video
+[2026-04-10 19:11:08] [INFO] [DRY RUN] Would add sustainableabundance to video
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Adding user sustainableabundance to group render
+[2026-04-10 19:11:08] [INFO] [DRY RUN] Would add sustainableabundance to render
+[2026-04-10 19:11:08] [INFO] Note: Log out and back in for group changes to take effect
+[2026-04-10 19:11:08] [INFO] ✅ User groups configured
+[2026-04-10 19:11:08] [INFO] ✅ System module installation completed (base)
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Installing development module (core)
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Development Tools Module Installation (core)
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Installing mise (Runtime Manager)
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] mise already installed
+[2026-04-10 19:11:08] [DEBUG] Could not self-update mise
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Installing Language Versions with mise
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Installing Python 3.12
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Installing Node lts
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] → Installing Rust stable
+[2026-04-10 19:11:08] [INFO] ✅ Language versions configured
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Installing uv (Python Package Manager)
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] uv already installed
+[2026-04-10 19:11:08] [DEBUG] Could not self-update uv
+[2026-04-10 19:11:08] [INFO] ✅ Development tools module installation completed (core)
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Installing productivity module (basic)
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:11:08] [INFO] 🚀 Productivity Tools Module Installation
+[2026-04-10 19:11:08] [INFO] ========================================
+[2026-04-10 19:14:26] [INFO] 
+[2026-04-10 19:14:26] [INFO] ========================================
+[2026-04-10 19:14:26] [INFO] 🚀 Post-Installation Validation
+[2026-04-10 19:14:26] [INFO] ========================================
+[2026-04-10 19:14:26] [INFO] ✅ Package validated: Git
+[2026-04-10 19:14:26] [INFO] ✅ Package validated: Docker
+[2026-04-10 19:14:29] [INFO] ✅ Service running: Docker service
+[2026-04-10 19:14:29] [INFO] ✅ Package validated: TLP
+[2026-04-10 19:14:29] [INFO] ✅ Service running: TLP service
+[2026-04-10 19:14:29] [INFO] ✅ Package validated: UFW
+[2026-04-10 19:14:29] [INFO] ✅ Service running: UFW service
+[2026-04-10 19:14:29] [INFO] 
+[2026-04-10 19:14:29] [INFO] → Validating mise installation
+[2026-04-10 19:14:29] [INFO] ✅ mise is available
+[2026-04-10 19:14:29] [INFO] 
+[2026-04-10 19:14:29] [INFO] → Validating uv installation
+[2026-04-10 19:14:29] [INFO] ✅ uv is available
+[2026-04-10 19:14:29] [INFO] 
+[2026-04-10 19:14:29] [INFO] → Validating ROCm installation
+[2026-04-10 19:14:29] [INFO] ✅ ROCm GPU detected: AMD Ryzen AI 5
+Unknown
+[2026-04-10 19:14:29] [INFO] ✅ Command available: Conda
+[2026-04-10 19:14:29] [INFO] 
+[2026-04-10 19:14:29] [INFO] → Validating Kubernetes cluster
+[2026-04-10 19:14:30] [INFO] ✅ Kubernetes cluster accessible (1 nodes)
+[2026-04-10 19:14:30] [INFO] 
+[2026-04-10 19:14:30] [INFO] → Validating Cilium
+[2026-04-10 19:14:30] [ERROR] ❌ Cilium status check failed
+[2026-04-10 19:15:57] [INFO] 
+[2026-04-10 19:15:57] [INFO] ========================================
+[2026-04-10 19:15:57] [INFO] 🚀 Post-Installation Validation
+[2026-04-10 19:15:57] [INFO] ========================================
+[2026-04-10 19:15:57] [INFO] ✅ Package validated: Git
+[2026-04-10 19:15:57] [INFO] ✅ Package validated: Docker
+[2026-04-10 19:15:57] [INFO] ✅ Service running: Docker service
+[2026-04-10 19:15:57] [INFO] ✅ Package validated: TLP
+[2026-04-10 19:15:57] [INFO] ✅ Service running: TLP service
+[2026-04-10 19:15:57] [INFO] ✅ Package validated: UFW
+[2026-04-10 19:15:57] [INFO] ✅ Service running: UFW service
+[2026-04-10 19:15:57] [INFO] 
+[2026-04-10 19:15:57] [INFO] → Validating mise installation
+[2026-04-10 19:15:57] [INFO] ✅ mise is available
+[2026-04-10 19:15:57] [INFO] 
+[2026-04-10 19:15:57] [INFO] → Validating uv installation
+[2026-04-10 19:15:57] [INFO] ✅ uv is available
+[2026-04-10 19:15:57] [INFO] 
+[2026-04-10 19:15:57] [INFO] → Validating ROCm installation
+[2026-04-10 19:15:57] [INFO] ✅ ROCm GPU detected: AMD Ryzen AI 5
+Unknown
+[2026-04-10 19:15:57] [INFO] ✅ Command available: Conda
+[2026-04-10 19:15:57] [INFO] 
+[2026-04-10 19:15:57] [INFO] → Validating Kubernetes cluster
+[2026-04-10 19:15:58] [INFO] ✅ Kubernetes cluster accessible (1 nodes)
+[2026-04-10 19:15:58] [INFO] 
+[2026-04-10 19:15:58] [INFO] → Validating Cilium
+[2026-04-10 19:15:58] [INFO] ✅ Cilium is healthy
+[2026-04-10 19:15:58] [INFO] 
+[2026-04-10 19:15:58] [INFO] → Validating Tetragon
+[2026-04-10 19:15:58] [INFO] ✅ Tetragon daemonset deployed
+[2026-04-10 19:15:58] [ERROR] ❌ Mount point not active: Encrypted vault
+[2026-04-10 19:20:44] [INFO] 
+[2026-04-10 19:20:44] [INFO] ========================================
+[2026-04-10 19:20:44] [INFO] 🚀 Post-Installation Validation
+[2026-04-10 19:20:44] [INFO] ========================================
+[2026-04-10 19:20:44] [INFO] ✅ Package validated: Git
+[2026-04-10 19:20:44] [INFO] ✅ Package validated: Docker
+[2026-04-10 19:20:44] [INFO] ✅ Service running: Docker service
+[2026-04-10 19:20:44] [INFO] ✅ Package validated: TLP
+[2026-04-10 19:20:44] [INFO] ✅ Service running: TLP service
+[2026-04-10 19:20:44] [INFO] ✅ Package validated: UFW
+[2026-04-10 19:20:44] [INFO] ✅ Service running: UFW service
+[2026-04-10 19:20:44] [INFO] 
+[2026-04-10 19:20:44] [INFO] → Validating mise installation
+[2026-04-10 19:20:44] [INFO] ✅ mise is available
+[2026-04-10 19:20:44] [INFO] 
+[2026-04-10 19:20:44] [INFO] → Validating uv installation
+[2026-04-10 19:20:44] [INFO] ✅ uv is available
+[2026-04-10 19:20:44] [INFO] 
+[2026-04-10 19:20:44] [INFO] → Validating ROCm installation
+[2026-04-10 19:20:45] [INFO] ✅ ROCm GPU detected: AMD Ryzen AI 5
+Unknown
+[2026-04-10 19:20:45] [INFO] ✅ Command available: Conda
+[2026-04-10 19:20:45] [INFO] 
+[2026-04-10 19:20:45] [INFO] → Validating Kubernetes cluster
+[2026-04-10 19:20:45] [INFO] ✅ Kubernetes cluster accessible (1 nodes)
+[2026-04-10 19:20:45] [INFO] 
+[2026-04-10 19:20:45] [INFO] → Validating Cilium
+[2026-04-10 19:20:45] [INFO] ✅ Cilium is healthy
+[2026-04-10 19:20:45] [INFO] 
+[2026-04-10 19:20:45] [INFO] → Validating Tetragon
+[2026-04-10 19:20:45] [INFO] ✅ Tetragon daemonset deployed
+[2026-04-10 19:20:45] [ERROR] ❌ Mount point not active: /home/sustainableabundance/securevault: Encrypted vault
+[2026-04-10 19:27:41] [INFO] 
+[2026-04-10 19:27:41] [INFO] ========================================
+[2026-04-10 19:27:41] [INFO] 🚀 Setting up Encrypted Vault
+[2026-04-10 19:27:41] [INFO] ========================================
+[2026-04-10 19:27:41] [INFO] [DRY RUN] Would initialize encrypted vault at /home/sustainableabundance/.securevaultenc
+[2026-04-10 19:27:41] [INFO] [DRY RUN] Would mount encrypted vault at /home/sustainableabundance/securevault
+[2026-04-10 19:27:44] [INFO] 
+[2026-04-10 19:27:44] [INFO] ========================================
+[2026-04-10 19:27:44] [INFO] 🚀 Setting up Encrypted Vault
+[2026-04-10 19:27:44] [INFO] ========================================
+[2026-04-10 19:27:44] [INFO] [DRY RUN] Would initialize encrypted vault at /home/sustainableabundance/.testvault
+[2026-04-10 19:27:44] [INFO] [DRY RUN] Would mount encrypted vault at /home/sustainableabundance/.testmount
+[2026-04-10 19:27:52] [INFO] 
+[2026-04-10 19:27:52] [INFO] ========================================
+[2026-04-10 19:27:52] [INFO] 🚀 Setting up Encrypted Vault
+[2026-04-10 19:27:52] [INFO] ========================================
+[2026-04-10 19:27:52] [INFO] Encrypted vault already initialized at /home/sustainableabundance/.directvault
+[2026-04-10 19:27:52] [INFO] 

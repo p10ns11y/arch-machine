@@ -98,6 +98,64 @@ customizations:
 
 Customizations override the default versions specified in `config/tools.yaml`. Use `./install.sh --show-profile <name>` to see current customizations for any profile.
 
+## Utility Functions
+
+The installer includes several standalone utility functions that can be run independently:
+
+### Encrypted Vault Setup
+
+Create and manage encrypted storage vaults using gocryptfs:
+
+```bash
+# Setup default vault (~/.securevaultenc → ~/securevault)
+./install.sh --setup-vault
+
+# Setup custom vault locations
+./install.sh --setup-vault ~/.myvault ~/.vault
+
+# Or call the function directly (requires logger)
+source lib/logger.sh
+source modules/security/install.sh
+setup_encrypted_vault ~/.workvault ~/.work
+```
+
+The vault setup function accepts two optional arguments:
+- `encrypted_dir`: Directory for encrypted data (default: `~/.securevaultenc`)
+- `mount_point`: Mount point for decrypted access (default: `~/securevault`)
+
+### Standalone Installers
+
+For legacy or specific use cases, standalone installer scripts are available:
+
+```bash
+# Basic ML/AI development setup
+./basic_setup.sh
+
+# Security hardening setup (legacy)
+./secure-fortress-phase0-simple.sh
+
+# Migration from existing setups
+./migrate.sh
+```
+
+### Maintenance Scripts
+
+Run maintenance tasks individually:
+
+```bash
+# Check for updates without installing
+maintenance/check-updates.sh
+
+# Apply available updates
+maintenance/apply-updates.sh
+
+# Run security audit
+maintenance/security-audit.sh
+
+# Setup automated maintenance
+maintenance/systemd-setup.sh setup
+```
+
 ## Project Structure
 
 ```
@@ -210,11 +268,27 @@ Modify `config/tools.yaml` to change tool versions or add new tools.
 
 ## Legacy Scripts
 
-The original scripts are still available for backward compatibility:
-- `basic_setup.sh`: Basic ML/AI development setup
-- `secure-fortress-phase0-simple.sh`: Security hardening setup
+### Legacy Scripts
 
-These are now considered legacy and may be removed in future versions.
+The original standalone scripts are still available for backward compatibility or specific use cases:
+
+- **`basic_setup.sh`**: Comprehensive ML/AI development setup including:
+  - Hardware detection (CPU, GPU, RAM)
+  - ROCm/NVIDIA GPU setup
+  - Conda/Mamba environment management
+  - Development tools (VS Code, Docker, etc.)
+  - System diagnostics and optimization
+
+- **`secure-fortress-phase0-simple.sh`**: Security hardening setup including:
+  - System updates and base development tools
+  - mise version manager setup
+  - Kubernetes (k3s) installation
+  - Cilium networking
+  - Tetragon runtime security monitoring
+  - Encrypted vault setup with gocryptfs
+  - SSH/GPG key management
+
+These legacy scripts provide one-shot installation but lack the modular, profile-based approach of the new system. They are now considered legacy and may be removed in future versions.
 
 ## Requirements
 
