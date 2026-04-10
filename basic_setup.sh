@@ -97,7 +97,15 @@ if [ ! -d "$HOME/miniconda/envs/ai-amd" ]; then
 fi
 
 # Not affiliated with X's xAI yet!
-# 10. xAI experimental env with pip PyTorch (official ROCm way) with latest python version
+# 10. Optional: only if you need heavy CUDA/data/ML/scientific stack later
+echo "→ Installing Mambaforge (only when needed)..."
+curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -o /tmp/m.sh
+bash /tmp/m.sh -b -p $HOME/mambaforge
+echo 'export PATH="$HOME/mambaforge/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Depends on conda being installed via Mambaforge.
+# 11. xAI experimental env with pip PyTorch (official ROCm way) with latest python version
 if [ ! -d "$HOME/miniconda/envs/xAI-exp" ]; then
     echo "Creating xAI + PyTorch via pip (ROCm official method)..."
     conda create -y -n xAI-exp python=3.14
