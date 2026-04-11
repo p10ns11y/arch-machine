@@ -1,0 +1,29 @@
+# Logs and reports
+logs/
+
+# Temporary files
+*.tmp
+*.swp
+*.bak
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Encrypted vault directories (should not be committed)
+*.enc/
+
+# Backup files
+*.backup
+backups/
+
+# System-specific files
+.cache/
+.config/
+.local/
