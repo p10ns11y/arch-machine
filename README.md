@@ -18,9 +18,16 @@ This repository provides a comprehensive system for setting up and maintaining A
 - **Comprehensive Logging**: Detailed logs and reports for all operations
 - **Migration Support**: Seamless transition from existing installations
 
+## Prerequisites
+
+- **Arch Linux** (primary target)
+- **Internet access** for downloads
+- **sudo privileges** for system operations
+- **yq** or **jq** for YAML/JSON processing (auto-installed if missing)
+
 ## Quick Start
 
-### First-Time Installation
+### Installation
 
 ```bash
 # Clone the repository
@@ -82,27 +89,61 @@ maintenance/cron-setup.sh setup
 - Runtime security monitoring (Tetragon)
 - Encrypted storage vault
 
-## Profile Customization
+## Usage
 
-Each installation profile can be customized by modifying the corresponding YAML file in `config/profiles/`. For example, to change the Python or Node.js versions installed with mise:
+### Maintenance Scripts
 
-```yaml
-customizations:
-  development:
-    mise:
-      versions:
-        python: ["3.12", "3.13", "3.14"]
-        node: ["20", "lts"]
-        rust: ["stable"]
+Run maintenance tasks individually:
+
+```bash
+# Check for updates without installing
+maintenance/check-updates.sh
+
+# Apply available updates
+maintenance/apply-updates.sh
+
+# Run security audit
+maintenance/security-audit.sh
+
+# Setup automated maintenance
+maintenance/systemd-setup.sh setup
 ```
 
-Customizations override the default versions specified in `config/tools.yaml`. Use `./install.sh --show-profile <name>` to see current customizations for any profile.
+### Automated Maintenance
 
-## Utility Functions
+The system includes automated weekly maintenance that runs every Monday at 2:00 AM:
 
-The installer includes several standalone utility functions that can be run independently:
+#### What It Does
+- **System Updates**: Pacman package updates and tool updates
+- **Security Scans**: Rootkit detection, file permission checks, service validation
+- **Health Monitoring**: Disk space, service status, and system health
+- **Cleanup**: Package cache cleanup and log rotation
+- **Reporting**: Detailed reports with recommendations
 
-### Encrypted Vault Setup
+#### Maintenance Reports
+Reports are saved in `logs/reports/` with information about updates applied, security issues found, system health metrics, and recommended actions.
+
+### Backup and Recovery
+
+The system automatically creates backups before major operations:
+
+```bash
+# Create manual backup
+maintenance/backup.sh create
+
+# List backups
+maintenance/backup.sh list
+
+# Restore specific backup
+maintenance/backup.sh restore <backup-name>
+
+# Clean old backups (keep 5 most recent)
+maintenance/backup.sh clean 5
+```
+
+### Utility Functions
+
+#### Encrypted Vault Setup
 
 Create and manage encrypted storage vaults using gocryptfs:
 
@@ -118,6 +159,97 @@ source lib/logger.sh
 source modules/security/install.sh
 setup_encrypted_vault ~/.workvault ~/.work
 ```
+
+The vault setup function accepts two optional arguments:
+- `encrypted_dir`: Directory for encrypted data (default: `~/.securevaultenc`)
+- `mount_point`: Mount point for decrypted access (default: `~/securevault`)
+
+For detailed usage, security considerations, and troubleshooting, see [`VAULT-GUIDE.md`](VAULT-GUIDE.md).
+
+##### Quick Vault Usage
+
+```bash
+# Mount vault (if not auto-mounted)
+gocryptfs ~/.securevaultenc ~/securevault
+
+# Use like normal directory
+echo "secret data" > ~/securevault/file.txt
+cat ~/securevault/file.txt
+
+# Unmount when done
+fusermount -u ~/securevault
+```
+
+## Project Structure
+
+```
+arch-machine/
+├── config/
+│   ├── tools.yaml              # Tool definitions and versions
+│   └── profiles/               # Installation profiles
+├── modules/                    # Installation modules
+│   ├── system/                 # System packages and services
+│   ├── development/            # Development tools (mise, uv, etc.)
+│   ├── ml-ai/                  # ML/AI tools and environments
+│   └── security/               # Security tools (k3s, Cilium, etc.)
+├── maintenance/                # Maintenance and automation
+│   ├── weekly-check.sh         # Weekly maintenance script
+│   ├── check-updates.sh        # Update checking
+│   ├── apply-updates.sh        # Update application
+│   ├── security-audit.sh       # Security scanning
+│   ├── backup.sh               # Backup and rollback
+│   ├── notify.sh               # Notification system
+│   ├── systemd-setup.sh        # Systemd timer setup
+│   └── cron-setup.sh           # Cron job setup
+├── lib/                        # Shared libraries
+│   ├── logger.sh               # Logging functions
+│   ├── installer.sh            # Installation functions
+│   └── validator.sh            # Validation functions
+├── systemd/                    # Systemd units
+├── logs/                       # Log files and reports
+├── install.sh                  # Main installer
+├── migrate.sh                  # Migration helper
+└── README.md
+```
+
+## Configuration
+
+### Profile Customization
+
+Each installation profile can be customized by modifying the corresponding YAML file in `config/profiles/`. For example, to change the Python or Node.js versions installed with mise:
+
+```yaml
+customizations:
+  development:
+    mise:
+      versions:
+        python: ["3.12", "3.13", "3.14"]
+        node: ["20", "lts"]
+        rust: ["stable"]
+```
+
+Customizations override the default versions specified in `config/tools.yaml`. Use `./install.sh --show-profile <name>` to see current customizations for any profile.
+
+### Custom Profiles
+
+Create custom installation profiles by editing `config/profiles/*.yaml`:
+
+```yaml
+name: "custom-profile"
+description: "My custom development setup"
+includes:
+  - system.full
+  - development.full
+customizations:
+  development:
+    mise:
+      versions:
+        python: ["3.12", "3.13"]
+```
+
+### Tool Configuration
+
+Modify `config/tools.yaml` to change tool versions or add new tools.
 
 The vault setup function accepts two optional arguments:
 - `encrypted_dir`: Directory for encrypted data (default: `~/.securevaultenc`)
@@ -261,57 +393,15 @@ maintenance/backup.sh restore <backup-name>
 maintenance/backup.sh clean 5
 ```
 
-## Configuration
-
-### Custom Profiles
-Create custom installation profiles by editing `config/profiles/*.yaml`:
-
-```yaml
-name: "custom-profile"
-description: "My custom development setup"
-includes:
-  - system.full
-  - development.full
-customizations:
-  development:
-    mise:
-      versions:
-        python: ["3.12", "3.13"]
-```
-
-### Tool Configuration
-Modify `config/tools.yaml` to change tool versions or add new tools.
-
 ## Legacy Scripts
-
-### Legacy Scripts
 
 The original standalone scripts are still available for backward compatibility or specific use cases:
 
-- **`basic_setup.sh`**: Comprehensive ML/AI development setup including:
-  - Hardware detection (CPU, GPU, RAM)
-  - ROCm/NVIDIA GPU setup
-  - Conda/Mamba environment management
-  - Development tools (VS Code, Docker, etc.)
-  - System diagnostics and optimization
+- **`basic_setup.sh`**: Comprehensive ML/AI development setup including hardware detection, ROCm/NVIDIA GPU setup, Conda/Mamba environment management, development tools (VS Code, Docker), and system diagnostics.
 
-- **`secure-fortress-phase0-simple.sh`**: Security hardening setup including:
-  - System updates and base development tools
-  - mise version manager setup
-  - Kubernetes (k3s) installation
-  - Cilium networking
-  - Tetragon runtime security monitoring
-  - Encrypted vault setup with gocryptfs
-  - SSH/GPG key management
+- **`secure-fortress-phase0-simple.sh`**: Security hardening setup including system updates, base development tools, mise version manager, Kubernetes (k3s), Cilium networking, Tetragon runtime security monitoring, encrypted vault setup with gocryptfs, and SSH/GPG key management.
 
-These legacy scripts provide one-shot installation but lack the modular, profile-based approach of the new system. They are now considered legacy and may be removed in future versions.
-
-## Requirements
-
-- **Arch Linux** (primary target)
-- **Internet access** for downloads
-- **sudo privileges** for system operations
-- **yq** or **jq** for YAML/JSON processing (auto-installed if missing)
+These legacy scripts provide one-shot installation but lack the modular, profile-based approach of the new system. They are considered legacy and may be removed in future versions.
 
 ## Verification
 
@@ -333,11 +423,8 @@ tail logs/installer.log
 ### Common Issues
 
 1. **Permission Denied**: Ensure scripts are executable (`chmod +x *.sh`)
-
 2. **Missing Dependencies**: Run `./install.sh` again - it will install missing dependencies
-
 3. **Service Failures**: Check systemctl status and logs
-
 4. **GPU Issues**: Verify ROCm installation with `rocminfo`
 
 ### Getting Help
