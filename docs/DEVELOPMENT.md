@@ -171,7 +171,7 @@ get_package_manager() {
     elif command -v dnf &>/dev/null; then
         echo "dnf"
     elif command -v pacman &>/dev/null; then
-        echo "pacman"
+        echo "pacman" # paru, yay
     else
         echo "unknown"
     fi

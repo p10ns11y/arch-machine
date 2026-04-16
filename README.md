@@ -91,6 +91,8 @@ grep "pacman -S" modules/system/install.sh
 - **Experimental**: Debian/Ubuntu/Fedora with modifications
 - **Not Supported**: macOS, Windows (WSL may work with extensive modifications)
 
+See [Author's Motto](Authors-Motto.md) for detailed reasoning behind our distribution focus and adaptation philosophy.
+
 ## Quick Start
 
 ```bash
@@ -163,6 +165,7 @@ arch-machine/
 - [Backup Guide](docs/BACKUP.md) - Backup and recovery procedures
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Development](docs/DEVELOPMENT.md) - Contributing and development guide
+- [Author's Motto](/AUTHORS-MOTTO.md) - Project philosophy and design decisions
 
 ## Verification
 
