@@ -176,8 +176,16 @@ tools:
         package: "pip-audit"
 
       cargo_audit:
-        description: "Rust crate vulnerability scanner"
-        install_command: "cargo install cargo-audit --quiet --locked"
+         description: "Rust crate vulnerability scanner"
+         install_command: "cargo install cargo-audit --quiet --locked"
+
+      vector:
+         description: "High-performance observability data pipeline for log processing and ETL"
+         package: "vector"
+
+      toon:
+         description: "Token-efficient JSON alternative for LLMs"
+         install_command: "cargo install toon-format --quiet --locked"
 
   productivity:
     packages: []

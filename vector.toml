@@ -1,0 +1,26 @@
+# Minimal Vector configuration for log ETL
+
+data_dir = "/tmp/vector"
+
+[sources.log_files]
+type = "file"
+include = ["logs/*.log", "logs/security-reports/*.txt"]
+read_from = "beginning"
+
+[sources.json_files]
+type = "file"
+include = ["logs/*.json"]
+read_from = "beginning"
+
+[transforms.add_meta]
+type = "remap"
+inputs = ["log_files", "json_files"]
+source = '''
+.hostname = get_hostname!()
+'''
+
+[sinks.ndjson_output]
+type = "file"
+inputs = ["add_meta"]
+path = "logs/parsed.ndjson"
+encoding.codec = "json"

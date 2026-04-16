@@ -88,6 +88,8 @@ maintenance/cron-setup.sh setup
 - Kubernetes (k3s) with Cilium networking
 - Runtime security monitoring (Tetragon)
 - Encrypted storage vault
+- Vulnerability scanning tools (OSV-Scanner, Grype, Syft, pip-audit, cargo-audit)
+- Log processing pipeline (Vector, Toon)
 
 ## Usage
 
@@ -362,8 +364,11 @@ maintenance/check-updates.sh
 # Apply available updates
 maintenance/apply-updates.sh
 
-# Run security audit
+# Run security audit (includes Vector log ETL)
 maintenance/security-audit.sh
+
+# Weekly comprehensive maintenance (includes Vector log ETL)
+maintenance/weekly-check.sh
 
 # Create backup
 maintenance/backup.sh create
@@ -374,6 +379,14 @@ maintenance/backup.sh list
 # Restore from backup
 maintenance/backup.sh restore 20241201-143022
 ```
+
+### Log ETL Processing
+Maintenance scripts automatically process logs through Vector for AI optimization:
+- **Vector**: Parses and structures log data into NDJSON format
+- **Toon**: Converts JSON to token-efficient TOON format for AI agents
+- **Output**: `logs/parsed.ndjson`, `logs/parsed.json`, `logs/parsed.toon`
+
+The TOON format provides ~30-40% token reduction compared to raw logs, enabling AI agents to understand system state without excessive token consumption.
 
 ## Backup and Recovery
 

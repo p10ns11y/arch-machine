@@ -364,6 +364,16 @@ main() {
     rm -f /tmp/package_updates.txt /tmp/system_updated /tmp/tools_updated /tmp/security_scanned
     rm -f /tmp/maintenance_issues.txt /tmp/maintenance_recommendations.txt
 
+    # Run Vector ETL for AI optimization
+    if command_exists vector && command_exists toon && command_exists jq; then
+        log_info "Running Vector log ETL for AI optimization"
+        if timeout 60 vector --config "$ROOT_DIR/vector.toml" && [[ -f "$ROOT_DIR/logs/parsed.ndjson" ]]; then
+            jq -s '.' "$ROOT_DIR/logs/parsed.ndjson" > "$ROOT_DIR/logs/parsed.json" && \
+            toon "$ROOT_DIR/logs/parsed.json" -e -o "$ROOT_DIR/logs/parsed.toon" && \
+            log_success "Log ETL completed: $ROOT_DIR/logs/parsed.toon"
+        fi
+    fi
+
     log_success "Weekly maintenance completed"
     log_info "Finished at: $(date)"
 }
