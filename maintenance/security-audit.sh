@@ -50,6 +50,21 @@ DRY_RUN="${DRY_RUN:-false}"
 # Ensure directories exist
 ensure_dir "$REPORTS_DIR"
 
+# Helper functions
+check_sudo() {
+    timeout 5 sudo -n true 2>/dev/null
+}
+
+log_to_report() {
+    echo "$1" >> "$SECURITY_REPORT"
+}
+
+append_to_report() {
+    cat >> "$SECURITY_REPORT" << EOF
+$1
+EOF
+}
+
 # Check if security tools are available
 check_security_tools() {
     local tools=("lynis" "clamav" "rkhunter" "unhide" "osv-scanner" "grype" "syft" "pip-audit" "cargo-audit")
@@ -228,7 +243,9 @@ run_lynis_audit() {
     log_section "Running Lynis Security Audit"
 
     if ! command_exists lynis; then
-        log_warn "Lynis not available, skipping"
+        log_warn "Lynis not available - install with pacman -S lynis"
+        log_to_report "=== LYNIS SECURITY AUDIT REPORT ===
+Status: Lynis not installed"
         return 0
     fi
 
@@ -237,29 +254,52 @@ run_lynis_audit() {
         return 0
     fi
 
-    if ! sudo -n true 2>/dev/null; then
-        log_warn "Lynis audit skipped - sudo authentication not available"
+    local lynis_report="$REPORTS_DIR/lynis-report-$(date +%Y%m%d).txt"
+    local cmd_success=false
+    local warnings=0
+    local suggestions=0
+    local critical=0
+
+    if check_sudo; then
+        log_subsection "Executing full Lynis system audit (with sudo)"
+        if timeout 30 sudo lynis audit system --quiet > "$lynis_report" 2>&1; then
+            cmd_success=true
+        fi
+    else
+        log_warn "Lynis audit skipped - sudo required for system checks"
+        append_to_report "
+=== LYNIS SECURITY AUDIT REPORT ===
+Status: Skipped - sudo authentication required
+Lynis provides comprehensive system hardening and security checks"
         return 0
     fi
 
-    log_subsection "Executing Lynis system audit"
-    local lynis_report="$REPORTS_DIR/lynis-report-$(date +%Y%m%d).txt"
-
-    sudo lynis audit system --quiet --report-file "$lynis_report" || {
-        log_warn "Lynis audit completed with warnings"
-    }
-
     if [[ -f "$lynis_report" ]]; then
-        log_success "Lynis report saved to: $lynis_report"
-
-        # Extract warnings and suggestions
-        local warnings
-        warnings=$(grep -c "Warning" "$lynis_report" 2>/dev/null || echo "0")
-        local suggestions
-        suggestions=$(grep -c "Suggestion" "$lynis_report" 2>/dev/null || echo "0")
-
-        log_info "Lynis found: $warnings warnings, $suggestions suggestions"
+        warnings=$(( $(grep -c "Warning" "$lynis_report" 2>/dev/null | tr -d '\n' || echo "0") ))
+        suggestions=$(( $(grep -c "Suggestion" "$lynis_report" 2>/dev/null | tr -d '\n' || echo "0") ))
+        critical=$(( $(grep -c "Critical" "$lynis_report" 2>/dev/null | tr -d '\n' || echo "0") ))
     fi
+
+    if [[ "$critical" -gt 0 ]]; then
+        log_error "🚨 $critical critical issues found!"
+    elif [[ "$warnings" -gt 0 ]]; then
+        log_warn "⚠️  $warnings warnings, $suggestions suggestions"
+    else
+        log_info "✅ No critical issues ($suggestions suggestions)"
+    fi
+
+    append_to_report "
+=== LYNIS SECURITY AUDIT REPORT ===
+Report file: $lynis_report
+Success: $cmd_success
+Warnings: $warnings
+Suggestions: $suggestions
+Critical: $critical
+$(if [[ "$critical" -gt 0 || "$warnings" -gt 0 ]]; then
+echo "TOP ISSUES:"
+grep -E "(Warning|Suggestion|Critical)" "$lynis_report" | head -5 || echo "None"
+fi)
+"
 }
 
 # Run ClamAV virus scan
@@ -267,7 +307,13 @@ run_clamav_scan() {
     log_section "Running ClamAV Virus Scan"
 
     if ! command_exists clamscan; then
-        log_warn "ClamAV not available, skipping"
+        log_warn "ClamAV not available, install with: pacman -S clamav"
+        {
+            echo ""
+            echo "=== CLAMAV VIRUS SCAN REPORT ==="
+            echo "Status: ClamAV not installed"
+            echo "Install command: pacman -S clamav"
+        } >> "$SECURITY_REPORT"
         return 0
     fi
 
@@ -276,96 +322,157 @@ run_clamav_scan() {
         return 0
     fi
 
-    if ! sudo -n true 2>/dev/null; then
-        log_warn "ClamAV scan skipped - sudo authentication not available"
+    # Check sudo availability
+    if ! timeout 5 sudo -n true 2>/dev/null; then
+        log_warn "ClamAV scan skipped - sudo authentication required"
+        {
+            echo ""
+            echo "=== CLAMAV VIRUS SCAN REPORT ==="
+            echo "Status: Skipped - sudo authentication required"
+            echo "ClamAV can scan the entire system for viruses and malware"
+        } >> "$SECURITY_REPORT"
         return 0
     fi
 
-    # Update virus definitions
-    log_subsection "Updating ClamAV virus definitions"
-    sudo freshclam --quiet || log_warn "Failed to update virus definitions"
+    log_subsection "Checking virus definitions"
 
-    # Scan common directories
-    log_subsection "Scanning system directories"
+    local scan_success=true
+    local infected_count=0
+    local scanned_files=0
+
+    # Try to update virus definitions
+    if timeout 30 sudo freshclam --quiet 2>/dev/null; then
+        log_info "✅ Virus definitions updated"
+    else
+        log_warn "Could not update virus definitions (requires sudo)"
+    fi
+
+    # Quick scan of common directories
+    log_subsection "Performing virus scan"
     local scan_dirs=("/home" "/etc" "/var" "/usr/local")
-    local infected_files=()
 
     for dir in "${scan_dirs[@]}"; do
         if [[ -d "$dir" ]]; then
-            log_info "Scanning $dir"
             local result
-            result=$(sudo clamscan -r --quiet --no-summary "$dir" 2>/dev/null | grep "FOUND" || true)
-            if [[ -n "$result" ]]; then
-                infected_files+=("$result")
+            if result=$(timeout 60 sudo clamscan -r --quiet --no-summary "$dir" 2>/dev/null); then
+                local dir_infected
+                dir_infected=$(echo "$result" | grep -c "FOUND" || echo "0")
+                infected_count=$((infected_count + dir_infected))
+
+                local dir_scanned
+                dir_scanned=$(echo "$result" | grep "Scanned" | sed 's/.*Scanned //' | sed 's/ files//' || echo "0")
+                scanned_files=$((scanned_files + dir_scanned))
+            else
+                log_warn "Could not scan $dir (insufficient privileges)"
+                scan_success=false
             fi
         fi
     done
 
-    if [[ ${#infected_files[@]} -gt 0 ]]; then
-        log_error "Found ${#infected_files[@]} infected files!"
-        for infection in "${infected_files[@]}"; do
-            log_error "  $infection"
-        done
+    # Report results
+    if [[ "$infected_count" -gt 0 ]]; then
+        log_error "🚨 Found $infected_count infected files!"
+    elif [[ "$scan_success" == "true" ]]; then
+        log_info "✅ No viruses found ($scanned_files files scanned)"
     else
-        log_success "No viruses found"
+        log_warn "⚠️  Partial scan completed - some directories require sudo"
     fi
+
+    # Log detailed results to report
+    {
+        echo ""
+        echo "=== CLAMAV VIRUS SCAN REPORT ==="
+        echo "Scan successful: $scan_success"
+        echo "Files scanned: $scanned_files"
+        echo "Infections found: $infected_count"
+        echo ""
+        if [[ "$infected_count" -gt 0 ]]; then
+            echo "INFECTED FILES:"
+            for dir in "${scan_dirs[@]}"; do
+                if [[ -d "$dir" ]]; then
+                    timeout 30 sudo clamscan -r --quiet --no-summary "$dir" 2>/dev/null | grep "FOUND" || echo "None in $dir"
+                fi
+            done
+        fi
+        echo ""
+        echo "FULL SCAN COMMAND (for complete system scan):"
+        echo "sudo clamscan -r / --quiet --no-summary"
+    } >> "$SECURITY_REPORT"
 }
 
 # Run rootkit checks
 run_rootkit_checks() {
     log_section "Running Rootkit Detection"
 
-    if ! sudo -n true 2>/dev/null; then
-        log_warn "Rootkit checks skipped - sudo authentication not available"
+    local rootkit_found=false
+    local tools_available=()
+
+    command_exists unhide && tools_available+=("unhide")
+    command_exists rkhunter && tools_available+=("rkhunter")
+
+    if [[ ${#tools_available[@]} -eq 0 ]]; then
+        log_info "No rootkit detection tools available"
+        append_to_report "
+=== ROOTKIT DETECTION REPORT ===
+Status: No tools available
+Install: pacman -S rkhunter unhide
+"
         return 0
     fi
 
-    local rootkit_found=false
+    log_info "Using tools: ${tools_available[*]}"
 
     # unhide
     if command_exists unhide; then
-        log_subsection "Running unhide"
         if [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would run unhide"
-        else
-            local unhide_result
-            unhide_result=$(sudo unhide 2>/dev/null | grep -E "(Found|HIDDEN|WARNING)" || true)
-            if [[ -n "$unhide_result" ]]; then
-                log_warn "unhide found potential issues:"
-                echo "$unhide_result" | while read -r line; do
-                    log_warn "  $line"
-                done
+        elif check_sudo; then
+            local unhide_output
+            if unhide_output=$(timeout 15 sudo unhide 2>&1) && echo "$unhide_output" | grep -q -E "(Found|HIDDEN|WARNING)"; then
+                local issues
+                issues=$(echo "$unhide_output" | grep -c -E "(Found|HIDDEN|WARNING)" || echo "0")
+                log_warn "⚠️  Unhide: $issues potential issues"
+                rootkit_found=true
             else
-                log_success "unhide: No hidden processes found"
+                log_info "✅ Unhide: No issues"
             fi
+        else
+            log_warn "Unhide skipped - sudo required"
         fi
     fi
 
     # rkhunter
     if command_exists rkhunter; then
-        log_subsection "Running rkhunter"
         if [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would run rkhunter"
-        else
-            # Update rkhunter
-            sudo rkhunter --update >/dev/null 2>&1 || true
-
-            local rkhunter_result
-            rkhunter_result=$(sudo rkhunter --check --quiet 2>/dev/null | grep -E "(Warning|Rootkit)" || true)
-            if [[ -n "$rkhunter_result" ]]; then
-                log_warn "rkhunter found issues:"
-                echo "$rkhunter_result" | while read -r line; do
-                    log_warn "  $line"
-                done
+        elif check_sudo; then
+            timeout 10 sudo rkhunter --update >/dev/null 2>&1 || true
+            local rkhunter_output
+            if rkhunter_output=$(timeout 30 sudo rkhunter --check --quiet 2>&1) && echo "$rkhunter_output" | grep -q -E "(Warning|Rootkit)"; then
+                local issues
+                issues=$(echo "$rkhunter_output" | grep -c -E "(Warning|Rootkit)" || echo "0")
+                log_warn "⚠️  Rkhunter: $issues issues"
+                rootkit_found=true
             else
-                log_success "rkhunter: No issues found"
+                log_info "✅ Rkhunter: No issues"
             fi
+        else
+            log_warn "Rkhunter skipped - sudo required"
         fi
     fi
 
     if [[ "$rootkit_found" == "true" ]]; then
-        log_error "Rootkit detection found infections!"
+        log_error "🚨 Rootkit indicators detected!"
+    else
+        log_info "✅ No rootkit indicators"
     fi
+
+    append_to_report "
+=== ROOTKIT DETECTION REPORT ===
+Tools: ${tools_available[*]}
+Issues found: $rootkit_found
+$(if ! check_sudo; then echo "Note: Full checks require sudo"; fi)
+"
 }
 
 # Check file permissions
@@ -421,7 +528,22 @@ check_running_services() {
     log_section "Checking Running Services"
 
     log_subsection "Listing listening services"
-    timeout 10 ss -tlnp 2>/dev/null | head -10 || log_warn "Cannot check listening services"
+    local services_count
+    services_count=$(ss -tln 2>/dev/null | grep -c LISTEN 2>/dev/null || echo "0")
+    services_count=$(echo "$services_count" | tr -d '[:space:]' | grep -o '^[0-9]*$' || echo "0")
+
+    if [[ "$services_count" -gt 0 ]]; then
+        log_info "Found $services_count active listening services"
+        # Show a few key services
+        ss -tln 2>/dev/null | grep LISTEN | head -5 | awk '{print "  " $4 " (" $1 ")"}' | while read -r line; do
+            log_info "$line"
+        done
+        if [[ "$services_count" -gt 5 ]]; then
+            log_info "  ... and $((services_count - 5)) more"
+        fi
+    else
+        log_warn "Cannot check listening services"
+    fi
 
     # Check for suspicious services
     local suspicious_ports=("12345" "31337" "6667" "6668" "6669")
@@ -444,129 +566,100 @@ check_running_services() {
 check_user_accounts() {
     log_section "Checking User Accounts"
 
-    if ! sudo -n true 2>/dev/null; then
-        log_warn "User account check skipped - sudo authentication not available"
-        return 0
+    local total_users=0
+    local unlocked=0
+    local locked=0
+    local no_password=0
+    local unlocked_list=""
+    local locked_list=""
+
+    if check_sudo; then
+        # Full audit with sudo
+        local passwd_output
+        if passwd_output=$(timeout 10 sudo passwd -S -a 2>&1); then
+            total_users=$(echo "$passwd_output" | wc -l)
+            unlocked_list=$(echo "$passwd_output" | awk '$2 != "L" {print $1}')
+            unlocked=$(echo "$unlocked_list" | wc -w)
+            locked_list=$(echo "$passwd_output" | awk '$2 == "L" {print $1}')
+            locked=$(echo "$locked_list" | wc -w)
+            no_password=$(echo "$passwd_output" | awk '$2 == "NP" {print}' | wc -l)
+
+            log_info "Found $unlocked unlocked, $locked locked accounts"
+
+            if [[ "$no_password" -gt 0 ]]; then
+                log_warn "⚠️  $no_password accounts have NO PASSWORD set!"
+            fi
+        else
+            log_warn "Failed to get user account details"
+        fi
+    else
+        # Fallback without sudo
+        log_warn "Limited user account check - sudo required for full audit"
+        local user_list
+        user_list=$(getent passwd | cut -d: -f1 | tr '\n' ' ')
+        total_users=$(echo "$user_list" | wc -w)
+        log_info "System has $total_users total user accounts (lock status unknown without sudo)"
     fi
 
-    # Check for accounts with empty passwords
-    local empty_passwd
-    empty_passwd=$(sudo awk -F: '($2 == "") {print $1}' /etc/shadow 2>/dev/null | wc -l 2>/dev/null || echo "0")
-    empty_passwd=$(echo "$empty_passwd" | tr -d '[:space:]' | grep -o '^[0-9]*$' || echo "0")
-    if [[ "$empty_passwd" -gt 0 ]]; then
-        log_error "Found $empty_passwd accounts with empty passwords!"
-    fi
+    # Log to report
+    append_to_report "
+=== USER ACCOUNTS REPORT ===
+Total accounts: $total_users
+$(if check_sudo; then
+echo "Unlocked: $unlocked
+Locked: $locked
+No password: $no_password
 
-    # Check for accounts with UID 0
-    local uid_zero
-    uid_zero=$(sudo awk -F: '($3 == 0) {print $1}' /etc/passwd 2>/dev/null | grep -v root | wc -l 2>/dev/null || echo "0")
-    uid_zero=$(echo "$uid_zero" | tr -d '[:space:]' | grep -o '^[0-9]*$' || echo "0")
-    if [[ "$uid_zero" -gt 0 ]]; then
-        log_error "Found additional accounts with UID 0!"
-    fi
+UNLOCKED ACCOUNTS:
+$(echo "$unlocked_list" | sed 's/^/  /')
 
-    # Check for unlocked accounts
-    local unlocked
-    local unlocked_list
-    unlocked_list=$(sudo passwd -S -a 2>/dev/null | grep -v "Password locked" | grep -v '^$' || true)
-    unlocked=$(echo "$unlocked_list" | grep -c . 2>/dev/null || echo "0")
-    unlocked=$(echo "$unlocked" | tr -d '[:space:]' | grep -o '^[0-9]*$' || echo "0")
+LOCKED ACCOUNTS:
+$(echo "$locked_list" | sed 's/^/  /')"
+else
+echo "ALL ACCOUNTS (lock status unknown):
+$(echo "$user_list" | sed 's/ /\n  /g')
 
-    log_info "Found $unlocked unlocked user accounts"
-
-    # Debug: show what we got
-    # log_info "DEBUG: unlocked_list contains: $(echo "$unlocked_list" | wc -l) lines"
-
-    # Show details about unlocked accounts
-    if [[ "$unlocked" -gt 0 ]] && [[ "$unlocked" -le 50 ]]; then
-        log_subsection "Unlocked accounts details:"
-        echo "$unlocked_list" | while read -r line; do
-            local username
-            username=$(echo "$line" | awk '{print $1}')
-            local status
-            status=$(echo "$line" | awk '{print $2}')
-            case "$status" in
-                "P") log_info "  $username: Password set" ;;
-                "NP") log_warn "  $username: No password (insecure!)" ;;
-                "L") ;; # Should not happen due to grep -v
-                *) log_info "  $username: Status $status" ;;
-            esac
-        done
-    elif [[ "$unlocked" -gt 10 ]]; then
-        log_info "  (showing first 10 of $unlocked accounts)"
-        echo "$unlocked_list" | head -10 | while read -r line; do
-            [[ -z "$line" ]] && continue
-            local username
-            username=$(echo "$line" | awk '{print $1}')
-            local status
-            status=$(echo "$line" | awk '{print $2}')
-            case "$status" in
-                "P") log_info "  $username: Password set" ;;
-                "NP") log_warn "  $username: No password (insecure!)" ;;
-                "L") ;; # Should not happen due to grep -v
-                *) log_info "  $username: Status $status" ;;
-            esac
-        done
-    fi
-
-    # Check for accounts with no password (most concerning)
-    local no_password
-    no_password=$(echo "$unlocked_list" | grep " NP " | wc -l 2>/dev/null || echo "0")
-    no_password=$(echo "$no_password" | tr -d '[:space:]' | grep -o '^[0-9]*$' || echo "0")
-    if [[ "$no_password" -gt 0 ]]; then
-        log_warn "Found $no_password accounts with NO PASSWORD - these are security risks!"
-        log_info "  Run: sudo passwd -S -a | grep ' NP ' to see which accounts"
-    fi
-
+RECOMMENDATION: Run with sudo for lock status and password details"
+fi)
+"
     log_success "User account check completed"
 }
 
 # Generate security report
 generate_security_report() {
-    {
-        echo "=== Security Audit Report ==="
-        echo "Date: $(date)"
-        echo "Hostname: $(hostname)"
-        echo "User: $(whoami)"
-        echo ""
+    local tools
+    tools=$(check_security_tools | tr '\n' ' ')
 
-        echo "=== Tools Used ==="
-        local tools
-        tools=$(check_security_tools)
-        for tool in $tools; do
-            echo "  $tool"
-        done
-        echo ""
+    append_to_report "
+=== SECURITY AUDIT SUMMARY ===
+Date: $(date)
+Hostname: $(hostname)
+User: $(whoami)
+Tools used: $tools
 
-        echo "=== Findings ==="
-        echo "See detailed logs above for specific findings"
-        echo ""
+Key artifacts:
+• sbom.cdx.json - CycloneDX SBOM (commit to version control)
+• $SECURITY_REPORT - Full report
 
-        echo "=== Artifacts ==="
-        echo "• sbom.cdx.json          → CycloneDX SBOM (in project root - commit to version control)"
-        echo "• $SECURITY_REPORT       → Detailed security audit report"
-        echo ""
+Recommendations:
+• Review warnings/errors in detailed sections
+• Address HIGH/CRITICAL vulnerability findings
+• Commit SBOM to version control
+• Fix file permission issues
+• Update security tools regularly
+• Review user accounts/services
+• Run with sudo for complete audit if possible
 
-    echo "=== Recommendations ==="
-    echo "1. Review all warnings and errors in the log"
-    echo "2. Address any HIGH/CRITICAL findings from vulnerability scans"
-    echo "3. Commit sbom.cdx.json to version control for software composition tracking"
-    echo "4. Address any file permission issues"
-    echo "5. Keep security tools updated"
-    echo "6. Regularly review user accounts and services"
-    echo "7. Aim for Lynis Hardening Index ≥ 75"
-    echo "8. Consider enabling automatic security updates"
-    echo ""
+Next steps:
+• Run weekly: $0
+• Monitor logs for suspicious activity
+• Keep system/applications updated
+• Review/commit SBOM
 
-    echo "=== Next Steps ==="
-    echo "Run this audit weekly: $0"
-    echo "Monitor logs for suspicious activity"
-    echo "Keep system and applications updated"
-    echo "Review and commit SBOM to version control"
+=== AUDIT COMPLETE ===
+"
 
-    } > "$SECURITY_REPORT"
-
-    log_success "Security report generated: $SECURITY_REPORT"
+    log_success "Report generated: $SECURITY_REPORT"
 }
 
 # Main security audit function

@@ -1,0 +1,84 @@
+
+=== LYNIS SECURITY AUDIT REPORT ===
+Report file: /home/sustainableabundance/arch-machine/logs/security-reports/lynis-report-20260416.txt
+Success: true
+Warnings: 0
+Suggestions: 0
+Critical: 0
+
+
+
+=== ROOTKIT DETECTION REPORT ===
+Tools: unhide rkhunter
+Issues found: false
+
+
+
+=== USER ACCOUNTS REPORT ===
+Total accounts: 30
+Unlocked: 2
+Locked: 28
+No password: 0
+
+UNLOCKED ACCOUNTS:
+  root
+  sustainableabundance
+
+LOCKED ACCOUNTS:
+  bin
+  daemon
+  mail
+  ftp
+  http
+  nobody
+  dbus
+  systemd-coredump
+  systemd-network
+  systemd-oom
+  systemd-journal-remote
+  systemd-resolve
+  systemd-timesync
+  tss
+  uuidd
+  alpm
+  avahi
+  git
+  cups
+  _talkd
+  polkitd
+  rtkit
+  sddm
+  pcscd
+  fwupd
+  passim
+  ollama
+  clamav
+
+
+=== SECURITY AUDIT SUMMARY ===
+Date: Thu Apr 16 01:32:05 PM IST 2026
+Hostname: ******
+User: root
+Tools used: lynis rkhunter unhide osv-scanner grype syft 
+
+Key artifacts:
+• sbom.cdx.json - CycloneDX SBOM (commit to version control)
+• /home/sustainableabundance/arch-machine/logs/security-reports/security-audit-20260416-133106.txt - Full report
+
+Recommendations:
+• Review warnings/errors in detailed sections
+• Address HIGH/CRITICAL vulnerability findings
+• Commit SBOM to version control
+• Fix file permission issues
+• Update security tools regularly
+• Review user accounts/services
+• Run with sudo for complete audit if possible
+
+Next steps:
+• Run weekly: maintenance/security-audit.sh
+• Monitor logs for suspicious activity
+• Keep system/applications updated
+• Review/commit SBOM
+
+=== AUDIT COMPLETE ===
+
