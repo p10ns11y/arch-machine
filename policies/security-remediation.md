@@ -1,38 +1,44 @@
-**✅ Here is the updated, high-professional, crystal-clear prompt** you can copy-paste directly to any coding agent (optimized for zero semantic ambiguity):
-
----
-
-**Security Remediation Policy (Strict)**
-
-When auditing and fixing vulnerable dependencies in a project, follow this exact priority order. Security takes absolute precedence over project stability.
-
 **Core Principle**  
-A temporarily broken local project is far safer than leaving an exploitable or vulnerable package on the system.
 
-**Strict Remediation Sequence** (follow in exact order, without exception):
+Security comes first.  
 
-1. **Audit** the dependency to determine severity and available fixes.
-2. **Attempt a simple fix** (patch, configuration change, or minimal code adjustment).
-3. If a simple fix is not feasible or sufficient, **upgrade the package to the latest stable version**.
-4. If upgrading still leaves the vulnerability or introduces unresolvable breaking changes, **uninstall/remove the package entirely**.
-5. If the vulnerable package is **not a direct dependency** (i.e. a transitive dependency):
-   - **Rename** the lock file by appending the suffix `-insecure` (preserve the original extension) to clearly mark it as unsafe and prevent any autonomous reinstallation process from using the vulnerable locked versions.  
-     Examples:  
-     - `package-lock.json` → `package-lock-insecure.json`  
-     - `Cargo.lock` → `Cargo.lock-insecure`  
-     - `poetry.lock` → `poetry.lock-insecure`  
-     - `Pipfile.lock` → `Pipfile.lock-insecure`  
-     - Any other lock file → `<original-name>-insecure.<original-extension>`
-   - Completely remove the installed package cache for that ecosystem (`node_modules/`, `target/`, `venv/`, `__pycache__/`, etc.) so that future builds cannot restore the vulnerable packages.
+A broken project is safer than a vulnerable package on the machine.  
 
-**Final Rule**  
-It is explicitly acceptable — and often preferred — to break the local project during remediation. The goal is to eliminate the vulnerable package from the machine as quickly as possible, even if it requires the developer to restore or refactor the project afterward.
+Delete waste ruthlessly before optimizing, accelerating, or automating
 
-Do not suggest keeping a vulnerable package “just because it works.”  
-Do not propose temporary workarounds that leave the vulnerability present on the system.
+### Updated Policy
 
----
+1. **Run the audit**  
+   `npm audit`  
+   `cargo audit`  
+   `pip-audit`  
+   `yarn audit` (or `yarn npm audit` in modern Yarn)  
+   Record exact vulnerability + severity.
 
-This version is precise, unambiguous, and eliminates any risk of the agent misunderstanding the lock-file handling. The rename strategy is now explicitly the required action.
+2. **Try built-in fix first**  
+   Where available, run the safe auto-fix:  
+   - `npm audit fix`  
+   - `cargo audit fix` (install with `--features=fix` if needed)  
+   - `pip-audit --fix` (or `--fix --dry-run` first)  
+   - Yarn: no native `yarn audit fix` — use `npm audit fix --package-lock-only` workaround then `yarn import` (or install `yarn-audit-fix` package).  
+   Re-audit immediately after.
 
-Would you like a shorter variant or one tailored for a specific agent (e.g., Claude / Cursor / Grok)?
+3. **Small code/config fix?**  
+   If one line still needed → do it.
+
+4. **Upgrade or kill (remaining critical/high only)**  
+   Still vulnerable or breaks something? Delete the package completely.
+
+5. **Transitive (indirect) deps**
+   - Targeted delete: `rm -rf node_modules/*/node_modules/vulnerable-package` (or `find node_modules -name "vulnerable-package" -type d -exec rm -rf {} +`).  
+   - If overkill/slow: `rm -rf node_modules` (whole thing).  
+   - **No lockfile rename or touch** for indirect deps (ever).  
+   - **No reinstall** until you have a clean fix.
+
+6. **Personal solo / hobby rule**  
+   Non-serious project (premflow, etc.)?  
+   - Delete the feature branch (`git branch -D feature-name`).  
+   - Entire repo clone? Only if you decide it’s cleaner. Get consent (Y/N)
+
+**Never** keep a vulnerable package “because it still runs.”  
+
