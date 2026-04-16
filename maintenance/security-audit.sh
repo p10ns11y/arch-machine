@@ -625,57 +625,6 @@ fi)
     log_success "User account check completed"
 }
 
-# Run Vector ETL for AI optimization
-run_vector_etl() {
-    log_section "Running Vector Log ETL"
-
-    if ! command_exists vector; then
-        log_warn "Vector not installed - skipping log ETL"
-        return 0
-    fi
-
-    if ! command_exists toon; then
-        log_warn "Toon not installed - skipping AI optimization"
-        return 0
-    fi
-
-    if ! command_exists jq; then
-        log_warn "jq not installed - skipping JSON processing"
-        return 0
-    fi
-
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would run Vector ETL"
-        return 0
-    fi
-
-    log_subsection "Processing logs with Vector"
-    if timeout 60 vector --config vector.toml; then
-        log_info "Vector processing completed"
-    else
-        log_warn "Vector processing failed or timed out"
-        return 0
-    fi
-
-    if [[ -f "$ROOT_DIR/logs/parsed.ndjson" ]]; then
-        log_subsection "Converting to JSON array"
-        if jq -s '.' "$ROOT_DIR/logs/parsed.ndjson" > "$ROOT_DIR/logs/parsed.json"; then
-            log_info "JSON array created"
-        else
-            log_warn "Failed to create JSON array"
-            return 0
-        fi
-
-        log_subsection "Optimizing with Toon"
-        if toon "$ROOT_DIR/logs/parsed.json" -e -o "$ROOT_DIR/logs/parsed.toon"; then
-            log_success "Toon optimization completed: $ROOT_DIR/logs/parsed.toon"
-        else
-            log_warn "Toon optimization failed"
-        fi
-    else
-        log_warn "NDJSON file not found"
-    fi
-}
 
 # Generate security report
 generate_security_report() {
@@ -737,9 +686,6 @@ main() {
 
     # Generate report
     generate_security_report
-
-    # Run Vector ETL for AI optimization
-    run_vector_etl
 
     # Extract evidence for AI agents
     if [[ -f "$ROOT_DIR/maintenance/extract-evidence.sh" ]]; then

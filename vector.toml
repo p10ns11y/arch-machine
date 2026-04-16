@@ -1,4 +1,5 @@
-# Minimal Vector configuration for log ETL
+# Vector configuration for log ETL processing
+# Processes existing log files and exits
 
 data_dir = "/tmp/vector"
 
@@ -6,17 +7,24 @@ data_dir = "/tmp/vector"
 type = "file"
 include = ["logs/*.log", "logs/security-reports/*.txt"]
 read_from = "beginning"
+fingerprinting.strategy = "checksum"
+fingerprinting.lines = 1
+ignore_older_secs = 86400  # Only process recent files
 
 [sources.json_files]
 type = "file"
 include = ["logs/*.json"]
 read_from = "beginning"
+fingerprinting.strategy = "checksum"
+fingerprinting.lines = 1
+ignore_older_secs = 86400
 
 [transforms.add_meta]
 type = "remap"
 inputs = ["log_files", "json_files"]
 source = '''
 .hostname = get_hostname!()
+.timestamp = now()
 '''
 
 [sinks.ndjson_output]
@@ -24,3 +32,5 @@ type = "file"
 inputs = ["add_meta"]
 path = "logs/parsed.ndjson"
 encoding.codec = "json"
+# Exit after processing existing files
+idle_timeout_secs = 5
