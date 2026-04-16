@@ -9,7 +9,7 @@ User=%USER%
 Group=%USER%
 Environment=HOME=%h
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=%h/installers/maintenance/weekly-check.sh
+ExecStart=%h/maintenance/weekly-check.sh
 StandardOutput=journal
 StandardError=journal
 # Restart on failure
