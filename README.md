@@ -46,6 +46,46 @@ Everything in `minimal` plus Kubernetes security hardening, runtime monitoring, 
 
 See [Installation Guide](INSTALLATION.md) for detailed profile information and customization options.
 
+## Adapting for Other Distributions
+
+#### Ubuntu/Debian
+```bash
+# Replace pacman with apt
+sed -i 's/pacman -S/apt install/g' modules/system/install.sh
+
+# Update package names
+# arch-package → debian-package equivalents
+# Example: reflector → apt update
+```
+
+#### Fedora/RHEL/CentOS
+```bash
+# Replace pacman with dnf/yum
+sed -i 's/pacman -S/dnf install/g' modules/system/install.sh
+
+# Update service management
+# systemctl → systemctl (same, but check init system)
+```
+
+#### General Adaptation Steps
+1. **Update Package Manager**: Replace `pacman` calls with your distro's package manager
+2. **Service Management**: Verify systemd compatibility (most modern distros use it)
+3. **Package Names**: Update package names to match your distribution
+4. **Paths**: Check `/usr/local/bin`, `/etc/systemd/system` availability
+5. **Dependencies**: Ensure `yq`, `jq`, `curl`, `git` are available
+
+#### Testing on Other Distros
+```bash
+# Test package manager detection
+./install.sh --validate
+
+# Dry run installation
+./install.sh --profile minimal --dry-run
+
+# Check for missing packages
+grep "pacman -S" modules/system/install.sh
+```
+
 ## Maintenance
 
 The system includes automated weekly maintenance for system updates, security scans, and health monitoring.
