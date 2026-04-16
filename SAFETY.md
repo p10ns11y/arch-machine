@@ -1,4 +1,4 @@
-## ⚠️ Safety & Requirements
+## Safety & Requirements
 
 ### System Requirements
 - **Operating System**: Arch Linux (primary), other Linux distributions may work with modifications
