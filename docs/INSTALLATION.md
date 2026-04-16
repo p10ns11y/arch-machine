@@ -1,5 +1,17 @@
 # Installation Guide
 
+## ⚠️ Important Safety Information
+
+**This project makes extensive system modifications. Please:**
+
+1. **Backup your system** before installation
+2. **Test in a virtual machine** first
+3. **Review all configurations** in `config/`
+4. **Monitor the installation process**
+5. **Have recovery options ready**
+
+See [README](../README.md#️-safety--requirements) for detailed safety measures and system requirements.
+
 ## First-Time Installation
 
 ```bash

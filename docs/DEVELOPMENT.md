@@ -157,6 +157,86 @@ ls -lh logs/evidence-bundle-*.json
 ls -lh logs/evidence-bundle-*.toon
 ```
 
+## Adapting for Other Distributions
+
+### Package Manager Abstraction
+The project currently uses pacman directly. To support multiple distributions:
+
+```bash
+# Create package manager abstraction
+# lib/installer.sh
+get_package_manager() {
+    if command -v apt &>/dev/null; then
+        echo "apt"
+    elif command -v dnf &>/dev/null; then
+        echo "dnf"
+    elif command -v pacman &>/dev/null; then
+        echo "pacman"
+    else
+        echo "unknown"
+    fi
+}
+
+install_package() {
+    local package="$1"
+    local pm
+    pm=$(get_package_manager)
+
+    case "$pm" in
+        apt) sudo apt update && sudo apt install -y "$package" ;;
+        dnf) sudo dnf install -y "$package" ;;
+        pacman) sudo pacman -S --noconfirm "$package" ;;
+        *) echo "Unsupported package manager: $pm"; return 1 ;;
+    esac
+}
+```
+
+### Distribution-Specific Modules
+Create distribution-specific modules:
+
+```
+modules/
+├── system/
+│   ├── arch.sh      # Arch Linux specific
+│   ├── debian.sh    # Debian/Ubuntu specific
+│   └── fedora.sh    # Fedora/RHEL specific
+```
+
+### Service Management Compatibility
+Most modern Linux distributions use systemd, but verify:
+
+```bash
+# Check init system
+if [[ -d /run/systemd/system ]]; then
+    echo "systemd detected"
+else
+    echo "non-systemd system - may require adaptations"
+fi
+```
+
+### Testing on Other Distributions
+```bash
+# Create distro-specific test script
+# test/distro-test.sh
+run_distro_tests() {
+    local distro="$1"
+
+    echo "Testing on $distro..."
+    ./install.sh --validate
+    ./install.sh --profile minimal --dry-run
+
+    # Check for distro-specific issues
+    case "$distro" in
+        ubuntu|debian)
+            check_apt_packages
+            ;;
+        fedora|rhel)
+            check_dnf_packages
+            ;;
+    esac
+}
+```
+
 ## Contributing Guidelines
 
 ### Code Style
