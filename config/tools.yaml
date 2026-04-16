@@ -172,8 +172,8 @@ tools:
         chmod: "755"
 
       pip_audit:
-        description: "Python package vulnerability scanner"
-        package: "pip-audit"
+         description: "Python package vulnerability scanner"
+         package: "pip-audit"
 
       cargo_audit:
          description: "Rust crate vulnerability scanner"
