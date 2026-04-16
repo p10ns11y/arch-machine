@@ -120,4 +120,4 @@ The original standalone scripts are still available for backward compatibility:
 - **`basic_setup.sh`**: Comprehensive ML/AI development setup
 - **`secure-fortress-phase0-simple.sh`**: Security hardening setup
 
-These provide one-shot installation but lack the modular, profile-based approach of the new system.
+These provide one-shot installation but lack the profile-based approach of the new system.
