@@ -42,6 +42,8 @@ tools:
       - name: haveged
         description: "Entropy daemon"
         service: haveged
+      - name: unhide
+        description: "Hidden process detection tool"
 
     rocm:
       packages:
@@ -149,6 +151,33 @@ tools:
     tetragon:
       description: "Runtime security monitoring"
       namespace: "kube-system"
+
+    vulnerability_scanning:
+      osv_scanner:
+        description: "Universal vulnerability scanner"
+        source: "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/')"
+        install_path: "/usr/local/bin/osv-scanner"
+        chmod: "755"
+
+      grype:
+        description: "Vulnerability scanner for container images and filesystems"
+        source: "https://raw.githubusercontent.com/anchore/grype/main/install.sh"
+        install_path: "/usr/local/bin"
+        installer_args: "-b /usr/local/bin"
+
+      syft:
+        description: "SBOM generator"
+        source: "https://get.anchore.io/syft"
+        install_path: "/usr/local/bin"
+        chmod: "755"
+
+      pip_audit:
+        description: "Python package vulnerability scanner"
+        package: "pip-audit"
+
+      cargo_audit:
+        description: "Rust crate vulnerability scanner"
+        install_command: "cargo install cargo-audit --quiet --locked"
 
   productivity:
     packages: []

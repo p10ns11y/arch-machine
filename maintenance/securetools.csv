@@ -1,0 +1,5 @@
+Tool,One-line description,When to use,What it solves
+lynis,Comprehensive auditing & hardening scanner for Linux/Unix systems,"Every time you run the full audit (local dev machine, server, or CI baseline)","Detects misconfigurations, missing patches, weak permissions, and CIS-benchmark violations"
+clamav,Open-source antivirus engine & malware scanner,Optional deep scan (uncomment in script) or scheduled cron jobs on servers,"Finds viruses, trojans, ransomware, and known malware in files/directories (including node_modules or downloads)"
+rkhunter,"Rootkit Hunter – scans for known rootkits, backdoors & local exploits",After every security-scan.sh run (adds <30s),"Detects hidden malware that replaces system binaries, hides processes, or installs backdoors"
+chkrootkit,Lightweight rootkit detector using known signature checks,Paired with rkhunter in every audit for cross-verification,Quickly spots classic rootkit patterns and system file inconsistencies

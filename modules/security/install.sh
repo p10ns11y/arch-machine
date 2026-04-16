@@ -156,6 +156,181 @@ install_tetragon() {
     log_success "Tetragon installed"
 }
 
+# Install OSV-Scanner
+install_osv_scanner() {
+    log_section "Installing OSV-Scanner"
+
+    if command_exists osv-scanner; then
+        log_info "OSV-Scanner already installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install OSV-Scanner"
+        return 0
+    fi
+
+    local source_template
+    source_template=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.osv_scanner.source")
+    local source
+    source=$(eval echo "$source_template")
+    local install_path
+    install_path=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.osv_scanner.install_path")
+    local chmod_mode
+    chmod_mode=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.osv_scanner.chmod")
+    log_subsection "Downloading OSV-Scanner from $source"
+    if [[ -w "$(dirname "$install_path")" ]]; then
+        curl -sSfL "$source" -o "$install_path" || {
+            log_error "Failed to download OSV-Scanner"
+            return 1
+        }
+        chmod "$chmod_mode" "$install_path" || {
+            log_error "Failed to set permissions on OSV-Scanner"
+            return 1
+        }
+    elif sudo -n true 2>/dev/null; then
+        sudo curl -sSfL "$source" -o "$install_path" || {
+            log_error "Failed to download OSV-Scanner"
+            return 1
+        }
+        sudo chmod "$chmod_mode" "$install_path" || {
+            log_error "Failed to set permissions on OSV-Scanner"
+            return 1
+        }
+    else
+        log_error "Cannot install OSV-Scanner - no write permissions to $install_path and sudo not available"
+        return 1
+    fi
+
+    log_success "OSV-Scanner installed"
+}
+
+# Install Grype
+install_grype() {
+    log_section "Installing Grype"
+
+    if command_exists grype; then
+        log_info "Grype already installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install Grype"
+        return 0
+    fi
+
+    local source
+    source=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.grype.source")
+    local installer_args
+    installer_args=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.grype.installer_args")
+
+    log_subsection "Installing Grype using installer script"
+    if sudo -n true 2>/dev/null; then
+        curl -sSfL "$source" | sudo sh -s -- $installer_args || {
+            log_error "Failed to install Grype with sudo"
+            return 1
+        }
+    else
+        log_error "Cannot install Grype - sudo authentication required for system installation"
+        log_info "Try running with sudo available, or install manually:"
+        log_info "curl -sSfL $source | sh -s -- $installer_args"
+        return 1
+    fi
+
+    log_success "Grype installed"
+}
+
+# Install Syft
+install_syft() {
+    log_section "Installing Syft"
+
+    if command_exists syft; then
+        log_info "Syft already installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install Syft"
+        return 0
+    fi
+
+    local source
+    source=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.syft.source")
+    local install_path
+    install_path=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.syft.install_path")
+    local chmod_mode
+    chmod_mode=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.syft.chmod")
+
+    log_subsection "Downloading Syft from $source"
+    if [[ -w "$install_path" ]]; then
+        curl -sSfL "$source" | sh -s -- -b "$install_path" || {
+            log_error "Failed to install Syft"
+            return 1
+        }
+    elif sudo -n true 2>/dev/null; then
+        curl -sSfL "$source" | sudo sh -s -- -b "$install_path" || {
+            log_error "Failed to install Syft with sudo"
+            return 1
+        }
+    else
+        log_error "Cannot install Syft - sudo authentication required for system installation"
+        log_info "Try running with sudo available, or install manually:"
+        log_info "curl -sSfL $source | sh -s -- -b $install_path"
+        return 1
+    fi
+
+    log_success "Syft installed"
+}
+
+# Install pip-audit
+install_pip_audit() {
+    log_section "Installing pip-audit"
+
+    if command_exists pip-audit; then
+        log_info "pip-audit already installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install pip-audit"
+        return 0
+    fi
+
+    log_subsection "Installing pip-audit via pip"
+    python3 -m pip install --upgrade pip-audit --quiet || {
+        log_error "Failed to install pip-audit"
+        return 1
+    }
+
+    log_success "pip-audit installed"
+}
+
+# Install cargo-audit
+install_cargo_audit() {
+    log_section "Installing cargo-audit"
+
+    if command_exists cargo-audit; then
+        log_info "cargo-audit already installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install cargo-audit"
+        return 0
+    fi
+
+    local install_command
+    install_command=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.cargo_audit.install_command")
+
+    log_subsection "Installing cargo-audit via cargo"
+    eval "$install_command" || {
+        log_error "Failed to install cargo-audit"
+        return 1
+    }
+
+    log_success "cargo-audit installed"
+}
+
 # Setup encrypted vault (gocryptfs)
 setup_encrypted_vault() {
     local vault_enc="${1:-$HOME/.securevaultenc}"
@@ -249,6 +424,15 @@ install_security() {
     install_encrypted_storage=$(yaml_get "$PROFILE_CONFIG/$PROFILE.yaml" "customizations.security.encrypted_storage")
     if [[ "$install_encrypted_storage" == "true" ]]; then
         setup_encrypted_vault || return 1
+    fi
+
+    # Install vulnerability scanning tools
+    if [[ "$category" == "full" ]]; then
+        install_osv_scanner || return 1
+        install_grype || return 1
+        install_syft || return 1
+        install_pip_audit || return 1
+        install_cargo_audit || return 1
     fi
 
     log_success "Security tools module installation completed ($category)"

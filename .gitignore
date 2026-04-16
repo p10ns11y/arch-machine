@@ -1,6 +1,9 @@
 # Logs and reports
 logs/
 
+# Security artifacts (keep for tracking)
+!sbom.cdx.json
+
 # Temporary files
 *.tmp
 *.swp
