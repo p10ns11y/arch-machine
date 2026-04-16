@@ -113,10 +113,31 @@ maintenance/backup.sh restore <backup-name>
 
 ## Getting Help
 
-1. **Check Logs**: All operations log to `logs/` directory
-2. **Validation**: Run `./install.sh --validate` for system checks
-3. **Backup First**: Create backup before troubleshooting
-4. **Issue Reports**: Include relevant log snippets and system information
+### Before Asking for Help
+1. **Check the documentation**: README and docs/ contain extensive guidance
+2. **Try the basics**: Run validation, check logs, create backups
+3. **Test in isolation**: Use `--dry-run` and minimal profiles first
+4. **Search existing issues**: Check for similar problems in troubleshooting docs
+
+### When to Seek Help
+- **System instability**: If your system becomes unbootable or unstable
+- **Data loss**: If backups fail or data becomes inaccessible
+- **Security concerns**: If you suspect the installation compromised security
+- **Persistent failures**: If basic troubleshooting doesn't resolve issues
+
+### Providing Information
+When reporting issues, include:
+- **System info**: `uname -a`, distribution version
+- **Command run**: Exact command that failed
+- **Error output**: Full error messages and logs
+- **Environment**: Virtual machine vs bare metal, sudo access
+- **Recent changes**: What you modified before the issue
+
+### Community Resources
+- **Arch Wiki**: Comprehensive Linux documentation
+- **Distribution forums**: Ubuntu forums, Fedora discourse, etc.
+- **GitHub Issues**: For project-specific problems
+- **Professional support**: For production deployments
 
 ## Diagnostic Commands
 
