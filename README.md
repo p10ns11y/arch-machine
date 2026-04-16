@@ -91,7 +91,7 @@ grep "pacman -S" modules/system/install.sh
 - **Experimental**: Debian/Ubuntu/Fedora with modifications
 - **Not Supported**: macOS, Windows (WSL may work with extensive modifications)
 
-See [Author's Motto](Authors-Motto.md) for detailed reasoning behind our distribution focus and adaptation philosophy.
+See [Author's Motto](/AUTHORS-MOTTO.md) for detailed reasoning behind our distribution focus and adaptation philosophy.
 
 ## Quick Start
 
