@@ -1,7 +1,6 @@
 # Logs and reports
 logs/*
-!logs/*-sample.log
-!logs/security-reports-sample.log
+!logs/*-sample.*
 
 # Security artifacts (keep for tracking)
 !sbom.cdx.json

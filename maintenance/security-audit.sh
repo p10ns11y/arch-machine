@@ -625,6 +625,7 @@ fi)
     log_success "User account check completed"
 }
 
+
 # Generate security report
 generate_security_report() {
     local tools
@@ -685,6 +686,12 @@ main() {
 
     # Generate report
     generate_security_report
+
+    # Extract evidence for AI agents
+    if [[ -f "$ROOT_DIR/maintenance/extract-evidence.sh" ]]; then
+        log_info "Extracting evidence bundle for AI agents"
+        "$ROOT_DIR/maintenance/extract-evidence.sh" >/dev/null 2>&1 || log_warn "Evidence extraction failed"
+    fi
 
     log_success "Security audit completed"
 }

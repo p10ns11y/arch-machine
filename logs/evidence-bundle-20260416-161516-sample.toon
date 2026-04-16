@@ -1,0 +1,119 @@
+timestamp: "2026-04-16T10:45:16Z"
+hostname: ******
+evidence:
+  security:
+    status: unknown
+    success: false
+    critical_issues: 0
+    warnings: 0
+    suggestions: 0
+    user_accounts:
+      total: 31
+      unlocked: 0
+      locked: 0
+    blockers[1]: sudo_required
+  installer:
+    errors[35]{timestamp,message,category}:
+      "2026-04-16 11:09:47",❌ Failed to install chkrootkit,error
+      "2026-04-16 11:26:00",❌ Failed to install chkrootkit,error
+      "2026-04-16 11:27:18",❌ Failed to install chkrootkit,error
+      "2026-04-16 11:34:32",❌ Failed to install chkrootkit,error
+      "2026-04-16 11:37:15",❌ Failed to install chkrootkit,error
+      "2026-04-16 11:38:41",❌ Failed to install chkrootkit,error
+      "2026-04-16 11:42:07",Failed to mount encrypted vault,error
+      "2026-04-16 11:42:07",Failed to install security module (full),error
+      "2026-04-16 11:44:02","Failed to download OSV-Scanner",error
+      "2026-04-16 11:44:02",Failed to install security module (full),error
+      "2026-04-16 11:46:04","Failed to download OSV-Scanner",error
+      "2026-04-16 11:46:14","Failed to download OSV-Scanner",error
+      "2026-04-16 11:46:20","Failed to download OSV-Scanner",error
+      "2026-04-16 11:46:56","Failed to download OSV-Scanner",error
+      "2026-04-16 11:47:08","Failed to download OSV-Scanner",error
+      "2026-04-16 11:47:51","Failed to download OSV-Scanner",error
+      "2026-04-16 11:49:20","❌ Service not running: Docker service",error
+      "2026-04-16 11:49:55","❌ Service not running: Docker service",error
+      "2026-04-16 11:52:35",Failed to install Grype,error
+      "2026-04-16 11:52:35",Failed to install security module (full),error
+      "2026-04-16 12:00:21",❌ Failed to install chkrootkit,error
+      "2026-04-16 12:06:55",❌ Failed to install chkrootkit,error
+      "2026-04-16 12:09:46",❌ Failed to install unhide,error
+      "2026-04-16 14:49:27","❌ Service not running: Docker service",error
+      "2026-04-16 15:00:30",Failed to install Tetragon,error
+      "2026-04-16 15:00:30",Failed to install security module (full),error
+      "2026-04-16 15:00:45",Failed to install Tetragon,error
+      "2026-04-16 15:00:45",Failed to install security module (full),error
+      "2026-04-16 15:01:07",Failed to install Tetragon,error
+      "2026-04-16 15:01:07",Failed to install security module (full),error
+      "2026-04-16 15:05:08",Failed to install Tetragon,error
+      "2026-04-16 15:05:08",Failed to install security module (full),error
+      "2026-04-16 15:05:38",Failed to install Tetragon,error
+      "2026-04-16 15:50:08",Failed to install Tetragon,error
+      "2026-04-16 15:50:08",Failed to install security module (full),error
+    warnings[50]{timestamp,message,category}:
+      "2026-04-16 13:22:02","Unhide skipped - sudo required",warning
+      "2026-04-16 13:22:02","Rkhunter skipped - sudo required",warning
+      "2026-04-16 13:22:02","Limited user account check - sudo required for full audit",warning
+      "2026-04-16 13:22:35","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:22:37","Lynis audit skipped - sudo required for system checks",warning
+      "2026-04-16 13:22:37","Unhide skipped - sudo required",warning
+      "2026-04-16 13:22:37","Rkhunter skipped - sudo required",warning
+      "2026-04-16 13:22:37","Limited user account check - sudo required for full audit",warning
+      "2026-04-16 13:22:47","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:26:25","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:26:27","Lynis audit skipped - sudo required for system checks",warning
+      "2026-04-16 13:26:27","Unhide skipped - sudo required",warning
+      "2026-04-16 13:26:27","Rkhunter skipped - sudo required",warning
+      "2026-04-16 13:26:27","Limited user account check - sudo required for full audit",warning
+      "2026-04-16 13:26:34","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:26:35","Lynis audit skipped - sudo required for system checks",warning
+      "2026-04-16 13:26:35","Unhide skipped - sudo required",warning
+      "2026-04-16 13:26:35","Rkhunter skipped - sudo required",warning
+      "2026-04-16 13:26:35","Limited user account check - sudo required for full audit",warning
+      "2026-04-16 13:26:50","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:27:38","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:27:40","Lynis audit skipped - sudo required for system checks",warning
+      "2026-04-16 13:27:40","Unhide skipped - sudo required",warning
+      "2026-04-16 13:27:40","Rkhunter skipped - sudo required",warning
+      "2026-04-16 13:27:40","Limited user account check - sudo required for full audit",warning
+      "2026-04-16 13:29:10","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:30:14","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 13:30:16","Lynis audit skipped - sudo required for system checks",warning
+      "2026-04-16 13:30:16","Unhide skipped - sudo required",warning
+      "2026-04-16 13:30:16","Rkhunter skipped - sudo required",warning
+      "2026-04-16 13:30:17","Limited user account check - sudo required for full audit",warning
+      "2026-04-16 13:31:06","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 14:43:47","OSV-Scanner found vulnerabilities",warning
+      "2026-04-16 14:48:17",No system packages defined in configuration,warning
+      "2026-04-16 14:50:53",No system packages defined in configuration,warning
+      "2026-04-16 14:51:49",No system packages defined in configuration,warning
+      "2026-04-16 15:00:26",No system packages defined in configuration,warning
+      "2026-04-16 15:00:41",No system packages defined in configuration,warning
+      "2026-04-16 15:01:03",No system packages defined in configuration,warning
+      "2026-04-16 15:05:04",No system packages defined in configuration,warning
+      "2026-04-16 15:07:19",Tetragon rollout did not complete within timeout,warning
+      "2026-04-16 15:08:18",Tetragon rollout did not complete within timeout,warning
+      "2026-04-16 15:43:45",Tetragon rollout did not complete within timeout,warning
+      "2026-04-16 15:50:02",No system packages defined in configuration,warning
+      "2026-04-16 15:51:38",Tetragon rollout did not complete within timeout,warning
+      "2026-04-16 16:14:16","Lynis audit skipped - sudo required for system checks",warning
+      "2026-04-16 16:14:16","Unhide skipped - sudo required",warning
+      "2026-04-16 16:14:16","Rkhunter skipped - sudo required",warning
+      "2026-04-16 16:14:16","Limited user account check - sudo required for full audit",warning
+      "2026-04-16 16:15:16",Vector processing failed or timed out,warning
+    total_unique: 85
+    max_entries: 50
+  updates:
+    timestamp: "2026-04-10T19:07:15+05:30"
+    system_packages: 0
+    tool_updates: 0
+    security_updates: 0
+    summary:
+      total_updates: 0
+      security_updates: 0
+      critical_updates: 0
+summary:
+  critical_issues: 0
+  errors_count: 35
+  warnings_count: 50
+  total_issues: 85
+  blockers[1]: sudo_required

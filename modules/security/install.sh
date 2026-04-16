@@ -331,6 +331,56 @@ install_cargo_audit() {
     log_success "cargo-audit installed"
 }
 
+install_vector() {
+    log_section "Installing Vector"
+
+    if command_exists vector; then
+        log_info "Vector already installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install Vector"
+        return 0
+    fi
+
+    local package
+    package=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.vector.package")
+
+    log_subsection "Installing Vector via pacman"
+    install_package "$package" "Vector log processing pipeline" || {
+        log_error "Failed to install Vector"
+        return 1
+    }
+
+    log_success "Vector installed"
+}
+
+install_toon() {
+    log_section "Installing Toon"
+
+    if command_exists toon; then
+        log_info "Toon already installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install Toon"
+        return 0
+    fi
+
+    local install_command
+    install_command=$(yaml_get "$CONFIG_FILE" "tools.security.vulnerability_scanning.toon.install_command")
+
+    log_subsection "Installing toon via cargo"
+    eval "$install_command" || {
+        log_error "Failed to install toon"
+        return 1
+    }
+
+    log_success "toon installed"
+}
+
 # Setup encrypted vault (gocryptfs)
 setup_encrypted_vault() {
     local vault_enc="${1:-$HOME/.securevaultenc}"
@@ -433,6 +483,8 @@ install_security() {
         install_syft || return 1
         install_pip_audit || return 1
         install_cargo_audit || return 1
+        install_vector || return 1
+        install_toon || return 1
     fi
 
     log_success "Security tools module installation completed ($category)"
