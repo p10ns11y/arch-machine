@@ -49,7 +49,8 @@ This file is the single source of truth for task claims and progress.
 | P3-9 | 4 | Evidence extraction implementation and integration | Eusinel |  | done | medium | P2-8 |  |  | it will evolve based on new logs |
 | P3-10 | 4 | Blocker taxonomy and delta-rule evolution (deferred) | Virtinel |  | todo | low | P3-9 |  |  | Separate session |
 | P4-11 | 5 | Offline-first consented network flow | Safinel |  | todo | medium | P3-10 |  |  |  |
-| P4-12 | 5 | Cleanup docs and ancillary runbooks | Guardwell |  | todo | low | P4-11 |  |  |  |
+| P4-12 | 5 | Cleanup docs and ancillary runbooks | Guardwell |  | todo | low | P4-11 |  |  |  |  |
+| X-1 | - | Implement secure-infra profile for advanced validation | Safinel |  | done | - | - |  | 2026-04-18 | .kilo/plans/1776443819802-jolly-river.md | Advanced Kubernetes/Cilium/Tetragon validation added
 
 ## Claim/Release Workflow
 
