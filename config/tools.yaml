@@ -95,48 +95,46 @@ tools:
       installer: "Miniforge" # for both conda and mamba
       source: "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
       environments:
-        ai_amd:
-          python: "3.12"
-          packages:
-            - jupyterlab
-            - numpy
-            - pandas
-            - matplotlib
-            - seaborn
-            - scikit-learn
-            - xgboost
-            - lightgbm
-            - polars
-            - duckdb
-            - optuna
-          conda_packages:
-            - wandb
-          pip_packages:
-            - torch
-            - torchvision
-            - torchaudio
-          pip_index: "https://download.pytorch.org/whl/rocm6.4/"
-        xai_exp:
-          python: "3.14"
-          packages:
-            - jupyterlab
-            - numpy
-            - pandas
-            - matplotlib
-            - seaborn
-            - scikit-learn
-            - xgboost
-            - duckdb
-            - tqdm
-            - polars
-            - lightgbm
-          conda_packages:
-            - wandb
-          pip_packages:
-            - torch
-            - torchvision
-            - torchaudio
-          pip_index: "https://download.pytorch.org/whl/rocm6.4/"
+         ai_amd:
+           python: "3.12"
+           packages:
+             - jupyterlab
+             - numpy
+             - pandas
+             - matplotlib
+             - seaborn
+             - scikit-learn
+             - xgboost
+             - lightgbm
+             - polars
+             - duckdb
+             - optuna
+           conda_packages:
+             - wandb
+           pip_packages:
+             - torch
+             - torchvision
+             - torchaudio
+         xai_exp:
+           python: "3.14"
+           packages:
+             - jupyterlab
+             - numpy
+             - pandas
+             - matplotlib
+             - seaborn
+             - scikit-learn
+             - xgboost
+             - duckdb
+             - tqdm
+             - polars
+             - lightgbm
+           conda_packages:
+             - wandb
+           pip_packages:
+             - torch
+             - torchvision
+             - torchaudio
 
   security:
     kubernetes:

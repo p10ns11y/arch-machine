@@ -80,7 +80,7 @@ create_conda_env() {
 
     # Create environment
     mamba create -y -n "$env_name" python="$python_version" || {
-        log_error "Failed to create conda environment $env_name"
+        log_error "Failed to create mamba environment $env_name"
         return 1
     }
 
@@ -109,11 +109,19 @@ setup_ai_environment() {
     local conda_packages=()
     mapfile -t conda_packages < <(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.ai_amd.conda_packages[]")
 
-    # Get pip packages and index
+    # Get pip packages
     local pip_packages=()
     mapfile -t pip_packages < <(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.ai_amd.pip_packages[]")
-    local pip_index
-    pip_index=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.ai_amd.pip_index")
+
+    # Dynamically detect ROCm version for pip index
+    local rocm_full
+    if [ -f /opt/rocm/.info/version ]; then
+        rocm_full=$(cat /opt/rocm/.info/version)
+    else
+        rocm_full=$(hipconfig --version 2>/dev/null || echo "7.2")
+    fi
+    local rocm_ver=$(echo "$rocm_full" | cut -d. -f1,2)
+    local pip_index="https://download.pytorch.org/whl/rocm${rocm_ver}"
 
     # Check if environment already exists
     if mamba env list | grep -q "^$env_name "; then
@@ -141,7 +149,7 @@ setup_ai_environment() {
 
     # Install conda packages
     if [[ ${#conda_packages[@]} -gt 0 ]]; then
-        conda install -y -c conda-forge "${conda_packages[@]}" || log_warn "Some conda packages failed"
+        mamba install -y -c conda-forge "${conda_packages[@]}" || log_warn "Some conda packages failed"
     fi
 
     # Install pip packages
@@ -158,23 +166,31 @@ setup_ai_environment() {
 
 # Setup xAI experimental environment
 setup_xai_environment() {
-    local env_name="xAI-exp"
+    local env_name="xai_exp"
     local python_version
-    python_version=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xAI_exp.python")
+    python_version=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xai_exp.python")
 
     # Get packages
     local packages=()
-    mapfile -t packages < <(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xAI_exp.packages[]")
+    mapfile -t packages < <(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xai_exp.packages[]")
 
     # Get conda packages
     local conda_packages=()
     mapfile -t conda_packages < <(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xAI_exp.conda_packages[]")
 
-    # Get pip packages and index
+    # Get pip packages
     local pip_packages=()
-    mapfile -t pip_packages < <(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xAI_exp.pip_packages[]")
-    local pip_index
-    pip_index=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xAI_exp.pip_index")
+    mapfile -t pip_packages < <(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xai_exp.pip_packages[]")
+
+    # Dynamically detect ROCm version for pip index
+    local rocm_full
+    if [ -f /opt/rocm/.info/version ]; then
+        rocm_full=$(cat /opt/rocm/.info/version)
+    else
+        rocm_full=$(hipconfig --version 2>/dev/null || echo "7.2")
+    fi
+    local rocm_ver=$(echo "$rocm_full" | cut -d. -f1,2)
+    local pip_index="https://download.pytorch.org/whl/rocm${rocm_ver}"
 
     # Check if environment already exists
     if mamba env list | grep -q "^$env_name "; then
@@ -202,7 +218,7 @@ setup_xai_environment() {
 
     # Install conda packages
     if [[ ${#conda_packages[@]} -gt 0 ]]; then
-        conda install -y -c conda-forge "${conda_packages[@]}" || log_warn "Some conda packages failed"
+        mamba install -y -c conda-forge "${conda_packages[@]}" || log_warn "Some conda packages failed"
     fi
 
     # Install pip packages
@@ -240,16 +256,14 @@ test_pytorch() {
     fi
 
     # Test in xAI-exp environment
-    if mamba env list | grep -q "^xAI-exp "; then
+    if mamba env list | grep -q "^xai_exp "; then
         log_subsection "Testing PyTorch in xAI-exp environment"
 
-       
         source "$HOME/mamba/bin/activate" xAI-exp
         python -c "import torch; print('CUDA available:', torch.cuda.is_available())" || {
             log_warn "PyTorch test failed in xAI-exp environment"
         }
-        log_subsection "Torch cuda available"
-        conda deactivate
+        mamba deactivate
     fi
 }
 
@@ -273,18 +287,20 @@ install_ml_ai() {
 
     # Setup environments
     local environments
-    environments=$(yaml_get "$PROFILE_CONFIG/$PROFILE.yaml" "customizations.ml_ai.conda.environments")
+    mapfile -t environments < <(yaml_get "$PROFILE_CONFIG/$PROFILE.yaml" "customizations.ml_ai.conda.environments[]")
 
     if [[ "$environments" == "null" ]] || [[ ${#environments} -eq 0 ]]; then
+        log_subsection "default envs"
         # Default environments
         setup_ai_environment
         setup_xai_environment
     else
         # Profile-specific environments
+        log_subsection "profile envs"
         for env in "${environments[@]}"; do
             case "$env" in
                 ai_amd) setup_ai_environment ;;
-                xAI-exp) setup_xai_environment ;;
+                xai_exp) setup_xai_environment ;;
             esac
         done
     fi
