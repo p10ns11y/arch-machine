@@ -231,6 +231,11 @@ parse_args() {
 
 # Validate profile
 validate_profile() {
+    # Allow secure-infra/security-infra profile for validation-only mode
+    if [[ "$PROFILE" == "secure-infra" || "$PROFILE" == "security-infra" ]]; then
+        return 0
+    fi
+
     local profile_file="$PROFILE_CONFIG/$PROFILE.yaml"
     if [[ ! -f "$profile_file" ]]; then
         log_error "Profile '$PROFILE' not found at $profile_file"
@@ -322,9 +327,7 @@ install_module() {
 
 # Run post-installation validation
 run_validation() {
-    log_section "Post-Installation Validation"
-
-    run_validation "$PROFILE"
+    _run_validation "$PROFILE"
 }
 
 # Show completion message

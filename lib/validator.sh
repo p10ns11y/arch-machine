@@ -184,68 +184,13 @@ validate_uv() {
     return 0
 }
 
-# Validate Kubernetes cluster
-# validate_kubernetes() {
-#     log_subsection "Validating Kubernetes cluster"
-
-#     if ! command_exists kubectl; then
-#         log_failure "kubectl command not found"
-#         return 1
-#     fi
-
-#     # Check if cluster is accessible
-#     if kubectl get nodes &>/dev/null; then
-#         local node_count
-#         node_count=$(kubectl get nodes --no-headers | wc -l)
-#         log_success "Kubernetes cluster accessible ($node_count nodes)"
-#         return 0
-#     else
-#         log_failure "Cannot access Kubernetes cluster"
-#         return 1
-#     fi
-# }
-
-# # Validate Cilium
-# validate_cilium() {
-#     log_subsection "Validating Cilium"
-
-#     if ! command_exists cilium; then
-#         log_failure "cilium command not found"
-#         return 1
-#     fi
-
-#     # Check Cilium status
-#     if cilium status | grep -q "OK"; then
-#         log_success "Cilium is healthy"
-#         return 0
-#     else
-#         log_failure "Cilium status check failed"
-#         return 1
-#     fi
-# }
-
-# # Validate Tetragon
-# validate_tetragon() {
-#     log_subsection "Validating Tetragon"
-
-#     local ds_count
-#     ds_count=$(kubectl -n kube-system get ds tetragon --no-headers 2>/dev/null | wc -l)
-
-#     if [[ "$ds_count" -gt 0 ]]; then
-#         log_success "Tetragon daemonset deployed"
-#         return 0
-#     else
-#         log_failure "Tetragon daemonset not found"
-#         return 1
-#     fi
-# }
-
 # Run comprehensive validation
-run_validation() {
+_run_validation() {
     local profile="${1:-all}"
+    local is_sub_call="${2:-false}"
     local failed_checks=0
 
-    log_section "Post-Installation Validation"
+    [[ "$is_sub_call" == "false" ]] && log_section "Post-Installation Validation"
 
     case "$profile" in
         minimal)
@@ -255,16 +200,22 @@ run_validation() {
             validate_command uv "uv package installer" || ((failed_checks++))
             ;;
         ml-dev)
-            run_validation "minimal"
+            _run_validation "minimal" "true"
             validate_rocm || ((failed_checks++))
             validate_command conda "Conda package manager" || ((failed_checks++))
             ;;
         security-dev)
-            run_validation "minimal"
+            _run_validation "minimal" "true"
             # validate_kubernetes || ((failed_checks++))
             # validate_cilium || ((failed_checks++))
             # validate_tetragon || ((failed_checks++))
             validate_mount ~/securevault "Encrypted vault" || ((failed_checks++))
+            ;;
+        secure-infra|security-infra)
+            source "$(dirname "${BASH_SOURCE[0]}")/validator_advanced.sh"
+            validate_kubernetes || ((failed_checks++))
+            validate_cilium || ((failed_checks++))
+            validate_tetragon || ((failed_checks++))
             ;;
         all|*)
             # Validate system packages
@@ -310,5 +261,5 @@ run_validation() {
 # Export functions
 export -f validate_package validate_service validate_command validate_user_group
 export -f validate_file validate_directory validate_mount validate_version
-export -f validate_rocm validate_mise validate_uv # validate_kubernetes
-export -f run_validation # validate_cilium validate_tetragon 
+export -f validate_rocm validate_mise validate_uv
+export -f _run_validation 
