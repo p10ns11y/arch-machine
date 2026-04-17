@@ -9,6 +9,8 @@ Meet **arch-machine** — your AI-forged, profile-based Arch Linux fortress that
 We don’t do lame `feature/xyz` branches.  
 Instead, every branch is a **virtuous compound-word sentinel**. Each one has a distinct purpose and vibe, like elite AI security operatives standing guard over different aspects of the project.
 
+![sentinels](/sentinels-ultimate-masters.jpg)
+
 | Compound word | Breakdown                          | Vibe / Fit                              |
 |---------------|------------------------------------|-----------------------------------------|
 | **Virtinel**  | virtue + sentinel                  | Best overall – trustworthy guardian     |
