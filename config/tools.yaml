@@ -4,6 +4,15 @@ tools:
       - name: base-devel
         description: "Core development tools"
         critical: true
+
+      # Default OS python (/usr/bin/python) do not come with pip/pipx
+      # Use either pipx (sudo pacman -S python-pipx) to install packages
+      # Otherwise directly install python packages 
+      # via pacman (sudo pacman -S python-xyz, where xyz is the python package)
+      # Refer: docs/TROUBLESHOOTING.md for more info
+      - name: python-audit
+        description: "Python package auditor"
+        critical: false
       - name: git
         description: "Version control system"
         min_version: "2.40.0"
@@ -83,51 +92,49 @@ tools:
   ml_ai:
     conda:
       description: "Conda package manager"
-      installer: "Mambaforge"
-      source: "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh"
+      installer: "Miniforge" # for both conda and mamba
+      source: "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
       environments:
-        ai_amd:
-          python: "3.12"
-          packages:
-            - jupyterlab
-            - numpy
-            - pandas
-            - matplotlib
-            - seaborn
-            - scikit-learn
-            - xgboost
-            - lightgbm
-            - polars
-            - duckdb
-            - optuna
-          conda_packages:
-            - wandb
-          pip_packages:
-            - torch
-            - torchvision
-            - torchaudio
-          pip_index: "https://download.pytorch.org/whl/rocm6.4/"
-        xai_exp:
-          python: "3.14"
-          packages:
-            - jupyterlab
-            - numpy
-            - pandas
-            - matplotlib
-            - seaborn
-            - scikit-learn
-            - xgboost
-            - duckdb
-            - tqdm
-            - polars
-            - lightgbm
-          conda_packages:
-            - wandb
-          pip_packages:
-            - torch
-            - torchvision
-            - torchaudio
-          pip_index: "https://download.pytorch.org/whl/rocm6.4/"
+         ai_amd:
+           python: "3.12"
+           packages:
+             - jupyterlab
+             - numpy
+             - pandas
+             - matplotlib
+             - seaborn
+             - scikit-learn
+             - xgboost
+             - lightgbm
+             - polars
+             - duckdb
+             - optuna
+           conda_packages:
+             - wandb
+           pip_packages:
+             - torch
+             - torchvision
+             - torchaudio
+         xai_exp:
+           python: "3.14"
+           packages:
+             - jupyterlab
+             - numpy
+             - pandas
+             - matplotlib
+             - seaborn
+             - scikit-learn
+             - xgboost
+             - duckdb
+             - tqdm
+             - polars
+             - lightgbm
+           conda_packages:
+             - wandb
+           pip_packages:
+             - torch
+             - torchvision
+             - torchaudio
 
   security:
     kubernetes:
@@ -135,6 +142,7 @@ tools:
         description: "Lightweight Kubernetes"
         service: k3s
         config:
+          bind_localhost: true
           flannel_backend: "none"
           disable_network_policy: true
           disable_traefik: true

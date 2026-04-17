@@ -6,7 +6,7 @@
 MODULE_NAME="security"
 CONFIG_FILE="$CONFIG_DIR/tools.yaml"
 
-# Install k3s (lightweight Kubernetes)
+# Install k3s (lightweight Kubernetes) — localhost-only + masked by default
 install_k3s() {
     log_section "Installing k3s (Kubernetes)"
 
@@ -20,36 +20,59 @@ install_k3s() {
         return 0
     fi
 
-    local config
-    config=$(yaml_get "$CONFIG_FILE" "tools.security.kubernetes.k3s.config")
+    # Read the new nested config map
+    local bind_localhost
+    local flannel_backend
+    local disable_network_policy
+    local disable_traefik
 
-    local exec_args=""
-    if [[ "$config" == *"flannel_backend"* ]]; then
+    bind_localhost=$(yaml_get "$CONFIG_FILE" "tools.security.kubernetes.k3s.config.bind_localhost" "false")
+    flannel_backend=$(yaml_get "$CONFIG_FILE" "tools.security.kubernetes.k3s.config.flannel_backend" "")
+    disable_network_policy=$(yaml_get "$CONFIG_FILE" "tools.security.kubernetes.k3s.config.disable_network_policy" "false")
+    disable_traefik=$(yaml_get "$CONFIG_FILE" "tools.security.kubernetes.k3s.config.disable_traefik" "false")
+
+    # Build ExecStart flags
+    local exec_args="server"
+
+    # Localhost binding (your main request)
+    if [[ "$bind_localhost" == "true" ]]; then
+        exec_args="$exec_args \
+            --bind-address=127.0.0.1 \
+            --advertise-address=127.0.0.1 \
+            --node-ip=127.0.0.1"
+        log_subsection "k3s will be bound to localhost only"
+    fi
+
+    # Conditional flags from config
+    if [[ "$flannel_backend" == "none" ]]; then
         exec_args="$exec_args --flannel-backend=none"
     fi
-    if [[ "$config" == *"disable_network_policy"* ]]; then
+
+    if [[ "$disable_network_policy" == "true" ]]; then
         exec_args="$exec_args --disable-network-policy"
     fi
-    if [[ "$config" == *"disable_traefik"* ]]; then
+
+    if [[ "$disable_traefik" == "true" ]]; then
         exec_args="$exec_args --disable-traefik"
     fi
 
     log_subsection "Installing k3s with args: $exec_args"
 
-    # Install k3s
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="$exec_args" sh - || {
+    # Install WITHOUT auto-enable/start (official k3s flags)
+    curl -sfL https://get.k3s.io | \
+        INSTALL_K3S_SKIP_ENABLE=true \
+        INSTALL_K3S_SKIP_START=true \
+        INSTALL_K3S_EXEC="$exec_args" sh - || {
         log_error "Failed to install k3s"
         return 1
     }
 
-    sudo systemctl enable --now k3s || {
-        log_error "Failed to enable k3s service"
-        return 1
-    }
+    # Mask it immediately (never starts at boot)
+    sudo rm -f /etc/systemd/system/k3s.service
+    sudo systemctl mask k3s.service
+    sudo systemctl daemon-reload
 
-    sleep 15  # Wait for k3s to start
-
-    log_success "k3s installed and started"
+    log_success "k3s installed (localhost-only + masked by default)"
 }
 
 # Configure kubeconfig
@@ -83,12 +106,12 @@ configure_kubeconfig() {
     log_success "kubeconfig configured"
 }
 
-# Install Cilium
+# Install Cilium as k3s CNI — minimal exposure for desktop/dev use
 install_cilium() {
-    log_section "Installing Cilium"
+    log_section "Installing Cilium CNI for k3s"
 
-    if cilium status &>/dev/null; then
-        log_info "Cilium already installed"
+    if ! sudo systemctl is-active --quiet k3s; then
+        log_info "k3s is masked/not running. Cilium skipped (start k3s with k3s-start only when needed)."
         return 0
     fi
 
@@ -102,58 +125,61 @@ install_cilium() {
     local config
     config=$(yaml_get "$CONFIG_FILE" "tools.security.cilium.config")
 
-    log_subsection "Installing Cilium $version"
+    log_subsection "Installing Cilium $version (no Prometheus, no Hubble, no Envoy metrics)"
+
 
     cilium install \
         --version "$version" \
-        --kubeconfig ~/.kube/config \
-        --set kubeProxyReplacement=false \
-        --set ipam.mode=cluster-pool \
-        --set cluster.name=fortress \
-        --set hubble.enabled=false || {
+        --helm-set debug.enabled=false \
+        --helm-set prometheus.enabled=false \
+        --helm-set operator.prometheus.enabled=false \
+        --helm-set hubble.enabled=false \
+        --helm-set envoy.prometheus.enabled=false \
+        --helm-set bpf.masquerade=false \
+        --helm-set ipam.mode=kubernetes \
+        --helm-set kubeProxyReplacement=partial || {
         log_error "Failed to install Cilium"
         return 1
     }
 
-    # Wait for Cilium to be ready
-    kubectl -n kube-system rollout restart ds/cilium
-    kubectl -n kube-system rollout status ds/cilium --timeout=60s || {
-        log_warn "Cilium rollout did not complete within timeout"
-    }
-
-    log_success "Cilium installed"
+    log_success "Cilium installed (minimal ports + desktop-friendly)"
 }
 
 # Install Tetragon
 install_tetragon() {
-    log_section "Installing Tetragon"
+    local enabled
+    enabled=$(yaml_get "$CONFIG_FILE" "tools.security.kubernetes.enabled" "false")
+
+    if [[ "$enabled" != "true" ]]; then
+        log_info "Tetragon skipped (kubernetes disabled in config)."
+        return 0
+    fi
+
+    if ! sudo systemctl is-active --quiet k3s; then
+        log_info "k3s not running. Tetragon skipped."
+        return 0
+    fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would install Tetragon"
         return 0
     fi
 
-    # Add Helm repo
-    helm repo add cilium https://helm.cilium.io --force-update >/dev/null 2>&1
-    helm repo update >/dev/null 2>&1
+    log_subsection "Installing Tetragon"
 
-    local namespace
-    namespace=$(yaml_get "$CONFIG_FILE" "tools.security.tetragon.namespace")
+    helm repo add tetragon https://helm.tetragon.io || true
+    helm repo update
 
-    helm upgrade --install tetragon cilium/tetragon \
-        --namespace "$namespace" \
-        --set tetragon.hostProcPath=/procHost >/dev/null 2>&1 || {
+    helm install tetragon tetragon/tetragon \
+        --namespace kube-system \
+        --set tetragon.prometheus.enabled=false \
+        --set tetragon.grpc.enabled=false \
+        --set tetragon.export.otel.enabled=false || {
         log_error "Failed to install Tetragon"
         return 1
     }
 
-    # Timer visualization could be better
-    # Async/await flow if possible
-    kubectl -n "$namespace" rollout status ds/tetragon --timeout=20s || {
-        log_warn "Tetragon rollout did not complete within timeout"
-    }
-
-    log_success "Tetragon installed"
+    log_success "Tetragon installed (only when k3s active)"
 }
 
 # Install OSV-Scanner
@@ -283,27 +309,27 @@ install_syft() {
 }
 
 # Install pip-audit
-install_pip_audit() {
-    log_section "Installing pip-audit"
+# install_pip_audit() {
+#     log_section "Installing pip-audit"
 
-    if command_exists pip-audit; then
-        log_info "pip-audit already installed"
-        return 0
-    fi
+#     if command_exists pip-audit; then
+#         log_info "pip-audit already installed"
+#         return 0
+#     fi
 
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would install pip-audit"
-        return 0
-    fi
+#     if [[ "$DRY_RUN" == "true" ]]; then
+#         log_info "[DRY RUN] Would install pip-audit"
+#         return 0
+#     fi
 
-    log_subsection "Installing pip-audit via pip"
-    python3 -m pip install --upgrade pip-audit --quiet || {
-        log_error "Failed to install pip-audit"
-        return 1
-    }
+#     log_subsection "Installing pip-audit via pip"
+#     python3 -m pip install --upgrade pip-audit --quiet || {
+#         log_error "Failed to install pip-audit"
+#         return 1
+#     }
 
-    log_success "pip-audit installed"
-}
+#     log_success "pip-audit installed"
+# }
 
 # Install cargo-audit
 install_cargo_audit() {
@@ -481,7 +507,7 @@ install_security() {
         install_osv_scanner || return 1
         install_grype || return 1
         install_syft || return 1
-        install_pip_audit || return 1
+        # install_pip_audit || return 1
         install_cargo_audit || return 1
         install_vector || return 1
         install_toon || return 1
