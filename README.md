@@ -1,5 +1,7 @@
 # arch-machine
 
+![tinfoil](/tinfoil.jpg)
+
 Profile-based bootstrap and maintenance system for Arch Linux workstations focused on ML/AI development and security hardening.
 
 For a more entertaining introduction, see [FUNREADME.md](FUNREADME.md) – where security meets humor.
