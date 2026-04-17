@@ -20,8 +20,12 @@ customizations:
         rust: ["stable"]
   ml_ai: false
   security:
+    # Use this for now devplays/cilium-teragon-clusters.sh
+    # Need advanced tweaks for local laptops
+    # Current configs are better for on-perm/cloud
+    # With microservices
     kubernetes:
-      k3s: true
-    cilium: true
-    tetragon: true
+      k3s: false
+    cilium: false
+    tetragon: false
     encrypted_storage: true

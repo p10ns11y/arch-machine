@@ -185,60 +185,60 @@ validate_uv() {
 }
 
 # Validate Kubernetes cluster
-validate_kubernetes() {
-    log_subsection "Validating Kubernetes cluster"
+# validate_kubernetes() {
+#     log_subsection "Validating Kubernetes cluster"
 
-    if ! command_exists kubectl; then
-        log_failure "kubectl command not found"
-        return 1
-    fi
+#     if ! command_exists kubectl; then
+#         log_failure "kubectl command not found"
+#         return 1
+#     fi
 
-    # Check if cluster is accessible
-    if kubectl get nodes &>/dev/null; then
-        local node_count
-        node_count=$(kubectl get nodes --no-headers | wc -l)
-        log_success "Kubernetes cluster accessible ($node_count nodes)"
-        return 0
-    else
-        log_failure "Cannot access Kubernetes cluster"
-        return 1
-    fi
-}
+#     # Check if cluster is accessible
+#     if kubectl get nodes &>/dev/null; then
+#         local node_count
+#         node_count=$(kubectl get nodes --no-headers | wc -l)
+#         log_success "Kubernetes cluster accessible ($node_count nodes)"
+#         return 0
+#     else
+#         log_failure "Cannot access Kubernetes cluster"
+#         return 1
+#     fi
+# }
 
-# Validate Cilium
-validate_cilium() {
-    log_subsection "Validating Cilium"
+# # Validate Cilium
+# validate_cilium() {
+#     log_subsection "Validating Cilium"
 
-    if ! command_exists cilium; then
-        log_failure "cilium command not found"
-        return 1
-    fi
+#     if ! command_exists cilium; then
+#         log_failure "cilium command not found"
+#         return 1
+#     fi
 
-    # Check Cilium status
-    if cilium status | grep -q "OK"; then
-        log_success "Cilium is healthy"
-        return 0
-    else
-        log_failure "Cilium status check failed"
-        return 1
-    fi
-}
+#     # Check Cilium status
+#     if cilium status | grep -q "OK"; then
+#         log_success "Cilium is healthy"
+#         return 0
+#     else
+#         log_failure "Cilium status check failed"
+#         return 1
+#     fi
+# }
 
-# Validate Tetragon
-validate_tetragon() {
-    log_subsection "Validating Tetragon"
+# # Validate Tetragon
+# validate_tetragon() {
+#     log_subsection "Validating Tetragon"
 
-    local ds_count
-    ds_count=$(kubectl -n kube-system get ds tetragon --no-headers 2>/dev/null | wc -l)
+#     local ds_count
+#     ds_count=$(kubectl -n kube-system get ds tetragon --no-headers 2>/dev/null | wc -l)
 
-    if [[ "$ds_count" -gt 0 ]]; then
-        log_success "Tetragon daemonset deployed"
-        return 0
-    else
-        log_failure "Tetragon daemonset not found"
-        return 1
-    fi
-}
+#     if [[ "$ds_count" -gt 0 ]]; then
+#         log_success "Tetragon daemonset deployed"
+#         return 0
+#     else
+#         log_failure "Tetragon daemonset not found"
+#         return 1
+#     fi
+# }
 
 # Run comprehensive validation
 run_validation() {
@@ -261,9 +261,9 @@ run_validation() {
             ;;
         security-dev)
             run_validation "minimal"
-            validate_kubernetes || ((failed_checks++))
-            validate_cilium || ((failed_checks++))
-            validate_tetragon || ((failed_checks++))
+            # validate_kubernetes || ((failed_checks++))
+            # validate_cilium || ((failed_checks++))
+            # validate_tetragon || ((failed_checks++))
             validate_mount ~/securevault "Encrypted vault" || ((failed_checks++))
             ;;
         all|*)
@@ -285,9 +285,10 @@ run_validation() {
 
             # Validate security tools
             if command_exists kubectl; then
-                validate_kubernetes || ((failed_checks++))
-                validate_cilium || ((failed_checks++))
-                validate_tetragon || ((failed_checks++))
+                echo "No clusters for laptop now..."
+                # validate_kubernetes || ((failed_checks++))
+                # validate_cilium || ((failed_checks++))
+                # validate_tetragon || ((failed_checks++))
             fi
 
             # Validate encrypted storage
@@ -309,5 +310,5 @@ run_validation() {
 # Export functions
 export -f validate_package validate_service validate_command validate_user_group
 export -f validate_file validate_directory validate_mount validate_version
-export -f validate_rocm validate_mise validate_uv validate_kubernetes
-export -f validate_cilium validate_tetragon run_validation
+export -f validate_rocm validate_mise validate_uv # validate_kubernetes
+export -f run_validation # validate_cilium validate_tetragon 

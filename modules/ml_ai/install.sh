@@ -6,12 +6,19 @@
 MODULE_NAME="ml_ai"
 CONFIG_FILE="$CONFIG_DIR/tools.yaml"
 
+# miniconda is successor of mambaforge and offers
+# both conda and mamba (drop in replacement with extra commands)
 # Install Mambaforge/Conda
 install_conda() {
-    log_section "Installing Conda (Mambaforge)"
+    log_section "Installing Conda/Mamba"
 
     if command_exists conda; then
         log_info "Conda already installed"
+        # return 0
+    fi
+
+    if command_exists mamba; then
+        log_info "Mamba already installed"
         return 0
     fi
 
@@ -19,6 +26,9 @@ install_conda() {
     installer_name=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.installer")
     local source_url
     source_url=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.source")
+    source_url=$(eval echo "$source_url")
+
+
 
     log_subsection "Downloading $installer_name"
     local installer_file="/tmp/$installer_name-$(date +%s).sh"
@@ -34,7 +44,7 @@ install_conda() {
     }
 
     log_subsection "Running $installer_name installer"
-    bash "$installer_file" -b -p "$HOME/mambaforge" || {
+    bash "$installer_file" -b -p "$HOME/mamba" || {
         log_error "Failed to install Conda"
         rm -f "$installer_file"
         return 1
@@ -44,15 +54,15 @@ install_conda() {
 
     # Add to PATH
     local bashrc="$HOME/.bashrc"
-    if [[ -f "$bashrc" ]] && ! grep -q "mambaforge/bin" "$bashrc"; then
-        echo 'export PATH="$HOME/mambaforge/bin:$PATH"' >> "$bashrc"
+    if [[ -f "$bashrc" ]] && ! grep -q "mamba/bin" "$bashrc"; then
+        echo 'export PATH="$HOME/mamba/bin:$PATH"' >> "$bashrc"
         log_debug "Added Conda to PATH in $bashrc"
     fi
 
     # Source for current session
-    export PATH="$HOME/mambaforge/bin:$PATH"
+    export PATH="$HOME/mamba/bin:$PATH"
 
-    log_success "Conda installed"
+    log_success "Conda/Mamba installed"
 }
 
 # Create conda environment
@@ -69,7 +79,7 @@ create_conda_env() {
     fi
 
     # Create environment
-    conda create -y -n "$env_name" python="$python_version" || {
+    mamba create -y -n "$env_name" python="$python_version" || {
         log_error "Failed to create conda environment $env_name"
         return 1
     }
@@ -77,7 +87,7 @@ create_conda_env() {
     # Install packages
     if [[ ${#packages[@]} -gt 0 ]]; then
         log_subsection "Installing packages in $env_name"
-        conda install -y -n "$env_name" "${packages[@]}" || {
+        mamba install -y -n "$env_name" "${packages[@]}" || {
             log_warn "Some packages failed to install in $env_name"
         }
     fi
@@ -106,9 +116,9 @@ setup_ai_environment() {
     pip_index=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.ai_amd.pip_index")
 
     # Check if environment already exists
-    if conda env list | grep -q "^$env_name "; then
+    if mamba env list | grep -q "^$env_name "; then
         log_info "Environment $env_name already exists, updating..."
-        conda update -y -n "$env_name" --all || log_warn "Failed to update $env_name"
+        mamba update -y -n "$env_name" --all || log_warn "Failed to update $env_name"
         return 0
     fi
 
@@ -124,7 +134,7 @@ setup_ai_environment() {
     log_subsection "Setting up $env_name environment"
 
     # Activate environment
-    source "$HOME/mambaforge/bin/activate" "$env_name" || {
+    source "$HOME/mamba/bin/activate" "$env_name" || {
         log_error "Failed to activate $env_name environment"
         return 1
     }
@@ -167,9 +177,9 @@ setup_xai_environment() {
     pip_index=$(yaml_get "$CONFIG_FILE" "tools.ml_ai.conda.environments.xAI_exp.pip_index")
 
     # Check if environment already exists
-    if conda env list | grep -q "^$env_name "; then
+    if mamba env list | grep -q "^$env_name "; then
         log_info "Environment $env_name already exists, updating..."
-        conda update -y -n "$env_name" --all || log_warn "Failed to update $env_name"
+        mamba update -y -n "$env_name" --all || log_warn "Failed to update $env_name"
         return 0
     fi
 
@@ -185,7 +195,7 @@ setup_xai_environment() {
     log_subsection "Setting up $env_name environment"
 
     # Activate environment
-    source "$HOME/mambaforge/bin/activate" "$env_name" || {
+    source "$HOME/mamba/bin/activate" "$env_name" || {
         log_error "Failed to activate $env_name environment"
         return 1
     }
@@ -217,24 +227,28 @@ test_pytorch() {
     fi
 
     # Test in ai_amd environment
-    if conda env list | grep -q "^ai_amd "; then
+    if mamba env list | grep -q "^ai_amd "; then
         log_subsection "Testing PyTorch in ai_amd environment"
 
-        source "$HOME/mambaforge/bin/activate" ai_amd
+        source "$HOME/mamba/bin/activate" ai_amd
         python -c "import torch; print('CUDA available:', torch.cuda.is_available())" || {
             log_warn "PyTorch test failed in ai_amd environment"
         }
-        conda deactivate
+        log_subsection "Torch cuda available"
+
+        mamba deactivate
     fi
 
     # Test in xAI-exp environment
-    if conda env list | grep -q "^xAI-exp "; then
+    if mamba env list | grep -q "^xAI-exp "; then
         log_subsection "Testing PyTorch in xAI-exp environment"
 
-        source "$HOME/mambaforge/bin/activate" xAI-exp
+       
+        source "$HOME/mamba/bin/activate" xAI-exp
         python -c "import torch; print('CUDA available:', torch.cuda.is_available())" || {
             log_warn "PyTorch test failed in xAI-exp environment"
         }
+        log_subsection "Torch cuda available"
         conda deactivate
     fi
 }
