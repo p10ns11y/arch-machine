@@ -1,6 +1,7 @@
 # arch-machine
 
-![tinfoil](/tinfoil.jpg)
+<img src="tinfoil.jpg" alt="tinfoil" width="140" style="display: block; margin: auto;">
+
 
 Profile-based bootstrap and maintenance system for Arch Linux workstations focused on ML/AI development and security hardening.
 
@@ -44,6 +45,10 @@ Basic development tools (git, python, node, rust) and essential system packages.
 
 ### `ml-dev` (Recommended)
 Everything in `minimal` plus ROCm GPU acceleration, ML/AI environments, and data science packages.
+
+Pre-configured Conda environments:
+- **ai_amd**: AI/ML environment with PyTorch, ROCm GPU support, JupyterLab, and essential data science packages (numpy, pandas, scikit-learn, xgboost, etc.)
+- **xai_exp**: Experimental AI environment with similar packages optimized for latest Python versions
 
 ### `security-dev`
 Everything in `minimal` plus Kubernetes security hardening, runtime monitoring, and encrypted storage.
