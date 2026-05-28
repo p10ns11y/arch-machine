@@ -11,6 +11,20 @@ import (
 const version = "0.2.0-sentinel"
 
 func main() {
+	// TUI subcommand dispatch (Phase 3: shell+ gum TUI, zero extra Go deps)
+	if len(os.Args) >= 2 && os.Args[1] == "tui" {
+		tuiScript := findTuiScript()
+		cmd := exec.Command("bash", tuiScript)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "❌ tinfoil tui failed: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	fmt.Printf("🚀 tinfoil %s — The Good Sentinel is watching 👀🛡️\n\n", version)
 
 	var mode, targetDir string
@@ -75,4 +89,24 @@ func findScript(scriptName string) string {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// findTuiScript locates the gum-powered interactive TUI (Phase 3)
+func findTuiScript() string {
+	// 1. Installed system location
+	if path := "/usr/share/tinfoil/lib/tui.sh"; fileExists(path) {
+		return path
+	}
+	// 2. Dev mode from repo root (bin/.. /lib/tui.sh)
+	binDir := filepath.Dir(os.Args[0])
+	if path := filepath.Join(binDir, "..", "lib", "tui.sh"); fileExists(path) {
+		return path
+	}
+	// 3. Fallback relative (when go run bin/tinfoil.go tui from root)
+	if path := "lib/tui.sh"; fileExists(path) {
+		return path
+	}
+	fmt.Fprintf(os.Stderr, "❌ Could not find lib/tui.sh — is the TUI installed?\n")
+	os.Exit(1)
+	return ""
 }
