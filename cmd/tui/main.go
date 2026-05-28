@@ -11,8 +11,9 @@ import (
 
 // Model follows the architecture in TUI-SPEC.md (Section 5)
 type model struct {
-	state    string // "welcome", "profile", "toggles", etc.
+	state    string // "welcome", "profile", "toggles", "running", "results"
 	list     list.Model
+	profile  string
 	quitting bool
 }
 
@@ -26,6 +27,13 @@ var (
 )
 
 func initialModel() model {
+	return model{
+		state: "welcome",
+		list:  welcomeList(),
+	}
+}
+
+func welcomeList() list.Model {
 	items := []list.Item{
 		item{title: "[i] Install / Reconfigure", desc: "Profile-based installation with dry-run"},
 		item{title: "[a] Run Security Audit", desc: "Full system + dependency audit"},
@@ -36,16 +44,26 @@ func initialModel() model {
 		item{title: "[q] Quit", desc: "The Sentinel is always watching"},
 	}
 
-	l := list.New(items, list.NewDefaultDelegate(), 60, 14)
+	l := list.New(items, list.NewDefaultDelegate(), 70, 16)
 	l.Title = "🛡️  arch-machine  •  Your AI-forged vigilant fortress"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.Styles.Title = titleStyle
+	return l
+}
 
-	return model{
-		state: "welcome",
-		list:  l,
+func profileList() list.Model {
+	items := []list.Item{
+		item{title: "minimal", desc: "Basic development tools"},
+		item{title: "ml-dev", desc: "ML/AI + ROCm (recommended)"},
+		item{title: "security-dev", desc: "Maximum hardening + Kubernetes"},
 	}
+
+	l := list.New(items, list.NewDefaultDelegate(), 70, 10)
+	l.Title = "Select Profile (per TUI-SPEC)"
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(false)
+	return l
 }
 
 type item struct {
@@ -68,13 +86,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case "enter":
-			// For now, just show selection (will wire real flows later)
 			selected := m.list.SelectedItem()
 			if selected != nil {
-				// Placeholder: in real impl we would switch state and launch flows
-				fmt.Printf("\nSelected: %s (full flow integration coming per TUI-SPEC)\n", selected)
+				title := selected.(item).title
+				switch {
+				case title == "[i] Install / Reconfigure":
+					m.state = "profile"
+					m.list = profileList()
+					return m, nil
+				default:
+					// Placeholder for other flows
+					fmt.Printf("\n[Selected: %s] — full implementation per TUI-SPEC in progress\n", title)
+					return m, tea.Quit
+				}
 			}
-			return m, tea.Quit
+		case "esc":
+			if m.state == "profile" {
+				m.state = "welcome"
+				m.list = welcomeList()
+				return m, nil
+			}
 		}
 	}
 
@@ -87,7 +118,15 @@ func (m model) View() string {
 	if m.quitting {
 		return "The Sentinel is always watching... 🛡️\n"
 	}
-	return "\n" + m.list.View() + "\n"
+
+	switch m.state {
+	case "welcome":
+		return "\n" + m.list.View() + "\n(Enter to select • q to quit)\n"
+	case "profile":
+		return "\n" + m.list.View() + "\n(Enter to choose profile • Esc to go back)\n"
+	default:
+		return "\n" + m.list.View() + "\n"
+	}
 }
 
 func main() {
