@@ -19,18 +19,25 @@ Instead, every branch is a **virtuous compound-word sentinel**. Each one has a d
 | **Guardwell** | guard + well (good/well)           | Simple, reassuring                      |
 | **Trusinel**  | true + sentinel                    | Emphasizes reliability                  |
 
-### When to Use Each Sentinel Branch (Concrete Situations)
+### Branch Philosophy – No Boring Feature Branches Allowed
+
+We don’t do lame `feature/xyz` branches.  
+Instead, every branch is a **virtuous compound-word sentinel**… except for the one true guardian that rules them all.
 
 | Branch       | Concrete Situation                                                                 | What It Solves                                      |
 |--------------|------------------------------------------------------------------------------------|-----------------------------------------------------|
-| **Virtinel** | You’re setting up your daily driver dev machine, doing normal work, or merging stable improvements | The “default trustworthy guardian” — balanced, reliable, production-ready security auditing + monitoring stack for everyday use |
-| **Eusinel**  | You’re experimenting with new AI-powered monitoring dashboards, futuristic Vector configs, or next-gen ML security features | Elegant, positive, slightly futuristic enhancements without breaking the core system |
-| **Safinel**  | You’re deploying on a production server, a high-security environment, or a machine that holds sensitive data | Maximum hardening mode — ultra-secure configs when you need the strongest possible guardian |
-| **Guardwell**| You’re onboarding a new team member, writing documentation, or creating a minimal/clean setup for someone less paranoid | Simple and reassuring experience — makes the whole security fortress feel approachable and beginner-friendly |
-| **Trusinel** | You need a long-term stable release for critical systems, CI/CD pipelines, or machines that must stay rock-solid for months | Emphasizes reliability — bug-free, battle-tested version for environments where uptime and trust matter most |
+| **Sentinel** | The one true default/protected branch (was `main`/`master` in the beginning)     | **The core fortress**. All stable, production-ready, and merged code lives here. This is the branch you clone and trust. |
+| **Virtinel** | Daily driver dev machine, normal work, merging stable improvements                | The “default trustworthy guardian” — balanced, reliable, production-ready security auditing + monitoring stack for everyday use |
+| **Eusinel**  | Experimenting with new AI-powered monitoring dashboards, futuristic Vector configs, or next-gen ML security features | Elegant, positive, slightly futuristic enhancements without breaking the core system |
+| **Safinel**  | Deploying on a production server, high-security environment, or machine with sensitive data | Maximum hardening mode — ultra-secure configs when you need the strongest possible guardian |
+| **Guardwell**| Onboarding a new team member, writing documentation, or creating a minimal/clean setup for someone less paranoid | Simple and reassuring experience — makes the whole security fortress feel approachable and beginner-friendly |
+| **Trusinel** | Long-term stable release for critical systems, CI/CD pipelines, or machines that must stay rock-solid for months | Emphasizes reliability — bug-free, battle-tested version for environments where uptime and trust matter most |
 
-**Rule:** Only these five branches exist. Nothing else. Ever.  
+**Rule:** These six branches are the **only** ones that exist.  
+`Sentinel` is the protected main branch. The others are the elite specialist sentinels.  
 (They’re basically the Justice League of Arch Linux security.)
+
+**Classic `main` and `master` branches** still exist as **genesis branches** (historical artifacts from the very beginning of the project).
 
 ### What the machine actually does (in dramatic terms):
 - **Bootstraps** your Arch machine with surgical precision using cute little `install.sh` and `security-audit.sh` scripts.
