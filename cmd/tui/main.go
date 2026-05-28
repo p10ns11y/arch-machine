@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/list"
@@ -135,4 +137,133 @@ func main() {
 		fmt.Printf("Error running TUI: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// FeatureToggleModel - Screen 2 per TUI-SPEC (Most Important Screen)
+type featureToggleModel struct {
+	features []FeatureItem
+	cursor   int
+	profile  string
+}
+
+type FeatureItem struct {
+	Name    string
+	Desc    string
+	Enabled bool
+	Risk    string
+}
+
+func newFeatureToggleModel(profile string) featureToggleModel {
+	// Rich demo data matching project spirit (real YAML loading coming)
+	feats := []FeatureItem{
+		{Name: "base-system", Desc: "Core system packages", Enabled: true, Risk: "Safe"},
+		{Name: "rocm-gpu", Desc: "AMD ROCm GPU acceleration", Enabled: true, Risk: "Medium"},
+		{Name: "python-ml", Desc: "PyTorch + data science stack", Enabled: true, Risk: "Medium"},
+		{Name: "kubernetes-hardening", Desc: "k3s + Cilium + Tetragon", Enabled: false, Risk: "High Vigilance"},
+		{Name: "weekly-maintenance-timer", Desc: "Automated security + updates", Enabled: true, Risk: "Safe"},
+	}
+	return featureToggleModel{features: feats, profile: profile}
+}
+
+func (m featureToggleModel) Init() tea.Cmd { return nil }
+
+func (m featureToggleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case "down", "j":
+			if m.cursor < len(m.features)-1 {
+				m.cursor++
+			}
+		case " ":
+			m.features[m.cursor].Enabled = !m.features[m.cursor].Enabled
+		case "enter":
+			// Proceed to Flow Runner (stub for now)
+			return newFlowRunnerModel(m.profile, m.features), nil
+		case "esc":
+			// Go back to profile selector
+			return initialModel(), nil
+		}
+	}
+	return m, nil
+}
+
+func (m featureToggleModel) View() string {
+	s := lipgloss.NewStyle().Bold(true).Render("Feature Toggle Matrix — " + m.profile) + "\n"
+	s += "space: toggle • enter: launch • esc: back\n\n"
+
+	for i, f := range m.features {
+		cursor := "  "
+		if i == m.cursor {
+			cursor = "▶ "
+		}
+		check := "[ ]"
+		if f.Enabled {
+			check = "[x]"
+		}
+		riskColor := "241"
+		if f.Risk == "Medium" {
+			riskColor = "214"
+		} else if f.Risk == "High Vigilance" {
+			riskColor = "196"
+		}
+		line := cursor + check + " " + f.Name + "  " +
+			lipgloss.NewStyle().Foreground(lipgloss.Color(riskColor)).Render(f.Risk) + "\n    " + f.Desc
+		s += line + "\n"
+	}
+	s += "\n(p = preview size — not yet wired)"
+	return s
+}
+
+// Very basic Flow Runner stub (Screen 3)
+type flowRunnerModel struct {
+	profile  string
+	features []FeatureItem
+	progress float64
+	done     bool
+}
+
+func newFlowRunnerModel(profile string, features []FeatureItem) flowRunnerModel {
+	return flowRunnerModel{profile: profile, features: features}
+}
+
+func (m flowRunnerModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m flowRunnerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.String() == "q" || msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		if m.done && msg.String() == "enter" {
+			return initialModel(), nil
+		}
+	}
+	// Fake progress
+	if !m.done {
+		m.progress += 0.08
+		if m.progress >= 1.0 {
+			m.done = true
+		}
+		return m, tea.Tick(120, func(t time.Time) tea.Msg { return t }) // simple animation
+	}
+	return m, nil
+}
+
+func (m flowRunnerModel) View() string {
+	s := "🚀 Running flow for " + m.profile + "\n\n"
+	bar := int(m.progress * 40)
+	s += "[" + strings.Repeat("█", bar) + strings.Repeat("░", 40-bar) + "]\n"
+	if m.done {
+		s += "\n✅ Flow complete (simulated per TUI-SPEC)\nPress enter to return to menu"
+	}
+	return s
 }
