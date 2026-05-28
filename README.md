@@ -105,6 +105,24 @@ The system includes automated weekly maintenance for system updates, security sc
 
 See [Maintenance Guide](MAINTENANCE.md) for complete maintenance documentation.
 
+## Interactive TUI (New in 2026 Sentinel)
+
+Launch the beautiful gum-powered paranoid control center:
+
+```bash
+tinfoil tui          # after system install (or go run bin/tinfoil.go tui in dev)
+./install.sh --tui   # during setup
+```
+
+Flows include:
+- 🔍 Full security audit (live vulns, SBOM, Lynis...)
+- 🧹 Policy-guided remediation (ruthless audit → kill, with multiple confirms)
+- 📦 Profile installer with live yq-powered module toggles + dry-run
+- 📜 Evidence extraction, maintenance, log browser (fzf)
+- Humorous self-aware tone: "The Sentinel sees your choices, citizen"
+
+Zero extra deps beyond what's already in the fortress. Pure shell + gum.
+
 ## Key Features
 
 - **Modular Installation**: Choose from different profiles
