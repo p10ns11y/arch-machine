@@ -31,3 +31,5 @@ backups/
 .cache/
 .config/
 .local/
+# Leftover from autonomous/TUI experiments (accidental copy during privileged operations)
+systemd/
