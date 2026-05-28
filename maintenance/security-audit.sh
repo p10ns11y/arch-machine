@@ -475,10 +475,28 @@ $(if ! check_sudo; then echo "Note: Full checks require sudo"; fi)
 "
 }
 
+# Fix file permissions
+fix_file_permissions() {
+    local file="$1"
+    local expected_perm="$2"
+
+    # Determine if sudo is needed (system files vs user files)
+    if [[ "$file" =~ ^/etc/ ]]; then
+        if check_sudo; then
+            sudo chmod "$expected_perm" "$file" && log_success "Fixed permissions for $file" || log_error "Failed to fix $file"
+        else
+            log_warn "Cannot fix $file - sudo required"
+        fi
+    else
+        chmod "$expected_perm" "$file" && log_success "Fixed permissions for $file" || log_error "Failed to fix $file"
+    fi
+}
+
 # Check file permissions
 check_file_permissions() {
     log_section "Checking File Permissions"
 
+    local fixed_count=0
     local issues=()
 
     # Check sensitive files
@@ -500,7 +518,18 @@ check_file_permissions() {
             actual_perm=$(stat -c "%a" "$file" 2>/dev/null || echo "unknown")
 
             if [[ "$actual_perm" != "$expected_perm" ]]; then
-                issues+=("$file: expected $expected_perm, got $actual_perm")
+                log_warn "Misconfigured: $file (expected $expected_perm, got $actual_perm)"
+                echo -n "Fix permissions for $file? (y/n): "
+                read -r response
+                case "$response" in
+                    [Yy]|[Yy][Ee][Ss])
+                        fix_file_permissions "$file" "$expected_perm"
+                        ((fixed_count++))
+                        ;;
+                    *)
+                        issues+=("$file: expected $expected_perm, got $actual_perm")
+                        ;;
+                esac
             fi
         fi
     done
@@ -511,15 +540,20 @@ check_file_permissions() {
     world_writable=$(find /home -type f -perm -002 2>/dev/null | wc -l)
     if [[ "$world_writable" -gt 0 ]]; then
         issues+=("Found $world_writable world-writable files in /home")
+        log_warn "Found $world_writable world-writable files in /home (not auto-fixed)"
     fi
 
     if [[ ${#issues[@]} -gt 0 ]]; then
-        log_warn "File permission issues found:"
+        log_warn "Remaining permission issues:"
         for issue in "${issues[@]}"; do
             log_warn "  $issue"
         done
     else
-        log_success "File permissions look good"
+        log_success "File permissions are correct"
+    fi
+
+    if [[ $fixed_count -gt 0 ]]; then
+        log_info "Fixed $fixed_count permission issues"
     fi
 }
 
@@ -680,7 +714,7 @@ main() {
     run_lynis_audit
     # run_clamav_scan
     run_rootkit_checks
-    # check_file_permissions
+    check_file_permissions
     check_running_services
     check_user_accounts
 

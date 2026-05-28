@@ -414,3 +414,28 @@ main() {
 
 # Run main function
 main "$@"
+
+echo "🔨 Building the 'tinfoil' CLI binary + installing scripts..."
+
+# Install Go if missing
+sudo pacman -Sy --needed --noconfirm go 2>/dev/null || true
+
+# Create system-wide share directory
+sudo mkdir -p /usr/share/tinfoil
+
+# Copy all necessary files so tinfoil can find them after install
+sudo cp -r security-audit.sh lib modules config systemd 2>/dev/null || true
+sudo cp -r . /usr/share/tinfoil/ 2>/dev/null || echo "⚠️  Some files could not be copied (normal in dev)"
+
+# Build static Go binary
+cd bin
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /tmp/tinfoil tinfoil.go
+sudo install -Dm755 /tmp/tinfoil /usr/local/bin/tinfoil
+cd ..
+
+echo "✅ tinfoil CLI installed successfully! 🎉"
+echo ""
+echo "Usage:"
+echo "   tinfoil                  → Global investigator mode"
+echo "   tinfoil .                → Audit current project"
+echo "   tinfoil /path/to/project → Audit any folder"

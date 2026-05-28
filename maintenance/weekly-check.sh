@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Weekly maintenance check script
 
-set -euo pipefail
+# set -euo pipefail  # Disabled for maintenance script to continue on individual check failures
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -88,6 +88,19 @@ generate_report() {
         echo "System packages: $( [[ -f /tmp/system_updated ]] && echo "UPDATED" || echo "NO ACTION" )"
         echo "Tool updates: $( [[ -f /tmp/tools_updated ]] && echo "CHECKED" || echo "NO ACTION" )"
         echo "Security scan: $( [[ -f /tmp/security_scanned ]] && echo "COMPLETED" || echo "NO ACTION" )"
+        echo ""
+
+        echo "=== Security Scan Results ==="
+        if [[ -f /tmp/vulnerability_scan.log ]]; then
+            echo "Vulnerability scan completed. Check /tmp/vulnerability_scan.log for details."
+            if grep -q "No known vulnerabilities\|No issues found" /tmp/vulnerability_scan.log; then
+                echo "✓ No vulnerabilities found"
+            else
+                echo "⚠ Vulnerabilities may be present - review scan log"
+            fi
+        else
+            echo "No vulnerability scan performed"
+        fi
         echo ""
 
         echo "=== Issues Found ==="
@@ -284,6 +297,52 @@ basic_security_scan() {
 
     touch /tmp/security_scanned
 
+    # Vulnerability scanning
+    log_subsection "Running vulnerability scans"
+
+    # OSV-Scanner on project and system
+    if command_exists osv-scanner; then
+        log_info "Running osv-scanner on project directory"
+        osv-scanner "$ROOT_DIR" >> /tmp/vulnerability_scan.log 2>&1 || log_warn "osv-scanner failed"
+    fi
+
+    # Pip-audit on system and conda environments
+    if command_exists pip-audit; then
+        log_info "Running pip-audit on system packages"
+        pip-audit >> /tmp/vulnerability_scan.log 2>&1 || log_warn "pip-audit system failed"
+
+        # Audit conda environments
+        if command_exists conda; then
+            conda env list | grep -E '^(ai_amd|xAI-exp)' | while read -r env_line; do
+                local env_name
+                env_name=$(echo "$env_line" | awk '{print $1}')
+                log_info "Auditing conda environment: $env_name"
+                conda run -n "$env_name" pip-audit >> /tmp/vulnerability_scan.log 2>&1 || log_warn "pip-audit failed for $env_name"
+            done
+        fi
+    fi
+
+    # Cargo audit if Cargo.lock exists
+    if [[ -f "$ROOT_DIR/Cargo.lock" ]] && command_exists cargo; then
+        log_info "Running cargo audit"
+        (cd "$ROOT_DIR" && cargo audit >> /tmp/vulnerability_scan.log 2>&1) || log_warn "cargo audit failed"
+    fi
+
+    # NPM audit in .kilo
+    if [[ -f "$ROOT_DIR/.kilo/package-lock.json" ]] && command_exists npm; then
+        log_info "Running npm audit in .kilo"
+        (cd "$ROOT_DIR/.kilo" && npm audit >> /tmp/vulnerability_scan.log 2>&1) || log_warn "npm audit failed"
+    fi
+
+    # Check for vulnerabilities found
+    if [[ -f /tmp/vulnerability_scan.log ]] && grep -q "vulnerability\|Vulnerability" /tmp/vulnerability_scan.log; then
+        log_warn "Vulnerabilities found - check /tmp/vulnerability_scan.log"
+        echo "Vulnerabilities detected - review scan log" >> /tmp/maintenance_issues.txt
+        echo "Run security remediation procedures" >> /tmp/maintenance_recommendations.txt
+    else
+        log_success "No vulnerabilities found in scans"
+    fi
+
     # Check for listening services
     log_subsection "Checking listening services"
     sudo netstat -tlnp 2>/dev/null | grep LISTEN | head -10 || log_warn "Cannot check listening services"
@@ -362,7 +421,7 @@ main() {
 
     # Clean up temp files
     rm -f /tmp/package_updates.txt /tmp/system_updated /tmp/tools_updated /tmp/security_scanned
-    rm -f /tmp/maintenance_issues.txt /tmp/maintenance_recommendations.txt
+    rm -f /tmp/maintenance_issues.txt /tmp/maintenance_recommendations.txt /tmp/vulnerability_scan.log
 
     # Extract evidence bundle for AI agents
     if [[ -f "$ROOT_DIR/maintenance/extract-evidence.sh" ]]; then
