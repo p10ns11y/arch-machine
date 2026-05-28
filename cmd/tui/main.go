@@ -123,9 +123,16 @@ func (m model) View() string {
 
 	switch m.state {
 	case "welcome":
-		return "\n" + m.list.View() + "\n(Enter to select • q to quit)\n"
+		box := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("63")).
+			Padding(1, 2).
+			Render("🛡️  arch-machine  •  Your AI-forged vigilant fortress\n" +
+				"\"Because your ex isn't the only one auditing your life\"\n\n" +
+				m.list.View())
+		return "\n" + box + "\n(↑↓ navigate • enter select • q quit)\n"
 	case "profile":
-		return "\n" + m.list.View() + "\n(Enter to choose profile • Esc to go back)\n"
+		return "\n" + m.list.View() + "\n(Enter to choose profile • Esc back)\n"
 	default:
 		return "\n" + m.list.View() + "\n"
 	}
