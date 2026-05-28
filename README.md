@@ -36,6 +36,9 @@ chmod +x install.sh migrate.sh
 
 # Post-installation setup
 maintenance/systemd-setup.sh setup
+
+# tinfoil CLI (security auditor) is now available:
+tinfoil tui
 ```
 
 ## Installation Profiles
@@ -104,6 +107,36 @@ The system includes automated weekly maintenance for system updates, security sc
 - **Evidence Extraction**: Generates AI-optimized evidence bundles from logs
 
 See [Maintenance Guide](MAINTENANCE.md) for complete maintenance documentation.
+
+## tinfoil CLI
+
+**tinfoil** is the self-aware paranoid security auditor CLI.
+
+It is **automatically installed** as the final step when you run `./install.sh` (any profile). The installer builds the Go binary and places it at `/usr/local/bin/tinfoil`, along with the required scripts in `/usr/share/tinfoil/`.
+
+### Usage
+
+```bash
+tinfoil                  # Global system-wide audit (default "investigator mode")
+tinfoil .                # Audit the current directory/project
+tinfoil /path/to/project # Audit any target folder
+tinfoil tui              # Launch the interactive TUI (if available in your setup)
+```
+
+### Development / Manual
+
+```bash
+go run bin/tinfoil.go
+go run bin/tinfoil.go .
+go run bin/tinfoil.go tui
+
+# Build locally
+go build -o /tmp/tinfoil bin/tinfoil.go
+/tmp/tinfoil
+```
+
+### Why this name?
+See [tinfoil-name-explained.md](tinfoil-name-explained.md).
 
 ## Key Features
 

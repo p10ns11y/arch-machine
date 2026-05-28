@@ -1,3 +1,33 @@
+# tinfoil — The CLI Name & Quick Start Guide
+
+**tinfoil** is the main security auditor CLI that ships with arch-machine.
+
+## Quick Installation & Usage
+
+tinfoil is installed automatically when you run the main installer:
+
+```bash
+./install.sh --profile ml-dev     # (or security-dev / minimal)
+```
+
+Then use it:
+
+```bash
+tinfoil                  # full system audit
+tinfoil tui              # interactive TUI
+tinfoil .                # current folder
+```
+
+For development:
+
+```bash
+go run bin/tinfoil.go tui
+```
+
+See the tinfoil section in README.md and docs/INSTALLATION.md.
+
+---
+
 ** Explanation of why “tinfoil” is way more humorous + perfect**
 
 
