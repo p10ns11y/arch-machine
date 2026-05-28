@@ -121,3 +121,28 @@ The original standalone scripts are still available for backward compatibility:
 - **`secure-fortress-phase0-simple.sh`**: Security hardening setup
 
 These provide one-shot installation but lack the profile-based approach of the new system.
+
+## The tinfoil CLI
+
+The `tinfoil` CLI is automatically built and installed by the main `./install.sh` process (it runs after the profile installation completes).
+
+### Installation details
+- Binary: `/usr/local/bin/tinfoil`
+- Supporting files: `/usr/share/tinfoil/`
+
+### Basic usage after installation
+
+```bash
+tinfoil                  # Full system audit
+tinfoil .                # Current directory
+tinfoil /some/path       # Specific target
+tinfoil tui              # Interactive interface (when present)
+```
+
+For development use without running the full installer:
+
+```bash
+go run bin/tinfoil.go tui
+```
+
+See the tinfoil section in the main README and `tinfoil-name-explained.md` for more context.

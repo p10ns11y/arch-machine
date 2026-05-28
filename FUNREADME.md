@@ -2,7 +2,7 @@
 
 **The only Arch Linux setup that audits itself harder than your ex audits your text messages.**
 
-Meet **arch-machine** — your AI-forged, profile-based Arch Linux fortress that turns a fresh install into a paranoid, self-healing, ML/AI-ready workstation faster than you can say “pacman -Syu… oh god why is it still compiling”.
+Meet **arch-machine** — your AI-forged, profile-based Arch Linux fortress that turns a fresh install into a vigilant, self-healing, ML/AI-ready workstation faster than you can say “pacman -Syu… oh god why is it still compiling”.
 
 ### Branch Philosophy – No Boring Feature Branches Allowed
 
@@ -30,7 +30,7 @@ Instead, every branch is a **virtuous compound-word sentinel**… except for the
 | **Virtinel** | Daily driver dev machine, normal work, merging stable improvements                | The “default trustworthy guardian” — balanced, reliable, production-ready security auditing + monitoring stack for everyday use |
 | **Eusinel**  | Experimenting with new AI-powered monitoring dashboards, futuristic Vector configs, or next-gen ML security features | Elegant, positive, slightly futuristic enhancements without breaking the core system |
 | **Safinel**  | Deploying on a production server, high-security environment, or machine with sensitive data | Maximum hardening mode — ultra-secure configs when you need the strongest possible guardian |
-| **Guardwell**| Onboarding a new team member, writing documentation, or creating a minimal/clean setup for someone less paranoid | Simple and reassuring experience — makes the whole security fortress feel approachable and beginner-friendly |
+| **Guardwell**| Onboarding a new team member, writing documentation, or creating a minimal/clean setup for someone less steeped in security | Simple and reassuring experience — makes the whole security fortress feel approachable and beginner-friendly |
 | **Trusinel** | Long-term stable release for critical systems, CI/CD pipelines, or machines that must stay rock-solid for months | Emphasizes reliability — bug-free, battle-tested version for environments where uptime and trust matter most |
 
 **Rule:** These six branches are the **only** ones that exist.  
