@@ -90,3 +90,11 @@ Evidence bundles provide:
 - **Change tracking**: Compare bundles over time
 
 Use the evidence bundles instead of raw logs to minimize token consumption while maintaining full situational awareness.
+## TUI Integration (2026-05-29, autonomous mission)
+The gum TUI (lib/tui.sh) now provides interactive access to evidence flows:
+- "Extract Evidence Bundle" menu directly calls maintenance/extract-evidence.sh
+- Logs browser uses fzf + gum pager on logs/evidence-*.*
+- All TUI runs can be logged via tee for full audit trail
+- Recommended: run `tinfoil tui` then choose evidence for human+AI consumption
+
+This improves the "evidence for the AI overlords" experience with beautiful paranoid UX.
