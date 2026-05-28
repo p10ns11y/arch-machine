@@ -143,6 +143,8 @@ OPTIONS:
     --show-profile PROFILE  Show detailed information about a profile
     --setup-vault [ENC_DIR] [MOUNT_POINT]  Setup encrypted vault (defaults: ~/.securevaultenc ~/securevault)
     -h, --help              Show this help message
+    --tui                   Launch the interactive gum-powered TUI (tinfoil tui)
+                            (beautiful menus for audit, remediation, profiles, evidence)
 
 PROFILES:
     minimal      - Basic development tools (git, python, node, rust)
@@ -219,6 +221,10 @@ parse_args() {
             -h|--help)
                 show_usage
                 exit 0
+                ;;
+            --tui)
+                # Launch interactive TUI (gum) — Phase 3 shipped
+                exec bash "${SCRIPT_DIR:-$(dirname "$0")}/lib/tui.sh" "$@"
                 ;;
             *)
                 log_error "Unknown option: $1"
