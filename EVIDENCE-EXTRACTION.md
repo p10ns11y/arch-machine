@@ -97,4 +97,4 @@ The gum TUI (lib/tui.sh) now provides interactive access to evidence flows:
 - All TUI runs can be logged via tee for full audit trail
 - Recommended: run `tinfoil tui` then choose evidence for human+AI consumption
 
-This improves the "evidence for the AI overlords" experience with beautiful paranoid UX.
+This improves the "evidence for the AI overlords" experience with beautiful vigilant UX.

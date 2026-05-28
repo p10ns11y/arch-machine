@@ -107,7 +107,7 @@ See [Maintenance Guide](MAINTENANCE.md) for complete maintenance documentation.
 
 ## Interactive TUI (New in 2026 Sentinel)
 
-Launch the beautiful gum-powered paranoid control center:
+Launch the beautiful gum-powered vigilant control center:
 
 ```bash
 tinfoil tui          # after system install (or go run bin/tinfoil.go tui in dev)
