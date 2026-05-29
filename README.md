@@ -22,7 +22,7 @@ For a more entertaining introduction, see [FUNREADME.md](FUNREADME.md) – where
 
 The security-dev profile includes security hardening and scans. Review [Safety & Requirements](docs/SECURITY.md) before choosing profiles.
 
-## Quick Start
+## Quick Start (Thin Sentinel First)
 
 ```bash
 # Clone the repository
@@ -32,13 +32,21 @@ cd arch-machine
 # Make scripts executable
 chmod +x install.sh migrate.sh
 
-# Install using ml-dev profile (recommended)
-./install.sh --profile ml-dev
+# 1. Thin install (default — recommended first step)
+#    Only the tinfoil guardian CLI + TUI. Fast, minimal footprint.
+./install.sh
+#    (or ./install.sh --thin)
 
-# Or for security-focused setup
+# 2. Use the sentinel immediately
+tinfoil tui              # interactive menus (audit, profiles, remediation, evidence)
+tinfoil                  # quick global audit
+
+# 3. Later — full hardened workstation (via same installer or from the TUI)
+./install.sh --profile ml-dev
+# or
 ./install.sh --profile security-dev
 
-# Post-installation setup
+# Post-installation (after full profile)
 maintenance/systemd-setup.sh setup
 ```
 

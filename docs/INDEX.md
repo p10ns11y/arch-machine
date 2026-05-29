@@ -7,7 +7,7 @@
 ## Quick Start (Recommended Path)
 
 1. Clone the repo.
-2. `./install.sh --thin` (installs only the `tinfoil` sentinel CLI + minimal runtime — fast, ~no heavy deps).
+2. `./install.sh` (or `./install.sh --thin`) — installs only the `tinfoil` sentinel CLI + self-contained runtime (fast, zero heavy deps by default).
 3. `tinfoil` or `tinfoil tui` — interactive Bubble Tea guardian (audit, cleanup, maintenance, evidence, settings).
 4. For a full hardened ML workstation: `./install.sh --profile minimal` (or ml-dev / security-dev).
 5. Weekly: the systemd timer (or manual `weekly-check.sh`) runs maintenance + produces AI-optimized evidence bundles in `logs/`.

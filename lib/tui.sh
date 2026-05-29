@@ -96,12 +96,25 @@ run_audit_flow() {
     return
   fi
 
+  # Robust tinfoil binary discovery (prefer PATH after thin install,
+  # then the share tree copy we maintain, then /usr/local fallback)
+  local tinfoil_cmd
+  if command -v tinfoil >/dev/null 2>&1; then
+    tinfoil_cmd="$(command -v tinfoil)"
+  elif [ -x "$ROOT/bin/tinfoil" ]; then
+    tinfoil_cmd="$ROOT/bin/tinfoil"
+  elif [ -x "/usr/local/bin/tinfoil" ]; then
+    tinfoil_cmd="/usr/local/bin/tinfoil"
+  else
+    tinfoil_cmd="tinfoil"  # last resort, will likely fail with clear error
+  fi
+
   gum spin --spinner dot --title "🛡️ The Sentinel is auditing... (live vulns, SBOM, Lynis, etc)" -- \
     bash -c "
       if [ -n '$target' ]; then
-        '$ROOT/bin/tinfoil' '$target' 2>&1 | tee /tmp/tinfoil-audit.log
+        '$tinfoil_cmd' '$target' 2>&1 | tee /tmp/tinfoil-audit.log
       else
-        '$ROOT/bin/tinfoil' 2>&1 | tee /tmp/tinfoil-audit.log
+        '$tinfoil_cmd' 2>&1 | tee /tmp/tinfoil-audit.log
       fi
     " || true
 
