@@ -86,7 +86,7 @@ The Vigilant Guardian (Sentinel) self-audits its own control plane. Loop active.
 
 **Evidence bundle for this Phase 1 micro-step**: logs/evidence-bundle-20260529-134653.json + .toon (Critical: 0, Errors: 48, Warnings: 33, Total: 81 — stable snapshot during hygiene).
 
-**Next in Phase 1 (immediate, unblocked)**: root pollution clean (.kilo/ + plans/, .composer/, stray artifacts — all user-writable), exhaustive cross-reference updates across the active codebase, creation of docs/LEGACY.md, living docs checkpoint.
+**Next in Phase 1 (immediate, unblocked)**: exhaustive cross-reference updates (any remaining historical mentions), living docs Phase 1 checkpoint, prepare content for first sentinel PR gate (after full Phase 1 items or safe partial).
 
 Self-referential loop remains the unbreakable spine of the mission. The policy was applied; the env limitation is explicitly called out rather than hidden. Highest security seniority preserved.
 
@@ -108,3 +108,16 @@ Self-referential loop remains the unbreakable spine of the mission. The policy w
 **docs/LEGACY.md** will be created in the Phase 1 checkpoint batch with full rationale + bundle links for both systemd/ and setups/.
 
 Highest security seniority: the agent's own prior experiment artifacts (setups/ from earlier autonomous runs) were deleted without sentiment. The policy applies to everything.
+
+### 2026-05-29 - Phase 1 Checkpoint Artifact: docs/LEGACY.md Created
+- Created `docs/LEGACY.md` (new authoritative record) documenting the two major kills (systemd/ partial + full setups/ + root pollution .kilo/.composer/) with:
+  - Exact artifacts, LOC counts, rationale citing `policies/security-remediation.md`.
+  - Evidence bundle filenames (134541/134653 for systemd, 134739/134750 for setups, 134802 for .kilo/.composer).
+  - Status notes (sudo limitation for systemd/ FS removal explicitly called out).
+  - "How to use this record" guidance for future contributors and autonomous agents.
+- Pre-creation evidence: 134834.
+- Post-creation evidence: 134850.
+- This file is the permanent, self-referential proof that the platform applied its own ruthless policy to its technical debt during the overhaul.
+- Cross-refs in handoff STATE/PROGRESS updated; open items reduced (setups/ and root pollution now closed).
+
+The overhaul now has a clean, documented foundation for the remaining Phase 1 reference sweeps and the transition to Phase 2 (docs consolidation).
