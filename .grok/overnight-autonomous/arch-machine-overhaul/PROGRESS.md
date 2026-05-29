@@ -24,3 +24,13 @@ The overhaul is now under full self-referential, evidence-first, policy-complian
 ---
 
 **This log is append-only. Update after every micro-step, commit, evidence bundle, and phase checkpoint. The Sentinel (Vigilant Guardian) is watching.**
+### 2026-05-29 - Phase 0 Branching Executed
+Followed user's explicit instructions precisely:
+- Verified sentinel is up to date with remote.
+- Current branch had the new handoff as relevant untracked changes.
+- Created clean dedicated branch `hotfix/arch-machine-overhaul-20260529` from sentinel.
+- Moved handoff content onto it and committed.
+
+This establishes the correct starting point for the full self-referential overhaul at highest security seniority level.
+
+Baseline evidence run completed (results in session logs). Proceeding to formal Checkpoint 0.

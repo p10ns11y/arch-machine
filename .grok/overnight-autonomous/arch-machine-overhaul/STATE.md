@@ -32,3 +32,15 @@
 Complete Phase 0 handoff bootstrap (ensure all living docs + EVIDENCE/ subdir are initialized with baseline evidence). Then enter Phase 1 with ruthless application of the security-remediation policy to the `systemd/` duplicate tree first (lowest risk, already gitignored).
 
 **Last Updated**: 2026-05-29 (initial creation)
+## 2026-05-29 Update - Phase 0 Branching Complete
+- Confirmed local `sentinel` is perfectly up to date with `origin/sentinel` (same commit 9c777ab, 0 ahead/behind).
+- Current work was on an older hotfix branch that had untracked handoff files.
+- Per explicit Phase 0 instructions: stashed relevant changes, checked out clean sentinel, created new dedicated branch `hotfix/arch-machine-overhaul-20260529` from it, then restored the handoff work.
+- New handoff folder + pointer committed on the clean branch (commit 647a204).
+- Baseline evidence collection performed (thin install path exercised + security-audit + evidence extraction run).
+
+**Self-referential loop executed successfully for branching step.**
+
+**Current Phase**: Still 0 (handoff bootstrap). Ready to complete remaining bootstrap steps (full baseline evidence bundle commit if not already, then move into Phase 1).
+
+**Next immediate action**: Ensure a proper baseline evidence bundle from the tools is committed on this new branch, then update this STATE with Checkpoint 0.
