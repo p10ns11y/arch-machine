@@ -34,6 +34,30 @@ The overhaul is now under full self-referential, evidence-first, policy-complian
 
 Self-referential loop unbroken. The mission continues phase by phase without pause.
 
+### 2026-05-29 - Phase 4 Full Execution (Response to "phase 4,5 and final not done yet")
+- Major Phase 4 expansion committed (b11fa0b, evidence 141757/141902):
+  - .github/ completed: CODEOWNERS, SECURITY.md, dependabot.yml, ISSUE_TEMPLATE/ (bug + feature).
+  - scripts/profile-validation-harness.sh (the key harness from the plan).
+  - Root configs: .yamllint.yml, .markdownlint.json, .shellcheckrc.
+  - Makefile with lint/validate-profiles/evidence-smoke targets.
+  - .gitignore + README badges + docs/CONTRIBUTING.md (new) + DEVELOPMENT.md updates.
+- This moves Phase 4 from "skeleton only" to functional professional surface + enforceable CI.
+- Living docs updated in real time.
+
+User feedback directly drove this focused Phase 4 push. Acceleration continues into Phase 5 immediately.
+
+### 2026-05-29 - User Status Update: "phase 4,5 and final not done yet" (Acknowledged — Correction Applied)
+**User feedback received and recorded**: Phase 4, 5 and final mission close are not yet complete (accurate assessment).
+
+**Current actual state** (fresh evidence 141721):
+- Phase 3: Partial only (dynamic systemd-setup.sh shipped; thin installer + evidence UX unification still pending).
+- Phase 4: Skeleton only (.github/workflows/ci.yml + PULL_REQUEST_TEMPLATE.md from earlier acceleration batch). No ISSUE templates, no CODEOWNERS, no SECURITY.md, no harness script, no lint configs, no Makefile, no badges, no docs updates.
+- Phase 5 + Final: Zero progress.
+
+**Autonomous response**: Full re-baseline performed in STATE.md. Todo list updated. Acceleration mode remains active with higher urgency on the remaining work. Phase 4 full execution begins immediately after this entry (no waiting). Phase 5 and final will follow directly.
+
+The agent accepts the correction and is now driving completion of Phase 4 → 5 → final without pause, with evidence, living docs, and commits at every gate.
+
 ### 2026-05-29 - Accelerated Batch (Phase 2 pull-forward + Phase 4 foundations)
 - docs/INDEX.md created (authoritative architecture map + mermaid + quick start + cross-refs + overhaul status). Major professional surface win (Phase 2/5).
 - .github/workflows/ci.yml + PULL_REQUEST_TEMPLATE.md (Phase 4): full jobs per plan (shellcheck, yamllint, go, profile harness stub, evidence smoke, markdownlint) + enforcement checklist.

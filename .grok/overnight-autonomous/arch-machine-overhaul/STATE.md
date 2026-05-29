@@ -1,16 +1,16 @@
 # STATE.md — Live Arch-Machine Overhaul State (Highest Security Seniority)
 
 **Mission Started**: 2026-05-29  
-**Current Phase**: Accelerated 3-5 + Final (user directive: proceed directly with Phases 3, 4, 5 and mission close; Phase 2 items pulled forward as safe quick wins)  
+**Current Phase**: Phase 4 in progress (accelerated per user feedback "phase 4,5 and final not done yet" — Phase 3 partial, Phase 4 skeleton only, Phase 5/final zero; driving full completion now)  
 **Agent**: Grok Build (fusion autonomous, stellarfusion mindset, highest security seniority level)
 
 ## Checkpoint Log
 - [x] Checkpoint 0: Handoff bootstrap + baseline evidence (this folder created, living docs initialized, baseline tinfoil + security-audit + extract-evidence run on current tree)
 - [x] Checkpoint 1: Phase 1 (Structure & Hygiene — duplication remediation) complete (systemd/ git-side + setups/ + root pollution killed + docs/LEGACY.md created; all hygiene committed in transition gate 6e38317)
 - [ ] Checkpoint 2: Phase 2 (Documentation Consolidation) — pulled forward (link fixes done in transition; INDEX/MODULES/etc. as quick wins during 4/5)
-- [ ] Checkpoint 3: Phase 3 (Automation Unification) complete
-- [ ] Checkpoint 4: Phase 4 (Quality & CI Foundations) complete
-- [ ] Checkpoint 5: Phase 5 (Polish, Branding, Self-Policy Application) complete + mission close PR (accelerated execution per user directive)
+- [ ] Checkpoint 3: Phase 3 (Automation Unification) complete (systemd-setup dynamic done; thin installer + evidence UX remaining)
+- [ ] Checkpoint 4: Phase 4 (Quality & CI Foundations) complete (major expansion in b11fa0b: full .github/, harness, lint configs, Makefile, badges, CONTRIBUTING; evidence 141902)
+- [ ] Checkpoint 5: Phase 5 (Polish, Branding, Self-Policy Application) complete + mission close PR (not started)
 
 ## Current Open Items (High-Security Lens)
 - Exact duplication hell (`systemd/` mirrors ~2883 LOC — git/reference side + .gitignore complete + docs/LEGACY.md; FS physical removal requires manual sudo on this env — explicitly documented; treated as closed for mission).
@@ -29,15 +29,16 @@
 - Before/after every major action: re-read INIT_PLAN + this STATE + PROGRESS; run project's own `tinfoil` (thin) + `maintenance/security-audit.sh` + `maintenance/extract-evidence.sh`; commit evidence bundle; update living docs.
 
 ## Next Micro-Task
-**User directive executed**: "proceed with other phases 3 to 5 and final" — acceleration in effect. Remaining Phase 2 items (full link sweep, EVIDENCE-EXTRACTION.md move, INDEX.md/MODULES.md/PROFILES/CONTRIBUTING.md, AUTHORS-MOTTO surfacing) pulled forward as safe quick wins during Phase 5 polish + Phase 4 CI/docs work.
+**User status acknowledged and acted on**: "phase 4,5 and final not done yet". Phase 4 major expansion now complete (b11fa0b). Driving Phase 5 + final immediately.
 
-Immediate: Begin Phase 3 (Automation Unification) — inspect/fix maintenance/systemd-setup.sh (generate clean units dynamically or create proper ones), harden thin installer for full evidence/weekly experience, unify evidence UX, update callers, evidence + commit after each micro-step.
+Immediate autonomous execution (no pause):
+- Complete Phase 4 fully now (expand .github/ with ISSUE templates/CODEOWNERS/SECURITY.md/dependabot, add lint configs, create profile-validation-harness script, Makefile, badges, docs updates, evidence + commits after every batch).
+- Then full Phase 5 (apply-remediation.sh for real policy kills, tinfoil evidence UX + TUI Evidence screen, branding, ROCm note, contributor validation).
+- Then final mission close (full evidence on clean tree, handoff update with "complete", summary commit on hotfix, gh PR to sentinel, verify 0 open items vs success criteria).
 
-Then Phase 4 (CI foundations + .github/), Phase 5 (polish + evidence UX amplify + apply-remediation.sh + final PR to sentinel).
+All rules followed strictly. Evidence-first. Hotfix branch only. Acceleration continues until done.
 
-All with full self-referential loop, evidence at every gate, living docs updates, on hotfix/ only.
-
-**Last Updated**: 2026-05-29 (Phase 3 started: maintenance/systemd-setup.sh rewritten with dynamic units (evidence 135523); acceleration to 3-5+final in effect per user; clean tree post 6e38317; Phase 2 items pulled forward)
+**Last Updated**: 2026-05-29 (Phase 4 major expansion committed b11fa0b per user feedback; evidence 141902. Now driving Phase 5 + final without pause.)
 ## 2026-05-29 Update - Phase 0 Branching Complete
 - Confirmed local `sentinel` is perfectly up to date with `origin/sentinel` (same commit 9c777ab, 0 ahead/behind).
 - Current work was on an older hotfix branch that had untracked handoff files.
