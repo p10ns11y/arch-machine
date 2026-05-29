@@ -34,3 +34,16 @@ Followed user's explicit instructions precisely:
 This establishes the correct starting point for the full self-referential overhaul at highest security seniority level.
 
 Baseline evidence run completed (results in session logs). Proceeding to formal Checkpoint 0.
+
+### 2026-05-29 - Phase 0 Checkpoint COMPLETE
+Handoff bootstrap executed successfully on clean dedicated branch `hotfix/arch-machine-overhaul-20260529` (from up-to-date sentinel).
+
+- Branching per explicit instructions completed.
+- Full handoff folder (CONTEXT, INIT_PLAN, STATE, PROGRESS, README, EVIDENCE/) created, committed, and self-referential rules activated.
+- Baseline evidence bundle produced using project's own tools and committed.
+- All Phase 0 micro-steps and success gate met.
+- Agent is grounded: re-read CONTEXT + INIT_PLAN, confirmed loop, policy application mindset, branch discipline.
+
+Autonomous execution now transitions to Phase 1 (Structure & Hygiene — starting with ruthless remediation of the systemd/ duplication tree as first high-severity "vulnerability" per the project's own policy).
+
+Evidence bundle for this checkpoint: logs/evidence-bundle-20260529-134117.*

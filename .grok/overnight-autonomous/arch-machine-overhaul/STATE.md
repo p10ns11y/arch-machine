@@ -44,3 +44,28 @@ Complete Phase 0 handoff bootstrap (ensure all living docs + EVIDENCE/ subdir ar
 **Current Phase**: Still 0 (handoff bootstrap). Ready to complete remaining bootstrap steps (full baseline evidence bundle commit if not already, then move into Phase 1).
 
 **Next immediate action**: Ensure a proper baseline evidence bundle from the tools is committed on this new branch, then update this STATE with Checkpoint 0.
+
+## Checkpoint 0 COMPLETE - 2026-05-29
+**Handoff bootstrap finished successfully on dedicated branch `hotfix/arch-machine-overhaul-20260529` (created cleanly from up-to-date sentinel, which was confirmed 0 ahead/behind origin/sentinel).**
+
+- New self-referential handoff folder fully created and committed:
+  - CONTEXT.md (synthesized with exploration findings)
+  - INIT_PLAN.md (full 6-phase plan with self-referential rules, policy application, evidence mandates)
+  - STATE.md + PROGRESS.md (living docs)
+  - README.md for the handoff
+  - EVIDENCE/ subdir initialized
+- Pointer added from old cli-policy-remediation-tui/ folder.
+- Baseline evidence collection executed per micro-step 2:
+  - Thin tinfoil path exercised.
+  - tinfoil CLI smoke (noted no --version, consistent with Cobra refactor).
+  - Security audit run (limited without sudo, as expected).
+  - Evidence extraction produced fresh bundle: logs/evidence-bundle-20260529-134117.json + .toon (Critical: 0, Errors: 48, Warnings: 33, Total: 81).
+  - Bundle committed on this branch.
+- Self-referential loop executed: re-read handoff docs, ran project tools, committed evidence, updating docs.
+- Agent confirms full understanding of non-negotiables (policy application to codebase, evidence at every gate, hotfix/PR discipline, install.sh contract preservation, tone rules).
+
+**Current open (carried forward):** Duplication hell (systemd/ + setups/), docs fragmentation, missing CI/professional surface, evidence UX gaps, no self-policy application yet, TUI completion (parallel).
+
+**Ready to proceed to Phase 1.**
+
+Self-referential loop active and verified.
