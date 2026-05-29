@@ -5,6 +5,10 @@
 
 Profile-based bootstrap and maintenance system for Arch Linux workstations focused on ML/AI development and security hardening.
 
+[![CI](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg)](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml)
+[![ShellCheck](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg?job=shellcheck)](https://github.com/p10ns11y/arch-machine/actions)
+[![Evidence](https://img.shields.io/badge/evidence-first-blue)](https://github.com/p10ns11y/arch-machine/tree/sentinel#evidence--the-differentiator)
+
 For a more entertaining introduction, see [FUNREADME.md](FUNREADME.md) – where security meets humor.
 
 ## Prerequisites

@@ -1,0 +1,4 @@
+# Phase 4 shellcheck config
+disable=SC2034,SC2154,SC1091
+shell=bash
+severity=warning

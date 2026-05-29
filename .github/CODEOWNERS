@@ -1,0 +1,11 @@
+# Sentinel (Vigilant Guardian) ownership
+*       @p10ns11y
+/docs/  @p10ns11y
+.github/ @p10ns11y
+maintenance/ @p10ns11y
+bin/ @p10ns11y
+cmd/ @p10ns11y
+
+# Evidence and policy are core — high scrutiny
+maintenance/extract-evidence.sh @p10ns11y
+policies/ @p10ns11y

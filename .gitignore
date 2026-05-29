@@ -38,3 +38,10 @@ systemd/
 .kilo/
 .composer/
 setups/
+
+# Phase 4 lint caches
+.mypy_cache/
+.ruff_cache/
+shellcheck.log
+yamllint.log
+
