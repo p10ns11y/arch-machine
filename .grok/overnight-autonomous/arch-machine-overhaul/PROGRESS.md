@@ -24,6 +24,15 @@ The overhaul is now under full self-referential, evidence-first, policy-complian
 ---
 
 **This log is append-only. Update after every micro-step, commit, evidence bundle, and phase checkpoint. The Sentinel (Vigilant Guardian) is watching.**
+
+### 2026-05-29 - Phase 1 Gate Close (Sweep + docs/LEGACY.md Committed)
+- Final cross-ref sweep (evidence 134929): confirmed zero active production references to killed items outside handoff history + LEGACY.md (perfect).
+- `docs/LEGACY.md` + living docs updates committed (fa6e22b).
+- Phase 1 (duplication remediation + root hygiene + self-policy application) substantially complete on hotfix/arch-machine-overhaul-20260529.
+- 3 commits this phase: systemd/ reference hygiene + .gitignore (86ac670), setups/ + .kilo/ + .composer/ kills (a9b4e32), LEGACY.md + gate (fa6e22b).
+- Next autonomous: either final Phase 1 PR prep or immediate overlap into Phase 2 (docs link fixes, INDEX.md, MODULES.md creation — high value, low risk on clean tree).
+
+Self-referential loop unbroken. The mission continues phase by phase without pause.
 ### 2026-05-29 - Phase 0 Branching Executed
 Followed user's explicit instructions precisely:
 - Verified sentinel is up to date with remote.
@@ -86,7 +95,7 @@ The Vigilant Guardian (Sentinel) self-audits its own control plane. Loop active.
 
 **Evidence bundle for this Phase 1 micro-step**: logs/evidence-bundle-20260529-134653.json + .toon (Critical: 0, Errors: 48, Warnings: 33, Total: 81 — stable snapshot during hygiene).
 
-**Next in Phase 1 (immediate, unblocked)**: exhaustive cross-reference updates (any remaining historical mentions), living docs Phase 1 checkpoint, prepare content for first sentinel PR gate (after full Phase 1 items or safe partial).
+**Next in Phase 1 (immediate, unblocked)**: final cross-ref sweep (complete — only historical mentions in handoff STATE/PROGRESS + the new LEGACY.md itself; no production impact), living docs Phase 1 gate close, prepare sentinel PR content or proceed to Phase 2 overlap items (link fixes, INDEX.md skeleton).
 
 Self-referential loop remains the unbreakable spine of the mission. The policy was applied; the env limitation is explicitly called out rather than hidden. Highest security seniority preserved.
 
