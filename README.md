@@ -16,7 +16,7 @@ For a more entertaining introduction, see [FUNREADME.md](FUNREADME.md) – where
 
 ## Safety Note
 
-The security-dev profile includes security hardening and scans. Review [Safety & Requirements](SAFETY.md) before choosing profiles.
+The security-dev profile includes security hardening and scans. Review [Safety & Requirements](docs/SECURITY.md) before choosing profiles.
 
 ## Quick Start
 
@@ -53,7 +53,7 @@ Pre-configured Conda environments:
 ### `security-dev`
 Everything in `minimal` plus Kubernetes security hardening, runtime monitoring, and encrypted storage.
 
-See [Installation Guide](INSTALLATION.md) for detailed profile information and customization options.
+See [Installation Guide](docs/INSTALLATION.md) for detailed profile information and customization options.
 
 ## Adapting for Other Distributions
 
@@ -103,7 +103,7 @@ The system includes automated weekly maintenance for system updates, security sc
 - **Manual**: Individual maintenance scripts in `maintenance/`
 - **Evidence Extraction**: Generates AI-optimized evidence bundles from logs
 
-See [Maintenance Guide](MAINTENANCE.md) for complete maintenance documentation.
+See [Maintenance Guide](docs/MAINTENANCE.md) for complete maintenance documentation.
 
 ## Interactive TUI (New in 2026 Sentinel)
 
@@ -146,14 +146,14 @@ arch-machine/
 
 ## Documentation
 
-- [Safety & Requirements](SAFETY.md) - Important safety information and system requirements
+- [Safety & Requirements](docs/SECURITY.md) - Important safety information and system requirements
 - [Installation Guide](docs/INSTALLATION.md) - Detailed setup and profiles
 - [Maintenance Guide](docs/MAINTENANCE.md) - System maintenance and automation
-- [Evidence Extraction](EVIDENCE-EXTRACTION.md) - AI-optimized log processing
+- [Evidence Extraction](docs/EVIDENCE.md) - AI-optimized log processing (legacy content in EVIDENCE-EXTRACTION.md during transition)
 - [Backup Guide](docs/BACKUP.md) - Backup and recovery procedures
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Development](docs/DEVELOPMENT.md) - Contributing and development guide
-- [Author's Motto](/AUTHORS-MOTTO.md) - Project philosophy and design decisions
+- [Author's Motto](AUTHORS-MOTTO.md) - Project philosophy and design decisions
 
 ## Verification
 
