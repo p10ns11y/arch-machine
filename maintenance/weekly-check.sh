@@ -31,6 +31,25 @@ DRY_RUN="${DRY_RUN:-false}"
 NOTIFICATION_ENABLED="${NOTIFICATION_ENABLED:-false}"
 REPORT_FILE="$REPORTS_DIR/maintenance-$(date +%Y%m%d-%H%M%S).txt"
 
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -n|--dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            -h|--help)
+                echo "Usage: weekly-check.sh [--dry-run]"
+                echo "  --dry-run  Check and report only; no sudo pacman or destructive cleanup"
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+
 # Ensure directories exist
 ensure_dir "$REPORTS_DIR"
 
@@ -434,4 +453,5 @@ main() {
 }
 
 # Run main function with all arguments
-main "$@"
+parse_args "$@"
+main
