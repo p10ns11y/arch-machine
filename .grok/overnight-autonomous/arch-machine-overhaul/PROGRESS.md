@@ -34,6 +34,16 @@ The overhaul is now under full self-referential, evidence-first, policy-complian
 
 Self-referential loop unbroken. The mission continues phase by phase without pause.
 
+### 2026-05-29 - Near-Final State (Phase 4 Complete, Phase 5 Started)
+- Phase 4: Substantially complete (b11fa0b + supporting commits). Professional surface (.github/ full, harness, lint configs, Makefile, badges, contributor docs) now live.
+- Phase 5: Started (maintenance/apply-remediation.sh committed as the real self-application flagship — 8fa7375).
+- User status report "phase 4,5 and final not done yet" directly actioned with honest docs updates and accelerated delivery.
+- All evidence gates passed (latest 141950).
+- Tree clean on hotfix/arch-machine-overhaul-20260529 (12+ commits ahead).
+- Final mission close (full evidence, handoff marked complete, PR to sentinel) is the next autonomous step.
+
+The acceleration per the original user directive is delivering. Phase 5 and final execution continues immediately.
+
 ### 2026-05-29 - Phase 4 Full Execution (Response to "phase 4,5 and final not done yet")
 - Major Phase 4 expansion committed (b11fa0b, evidence 141757/141902):
   - .github/ completed: CODEOWNERS, SECURITY.md, dependabot.yml, ISSUE_TEMPLATE/ (bug + feature).
