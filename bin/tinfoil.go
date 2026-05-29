@@ -6,35 +6,52 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/p10ns11y/arch-machine/cmd/tui"
+	"github.com/spf13/cobra"
 )
 
 const version = "0.2.0-sentinel"
 
-func main() {
-	// TUI subcommand dispatch (Phase 3: shell+ gum TUI, zero extra Go deps)
-	if len(os.Args) >= 2 && os.Args[1] == "tui" {
-		tuiScript := findTuiScript()
-		cmd := exec.Command("bash", tuiScript)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "❌ tinfoil tui failed: %v\n", err)
-			os.Exit(1)
-		}
-		return
-	}
+var rootCmd = &cobra.Command{
+	Use:   "tinfoil [path]",
+	Short: "The Good Sentinel security auditor",
+	Long:  "tinfoil is a paranoid but practical security auditor for Arch Linux systems and projects.",
+	Run:   runAudit,
+}
 
+var tuiCmd = &cobra.Command{
+	Use:   "tui",
+	Short: "Launch the interactive Bubble Tea TUI",
+	Long:  "Starts the full graphical TUI (Go + Bubble Tea) for interactive profile selection, feature toggles, and flows.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Directly embed and run the Bubble Tea TUI (single binary, per TUI-SPEC)
+		return tui.Run()
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(tuiCmd)
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func runAudit(cmd *cobra.Command, args []string) {
 	fmt.Printf("🚀 tinfoil %s — The Good Sentinel is watching 👀🛡️\n\n", version)
 
 	var mode, targetDir string
 
-	if len(os.Args) == 1 {
+	if len(args) == 0 {
 		mode = "global"
 		targetDir = os.Getenv("HOME")
 	} else {
 		mode = "project"
-		targetDir = os.Args[1]
+		targetDir = args[0]
 		abs, err := filepath.Abs(targetDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Failed to resolve path: %v\n", err)
@@ -51,25 +68,26 @@ func main() {
 
 	fmt.Printf("   Mode : %s\n   Target: %s\n\n", mode, targetDir)
 
-	// Smart script discovery: first look in installed location, then fallback to repo (dev mode)
 	scriptPath := findScript("maintenance/security-audit.sh")
 
-	cmd := exec.Command("bash", scriptPath)
+	auditCmd := exec.Command("bash", scriptPath)
 	if mode == "global" {
-		cmd.Args = append(cmd.Args, "--global")
+		auditCmd.Args = append(auditCmd.Args, "--global")
 	} else {
-		cmd.Args = append(cmd.Args, "--project", targetDir)
+		auditCmd.Args = append(auditCmd.Args, "--project", targetDir)
 	}
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+	auditCmd.Stdout = os.Stdout
+	auditCmd.Stderr = os.Stderr
+	auditCmd.Stdin = os.Stdin
 
-	if err := cmd.Run(); err != nil {
+	if err := auditCmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "❌ tinfoil failed: %v\n", err)
 		os.Exit(1)
 	}
 }
+
+
 
 func findScript(scriptName string) string {
 	// 1. Installed system location (after ./install.sh)
@@ -91,7 +109,7 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-// findTuiScript locates the gum-powered interactive TUI (Phase 3)
+// findTuiScript locates the legacy gum-powered interactive TUI (fallback only)
 func findTuiScript() string {
 	// 1. Installed system location
 	if path := "/usr/share/tinfoil/lib/tui.sh"; fileExists(path) {
@@ -102,7 +120,7 @@ func findTuiScript() string {
 	if path := filepath.Join(binDir, "..", "lib", "tui.sh"); fileExists(path) {
 		return path
 	}
-	// 3. Fallback relative (when go run bin/tinfoil.go tui from root)
+	// 3. Fallback relative
 	if path := "lib/tui.sh"; fileExists(path) {
 		return path
 	}

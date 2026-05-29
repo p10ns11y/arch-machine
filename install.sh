@@ -12,7 +12,8 @@ MODULES_DIR="$SCRIPT_DIR/modules"
 LOGS_DIR="$SCRIPT_DIR/logs"
 
 # Default values
-PROFILE="ml-dev"
+PROFILE=""
+THIN_MODE=true          # New default: only install tinfoil (the manager)
 DRY_RUN=false
 FORCE=false
 VERBOSE=false
@@ -134,7 +135,7 @@ Modular installer for development environments on Arch Linux.
 
 OPTIONS:
     -p, --profile PROFILE    Installation profile (minimal, ml-dev, security-dev)
-                             Default: ml-dev
+                             If omitted, runs in thin mode (only installs tinfoil CLI)
     -d, --dry-run           Show what would be done without making changes
     -f, --force             Force installation even if components exist
     -v, --verbose           Enable verbose logging
@@ -145,6 +146,9 @@ OPTIONS:
     -h, --help              Show this help message
     --tui                   Launch the interactive gum-powered TUI (tinfoil tui)
                             (beautiful menus for audit, remediation, profiles, evidence)
+    --thin                  Force thin mode (only install tinfoil CLI manager)
+
+Default behavior (no --profile): Thin mode — only installs the tinfoil CLI.
 
 PROFILES:
     minimal      - Basic development tools (git, python, node, rust)
@@ -152,9 +156,9 @@ PROFILES:
     security-dev - Security-focused with Kubernetes and monitoring
 
 EXAMPLES:
-    $0 --profile minimal --dry-run
-    $0 --profile ml-dev --verbose
-    $0 --profile security-dev
+    $0                           # Thin mode: just install tinfoil (the manager)
+    $0 --profile minimal         # Full workstation with chosen profile
+    $0 --profile ml-dev --dry-run
     $0 --validate
     $0 --setup-vault ~/.myvault ~/.vault
 
@@ -225,6 +229,10 @@ parse_args() {
             --tui)
                 # Launch interactive TUI (gum) — Phase 3 shipped
                 exec bash "${SCRIPT_DIR:-$(dirname "$0")}/lib/tui.sh" "$@"
+                ;;
+            --thin)
+                THIN_MODE=true
+                shift
                 ;;
             *)
                 log_error "Unknown option: $1"
@@ -355,6 +363,11 @@ show_completion() {
 main() {
     parse_args "$@"
 
+    # Determine mode: thin (default) vs full profile
+    if [[ -n "$PROFILE" ]]; then
+        THIN_MODE=false
+    fi
+
     # Handle special modes that need libraries
     if [[ "$LIST_PROFILES_ONLY" == "true" || -n "$SHOW_PROFILE" || "$SETUP_VAULT" == "true" ]]; then
         load_libraries
@@ -380,6 +393,12 @@ main() {
         exit $?
     fi
 
+    if [[ "$THIN_MODE" == "true" ]]; then
+        # Thin mode: do nothing heavy here. install_tinfoil_thin() will run after main().
+        return 0
+    fi
+
+    # === Full profile mode only ===
     validate_profile
 
     # Load libraries
@@ -418,30 +437,54 @@ main() {
     show_completion
 }
 
+# Thin installer: only installs the tinfoil CLI manager (new default behavior)
+install_tinfoil_thin() {
+    echo "==> Thin mode: Installing tinfoil CLI manager only"
+
+    # Install Go if missing (minimal requirement for building tinfoil)
+    if ! command -v go >/dev/null 2>&1; then
+        echo "    Installing Go..."
+        sudo pacman -Sy --needed --noconfirm go 2>/dev/null || true
+    fi
+
+    # Create minimal share directory
+    sudo mkdir -p /usr/share/tinfoil/maintenance /usr/share/tinfoil/lib
+
+    # Only copy the absolute minimum the tinfoil binary needs
+    echo "    Installing minimal runtime files for tinfoil..."
+    [[ -f maintenance/security-audit.sh ]] && sudo cp -f maintenance/security-audit.sh /usr/share/tinfoil/maintenance/
+    [[ -d lib ]] && sudo cp -f lib/*.sh /usr/share/tinfoil/lib/ 2>/dev/null || true
+
+    # Build and install
+    if [[ -f bin/tinfoil.go ]]; then
+        echo "    Building tinfoil..."
+        (cd bin && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /tmp/tinfoil tinfoil.go)
+        sudo install -Dm755 /tmp/tinfoil /usr/local/bin/tinfoil
+    else
+        echo "ERROR: bin/tinfoil.go not found"
+        return 1
+    fi
+
+    echo ""
+    echo "✅ tinfoil CLI manager installed successfully to /usr/local/bin/tinfoil"
+    echo ""
+    echo "   tinfoil                  → Global investigator / manager mode"
+    echo "   tinfoil .                → Audit current project"
+    echo "   tinfoil tui              → Interactive TUI (if installed)"
+    echo ""
+    echo "To set up a full workstation later, run:"
+    echo "   ./install.sh --profile minimal"
+    echo "   ./install.sh --profile ml-dev      # (warning: large)"
+}
+
 # Run main function
 main "$@"
 
-echo "🔨 Building the 'tinfoil' CLI binary + installing scripts..."
-
-# Install Go if missing
-sudo pacman -Sy --needed --noconfirm go 2>/dev/null || true
-
-# Create system-wide share directory
-sudo mkdir -p /usr/share/tinfoil
-
-# Copy all necessary files so tinfoil can find them after install
-sudo cp -r security-audit.sh lib modules config systemd 2>/dev/null || true
-sudo cp -r . /usr/share/tinfoil/ 2>/dev/null || echo "⚠️  Some files could not be copied (normal in dev)"
-
-# Build static Go binary
-cd bin
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /tmp/tinfoil tinfoil.go
-sudo install -Dm755 /tmp/tinfoil /usr/local/bin/tinfoil
-cd ..
-
-echo "✅ tinfoil CLI installed successfully! 🎉"
-echo ""
-echo "Usage:"
-echo "   tinfoil                  → Global investigator mode"
-echo "   tinfoil .                → Audit current project"
-echo "   tinfoil /path/to/project → Audit any folder"
+# === Default behavior after main() ===
+if [[ "$THIN_MODE" == "true" ]]; then
+    install_tinfoil_thin
+else
+    # Full profile path already completed inside main()
+    echo ""
+    echo "Full workstation installation completed for profile: $PROFILE"
+fi
