@@ -1,6 +1,11 @@
 # Logs and reports
 logs/*
 !logs/*-sample.*
+.tinfoil/
+
+security-audit-*.txt
+evidence-bundle-*.json
+evidence-bundle-*.toon
 
 # Security artifacts (keep for tracking)
 !sbom.cdx.json
@@ -31,5 +36,17 @@ backups/
 .cache/
 .config/
 .local/
-# Leftover from autonomous/TUI experiments (accidental copy during privileged operations)
+# systemd/ duplication tree (exact ~2883 LOC mirror of lib/modules/config) — killed per policies/security-remediation.md as high-severity vulnerability (Phase 1 of arch-machine-overhaul). FS removal may require manual sudo on some envs; gitignored to prevent reappearance. References purged from maintenance/ and docs. Do not recreate.
 systemd/
+
+# Root pollution killed in Phase 1 (arch-machine-overhaul): .kilo/ (plans + package-lock from prior agent experiments), .composer/ (wave artifacts), setups/ (legacy duplication variants with no active references). Added per security-remediation policy to prevent reintroduction. Evidence bundles 134739/134750/134802 document the kills.
+.kilo/
+.composer/
+setups/
+
+# Phase 4 lint caches
+.mypy_cache/
+.ruff_cache/
+shellcheck.log
+yamllint.log
+
