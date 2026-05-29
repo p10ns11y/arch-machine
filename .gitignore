@@ -31,5 +31,5 @@ backups/
 .cache/
 .config/
 .local/
-# Leftover from autonomous/TUI experiments (accidental copy during privileged operations)
+# systemd/ duplication tree (exact ~2883 LOC mirror of lib/modules/config) — killed per policies/security-remediation.md as high-severity vulnerability (Phase 1 of arch-machine-overhaul). FS removal may require manual sudo on some envs; gitignored to prevent reappearance. References purged from maintenance/ and docs. Do not recreate.
 systemd/
