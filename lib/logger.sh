@@ -1,12 +1,32 @@
 #!/usr/bin/env bash
 # Logger library for installer and maintenance scripts
 
-LOG_DIR="${LOG_DIR:-logs}"
+# Determine intelligent log location based on context:
+# - If TINFOIL_TARGET_DIR is set (project mode from tinfoil CLI), prefer writing inside the target project.
+# - Else if running from installed /usr/share/tinfoil, use per-user location.
+# - Otherwise fall back to relative "logs/" (dev mode).
+resolve_log_dir() {
+    # Highest priority: explicit project target from tinfoil CLI
+    if [[ -n "${TINFOIL_TARGET_DIR:-}" && -d "$TINFOIL_TARGET_DIR" ]]; then
+        echo "$TINFOIL_TARGET_DIR/.tinfoil/logs"
+    # Common variables set by tui.sh / install flows
+    elif [[ -n "${ROOT:-}" && ( "$ROOT" == "/usr/share/tinfoil" || "$ROOT" == /usr/share/tinfoil* ) ]]; then
+        local data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+        echo "$data_home/tinfoil/logs"
+    elif [[ -n "${ROOT_DIR:-}" && ( "$ROOT_DIR" == "/usr/share/tinfoil" || "$ROOT_DIR" == /usr/share/tinfoil* ) ]]; then
+        local data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+        echo "$data_home/tinfoil/logs"
+    else
+        echo "${LOG_DIR:-logs}"
+    fi
+}
+
+LOG_DIR="${LOG_DIR:-$(resolve_log_dir)}"
 LOG_FILE="${LOG_FILE:-installer.log}"
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
 
-# Ensure log directory exists
-mkdir -p "$LOG_DIR"
+# Ensure log directory exists (best effort, don't fail hard on permission issues)
+mkdir -p "$LOG_DIR" 2>/dev/null || true
 
 # Log levels
 declare -A LOG_LEVELS=(
