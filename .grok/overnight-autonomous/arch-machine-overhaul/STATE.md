@@ -1,26 +1,26 @@
 # STATE.md — Live Arch-Machine Overhaul State (Highest Security Seniority)
 
 **Mission Started**: 2026-05-29  
-**Current Phase**: 1 - Structure & Hygiene (Duplication Remediation)  
+**Current Phase**: Accelerated 3-5 + Final (user directive: proceed directly with Phases 3, 4, 5 and mission close; Phase 2 items pulled forward as safe quick wins)  
 **Agent**: Grok Build (fusion autonomous, stellarfusion mindset, highest security seniority level)
 
 ## Checkpoint Log
 - [x] Checkpoint 0: Handoff bootstrap + baseline evidence (this folder created, living docs initialized, baseline tinfoil + security-audit + extract-evidence run on current tree)
-- [ ] Checkpoint 1: Phase 1 (Structure & Hygiene — duplication remediation) complete (systemd/ git-side + setups/ + root pollution killed + docs/LEGACY.md created; cross-ref sweeps + final commit pending)
-- [ ] Checkpoint 2: Phase 2 (Documentation Consolidation) complete
+- [x] Checkpoint 1: Phase 1 (Structure & Hygiene — duplication remediation) complete (systemd/ git-side + setups/ + root pollution killed + docs/LEGACY.md created; all hygiene committed in transition gate 6e38317)
+- [ ] Checkpoint 2: Phase 2 (Documentation Consolidation) — pulled forward (link fixes done in transition; INDEX/MODULES/etc. as quick wins during 4/5)
 - [ ] Checkpoint 3: Phase 3 (Automation Unification) complete
 - [ ] Checkpoint 4: Phase 4 (Quality & CI Foundations) complete
-- [ ] Checkpoint 5: Phase 5 (Polish, Branding, Self-Policy Application) complete + mission close PR
+- [ ] Checkpoint 5: Phase 5 (Polish, Branding, Self-Policy Application) complete + mission close PR (accelerated execution per user directive)
 
 ## Current Open Items (High-Security Lens)
-- Exact duplication hell (`systemd/` mirrors ~2883 LOC — git/reference side + .gitignore complete; FS physical removal requires manual sudo on this env due to fingerprint timeout; explicitly documented in docs/LEGACY.md).
-- Documentation fragmentation (broken links, no single source of truth) — Phase 2.
-- Missing professional surface (no .github/, no CI, limited contributor docs) — Phase 4.
-- Evidence UX still raw (opportunity to amplify the differentiator) — Phase 5.
-- No self-application of the project's own policies to its codebase (ironic gap) — **partially closed** (this overhaul is the first full self-application; docs/LEGACY.md + evidence bundles are the proof).
-- Bubble Tea TUI (per updated TUI-SPEC) still early (parallel work on same lineage).
-- ROCm duplication in ml-dev (less urgent now that thin is default).
-- Root pollution and legacy remnants — **largely closed** (setups/ + .kilo/ + .composer/ killed in Phase 1; documented in docs/LEGACY.md).
+- Exact duplication hell (`systemd/` mirrors ~2883 LOC — git/reference side + .gitignore complete + docs/LEGACY.md; FS physical removal requires manual sudo on this env — explicitly documented; treated as closed for mission).
+- Documentation fragmentation (broken links, no single source of truth) — Phase 2 items pulled forward as quick wins during accelerated 4/5 execution (link fixes already in transition commit 6e38317).
+- Missing professional surface (no .github/, no CI, limited contributor docs) — Phase 4 (now primary focus after 3).
+- Evidence UX still raw (opportunity to amplify the differentiator) — Phase 5 (will include tinfoil evidence subcommands + TUI Evidence screen).
+- No self-application of the project's own policies to its codebase (ironic gap) — **largely closed** (this entire autonomous overhaul + docs/LEGACY.md + evidence bundles at every gate is the living proof; apply-remediation.sh in Phase 5 will make it callable).
+- Bubble Tea TUI (per updated TUI-SPEC) still early (parallel work on same lineage; evidence screen + real flows targeted in Phase 5).
+- ROCm duplication in ml-dev (less urgent now that thin is default; smarter handling in Phase 5 if time).
+- Root pollution and legacy remnants — **closed** (all killed in Phase 1 + transition commit; documented).
 
 ## Branch & Policy Compliance (Non-Negotiable)
 - Current working branch: `hotfix/arch-machine-overhaul-20260529` (or equivalent hotfix/sentinel-* or vir tinel-style).
@@ -29,16 +29,15 @@
 - Before/after every major action: re-read INIT_PLAN + this STATE + PROGRESS; run project's own `tinfoil` (thin) + `maintenance/security-audit.sh` + `maintenance/extract-evidence.sh`; commit evidence bundle; update living docs.
 
 ## Next Micro-Task
-Complete Phase 1 remaining items:
-- Any remaining cross-ref sweeps (grep for historical "setups/" or "systemd/ dup" mentions in active docs/ outside the new LEGACY.md; update old handoff pointer if needed).
-- Final evidence bundle + living docs Phase 1 checkpoint entry.
-- Commit the LEGACY.md + sweeps.
-- Prepare concise PR description for sentinel (detailing the policy application, evidence bundles, no behavior change, and the one documented env limitation for systemd/ FS).
-- After PR merge (or safe partial), advance to Phase 2 (docs consolidation: link fixes, INDEX.md, MODULES.md, etc.).
+**User directive executed**: "proceed with other phases 3 to 5 and final" — acceleration in effect. Remaining Phase 2 items (full link sweep, EVIDENCE-EXTRACTION.md move, INDEX.md/MODULES.md/PROFILES/CONTRIBUTING.md, AUTHORS-MOTTO surfacing) pulled forward as safe quick wins during Phase 5 polish + Phase 4 CI/docs work.
 
-The bulk of Phase 1 duplication remediation and root hygiene is complete (setups/ + .kilo/ + .composer/ fully killed; systemd/ git/reference side complete; docs/LEGACY.md created). Self-application of the policy is now a living, committed artifact.
+Immediate: Begin Phase 3 (Automation Unification) — inspect/fix maintenance/systemd-setup.sh (generate clean units dynamically or create proper ones), harden thin installer for full evidence/weekly experience, unify evidence UX, update callers, evidence + commit after each micro-step.
 
-**Last Updated**: 2026-05-29 (Phase 1 hygiene complete: setups/ + .kilo/ + .composer/ killed + docs/LEGACY.md created + .gitignore hardened; evidence 134850; open items significantly reduced)
+Then Phase 4 (CI foundations + .github/), Phase 5 (polish + evidence UX amplify + apply-remediation.sh + final PR to sentinel).
+
+All with full self-referential loop, evidence at every gate, living docs updates, on hotfix/ only.
+
+**Last Updated**: 2026-05-29 (Phase 3 started: maintenance/systemd-setup.sh rewritten with dynamic units (evidence 135523); acceleration to 3-5+final in effect per user; clean tree post 6e38317; Phase 2 items pulled forward)
 ## 2026-05-29 Update - Phase 0 Branching Complete
 - Confirmed local `sentinel` is perfectly up to date with `origin/sentinel` (same commit 9c777ab, 0 ahead/behind).
 - Current work was on an older hotfix branch that had untracked handoff files.

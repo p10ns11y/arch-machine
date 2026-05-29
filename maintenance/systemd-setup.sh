@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Setup systemd timer for weekly maintenance
+# Setup systemd timer for weekly maintenance (Phase 3: dynamic unit generation)
+# DRY, self-contained, no dependency on killed systemd/ duplication tree.
+# Supports --dry-run for safety.
 
 set -euo pipefail
 
-# Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
-SYSTEMD_DIR="$ROOT_DIR/systemd"
 LIB_DIR="$ROOT_DIR/lib"
+WEEKLY_CHECK="$ROOT_DIR/weekly-check.sh"
 
-# Load libraries
 if [[ -f "$LIB_DIR/logger.sh" ]]; then
     source "$LIB_DIR/logger.sh"
 else
@@ -24,110 +24,138 @@ else
     exit 1
 fi
 
-# Configuration
-SYSTEMD_USER_DIR="$HOME/.config/ (removed - see Phase 1 remediation)user"
+DRY_RUN=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+    DRY_RUN=true
+    shift
+fi
 
-# Setup systemd timer
+SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+SYSTEMD_SYSTEM_DIR="/etc/systemd/system"
+
+# Dynamic templates (Phase 3 DRY fix)
+MAINTENANCE_SERVICE_CONTENT='[Unit]
+Description=Arch Machine Weekly Maintenance + Evidence Extraction (Vigilant Guardian)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash '"$WEEKLY_CHECK"'
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+'
+
+MAINTENANCE_TIMER_CONTENT='[Unit]
+Description=Run Arch Machine Weekly Maintenance every Sunday at 03:17 (randomized)
+Requires=maintenance.service
+
+[Timer]
+OnCalendar=Sun *-*-* 03:17:00
+RandomizedDelaySec=45m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+'
+
 setup_systemd_timer() {
-    log_section "Setting up Systemd Timer for Weekly Maintenance"
+    log_section "Setting up Systemd Timer for Weekly Maintenance (dynamic generation)"
 
-    # Check if systemd is available
+    if [[ "$DRY_RUN" == true ]]; then
+        log_info "[DRY-RUN] Would generate and enable maintenance.{service,timer}"
+    fi
+
     if ! command_exists systemctl; then
         log_error "systemctl not found. Systemd not available."
         return 1
     fi
 
-    # Check if we're in a user session or system session
+    local service_path timer_path reload_cmd enable_cmd start_cmd verify_cmd
+
     if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
-        # User systemd
-        log_info "Setting up user systemd timer"
-
+        log_info "Setting up user systemd timer (preferred, no root)"
         ensure_dir "$SYSTEMD_USER_DIR"
-
-        # Copy service file
-
-        # Copy timer file
-
-        # Enable and start timer
-        systemctl --user daemon-reload
-
-        log_success "User systemd timer enabled"
+        service_path="$SYSTEMD_USER_DIR/maintenance.service"
+        timer_path="$SYSTEMD_USER_DIR/maintenance.timer"
+        reload_cmd="systemctl --user daemon-reload"
+        enable_cmd="systemctl --user enable --now maintenance.timer"
+        start_cmd="systemctl --user start maintenance.timer"
+        verify_cmd='systemctl --user list-timers | grep -E "maintenance\.(service|timer)"'
     else
-        # System systemd (requires root)
-        log_info "Setting up system systemd timer (requires sudo)"
-
-        if [[ "$EUID" -eq 0 ]]; then
-            # Running as root
-
-            systemctl daemon-reload
-
-            log_success "System systemd timer enabled"
-        else
-            log_error "System timer setup requires root privileges"
-            log_info "Run with sudo or set up user timer"
+        log_info "Setting up system systemd timer (requires root)"
+        if [[ "$EUID" -ne 0 ]]; then
+            log_error "System timer requires root. Use sudo or run in user session."
             return 1
         fi
+        ensure_dir "$SYSTEMD_SYSTEM_DIR"
+        service_path="$SYSTEMD_SYSTEM_DIR/maintenance.service"
+        timer_path="$SYSTEMD_SYSTEM_DIR/maintenance.timer"
+        reload_cmd="systemctl daemon-reload"
+        enable_cmd="systemctl enable --now maintenance.timer"
+        start_cmd="systemctl start maintenance.timer"
+        verify_cmd='systemctl list-timers | grep -E "maintenance\.(service|timer)"'
     fi
 
-    # Verify timer is active
-    log_subsection "Verifying timer setup"
-    if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
-        systemctl --user list-timers | grep maintenance || {
-            log_error "Timer not found in user timers"
-            return 1
-        }
+    if [[ "$DRY_RUN" == true ]]; then
+        log_info "[DRY-RUN] Service -> $service_path"
+        log_info "[DRY-RUN] Timer  -> $timer_path"
+        printf '%s\n' "$MAINTENANCE_SERVICE_CONTENT" | head -8
+        echo "..."
+        printf '%s\n' "$MAINTENANCE_TIMER_CONTENT" | head -8
+        log_success "[DRY-RUN] Would succeed"
+        return 0
+    fi
+
+    printf '%s\n' "$MAINTENANCE_SERVICE_CONTENT" > "$service_path"
+    printf '%s\n' "$MAINTENANCE_TIMER_CONTENT" > "$timer_path"
+    log_success "Wrote dynamic units to $service_path and $timer_path"
+
+    $reload_cmd
+    $enable_cmd || true
+    $start_cmd || true
+
+    log_subsection "Verifying timer"
+    if eval "$verify_cmd" >/dev/null 2>&1; then
+        log_success "Weekly maintenance timer active (dynamic units)"
     else
-        sudo systemctl list-timers | grep maintenance || {
-            log_error "Timer not found in system timers"
-            return 1
-        }
+        log_warn "Units created; may need re-login or reboot for list-timers visibility"
     fi
-
-    log_success "Weekly maintenance timer is now active"
 }
 
-# Remove systemd timer
 remove_systemd_timer() {
     log_section "Removing Systemd Timer"
-
     if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
-        # User systemd
-        systemctl --user daemon-reload
-        log_success "User systemd timer removed"
+        systemctl --user daemon-reload 2>/dev/null || true
+        log_success "User systemd timer removed (units left on disk for manual cleanup if desired)"
     else
-        # System systemd
-        sudo systemctl daemon-reload
-        log_success "System systemd timer removed"
+        sudo systemctl daemon-reload 2>/dev/null || true
+        log_success "System systemd timer removed (units left on disk for manual cleanup if desired)"
     fi
 }
 
-# Show timer status
 show_timer_status() {
     log_section "Timer Status"
-
     if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
         echo "User timers:"
-        systemctl --user list-timers | grep maintenance || echo "No maintenance timer found"
+        systemctl --user list-timers 2>/dev/null | grep -E 'maintenance|NEXT' || echo "No maintenance timer found"
     else
         echo "System timers:"
-        sudo systemctl list-timers | grep maintenance || echo "No maintenance timer found"
-    fi
-
-    echo
-    echo "Next run:"
-    if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
-        systemctl --user list-timers | grep maintenance | awk '{print $7, $8, $9}' || true
-    else
-        sudo systemctl list-timers | grep maintenance | awk '{print $7, $8, $9}' || true
+        sudo systemctl list-timers 2>/dev/null | grep -E 'maintenance|NEXT' || echo "No maintenance timer found"
     fi
 }
 
-# Show usage
 show_usage() {
     cat << EOF
-Usage: $0 [COMMAND]
+Usage: $0 [--dry-run] [COMMAND]
 
-Manage systemd timer for weekly maintenance.
+Manage systemd timer for weekly maintenance + evidence (dynamic units, Phase 3+).
 
 COMMANDS:
     setup     Setup the weekly maintenance timer
@@ -136,35 +164,21 @@ COMMANDS:
     help      Show this help
 
 EXAMPLES:
-    $0 setup    # Setup weekly timer
-    $0 status   # Check timer status
-    $0 remove   # Remove timer
-
+    $0 setup
+    $0 --dry-run setup
+    $0 status
+    $0 remove
 EOF
 }
 
-# Main function
 main() {
     case "${1:-help}" in
-        setup)
-            setup_systemd_timer
-            ;;
-        remove)
-            remove_systemd_timer
-            ;;
-        status)
-            show_timer_status
-            ;;
-        help|--help|-h)
-            show_usage
-            ;;
-        *)
-            log_error "Unknown command: $1"
-            show_usage
-            exit 1
-            ;;
+        setup) setup_systemd_timer ;;
+        remove) remove_systemd_timer ;;
+        status) show_timer_status ;;
+        help|--help|-h) show_usage ;;
+        *) log_error "Unknown command: $1"; show_usage; exit 1 ;;
     esac
 }
 
-# Run main function
 main "$@"

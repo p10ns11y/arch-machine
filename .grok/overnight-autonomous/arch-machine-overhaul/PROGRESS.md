@@ -33,6 +33,32 @@ The overhaul is now under full self-referential, evidence-first, policy-complian
 - Next autonomous: either final Phase 1 PR prep or immediate overlap into Phase 2 (docs link fixes, INDEX.md, MODULES.md creation — high value, low risk on clean tree).
 
 Self-referential loop unbroken. The mission continues phase by phase without pause.
+
+### 2026-05-29 - Phase 3 Start (Automation Unification): maintenance/systemd-setup.sh Fixed
+- Core Phase 3 micro-step 1 complete: `maintenance/systemd-setup.sh` fully rewritten with dynamic unit generation from inline templates (DRY, --dry-run support, no dependency on killed systemd/ dup tree).
+- Units now written to standard user ($HOME/.config/systemd/user/) or system (/etc/systemd/system/) locations and call weekly-check.sh (evidence pipeline).
+- Pre-edit evidence 135429; post-edit 135523.
+- Reference sweep clean (no lingering active references to killed dup outside docs/LEGACY.md + handoff).
+- This unblocks reliable weekly maintenance + evidence on installed systems (thin tinfoil users now have a working path).
+
+### 2026-05-29 - User Directive: Accelerate to Phases 3-5 + Final (Proceed Directly)
+**Explicit user instruction received**: "proceed with other phases 3 to 5 and final"
+
+**Decision (highest security seniority, self-referential)**:
+- Recorded in STATE.md (Current Phase updated to "Accelerated 3-5 + Final"; Checkpoint log and open items adjusted; Phase 2 items explicitly pulled forward as safe quick wins during later phases to avoid blocking).
+- Transition gate commit 6e38317: Cleaned all remaining Phase 1 hygiene deletions (29 files, .kilo/ + .composer/ + setups/ fully removed from tree + index) + early Phase 2 link fixes in README.md (bare names standardized to docs/ paths). Working tree now pristine for accelerated execution.
+- Fresh evidence bundle 135321 produced immediately before this decision and transition commit.
+- Remaining Phase 2 micro-steps (EVIDENCE-EXTRACTION.md → docs/EVIDENCE.md move + content consolidation, full docs/INDEX.md with mermaid architecture, MODULES.md authoring contract, PROFILES.md, CONTRIBUTING.md enhancement, AUTHORS-MOTTO prominent linking, exhaustive link fixes across all md, script comments) will be executed as quick, low-risk wins interleaved with Phase 5 polish and Phase 4 CI/docs updates. No risk to the clean tree or prior kills.
+- Phase 3 (Automation Unification) begins **immediately** after this entry: maintenance/systemd-setup.sh fix (dynamic unit generation preferred for DRY), thin installer hardening for complete evidence/weekly guardian experience on installed tinfoil, evidence UX unification, all caller updates, evidence + living docs + commit after each micro-batch.
+- Then Phase 4 (professional .github/ CI surface with shellcheck/yamllint/go/profile-validation/evidence-smoke, templates, lint configs, Makefile, badges).
+- Then Phase 5 (branding balance, evidence UX amplification including tinfoil evidence subcommands + TUI Evidence screen per TUI-SPEC, creation of maintenance/apply-remediation.sh for real callable policy kills, smarter ROCm, contributor validation, final mission close).
+- Final: Complete evidence on clean tree, handoff finalization, summary commit on hotfix, gh PR to sentinel, verification against success criteria in CONTEXT.md (0 open items, install.sh/tinfoil contract preserved, self-referential loop proven end-to-end).
+
+**Self-referential loop status**: Re-read of CONTEXT + INIT_PLAN + STATE + PROGRESS + fresh evidence executed before recording this directive and before the transition commit. All future actions (Phases 3-5 + final) will follow the identical mandatory pre/post checklist.
+
+The autonomous mission is now under explicit acceleration per user. No waiting. Phase 3 starts now. The Vigilant Guardian continues to apply its own policy to itself at principal-architect level while shipping professional-grade foundations.
+
+Evidence for this acceleration gate: logs/evidence-bundle-20260529-135321.json + .toon (also referenced in handoff/EVIDENCE/README.md).
 ### 2026-05-29 - Phase 0 Branching Executed
 Followed user's explicit instructions precisely:
 - Verified sentinel is up to date with remote.
