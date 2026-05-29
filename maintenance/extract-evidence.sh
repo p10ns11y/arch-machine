@@ -8,7 +8,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
 LIB_DIR="$ROOT_DIR/lib"
-LOGS_DIR="$ROOT_DIR/logs"
+
+# Smart logs directory (same logic as security-audit.sh)
+get_logs_dir() {
+    if [[ "$ROOT_DIR" == "/usr/share/tinfoil" || "$ROOT_DIR" == /usr/share/tinfoil* ]]; then
+        local data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+        echo "$data_home/tinfoil/logs"
+    else
+        echo "$ROOT_DIR/logs"
+    fi
+}
+
+LOGS_DIR="$(get_logs_dir)"
 REPORTS_DIR="$LOGS_DIR/reports"
 
 # Load dependencies
@@ -34,23 +45,72 @@ else
 fi
 
 # Default values
-OUTPUT_DIR="$LOGS_DIR"
+# If tinfoil told us a specific target project, prefer writing evidence there.
+if [[ -n "${TINFOIL_TARGET_DIR:-}" && -d "$TINFOIL_TARGET_DIR" ]]; then
+    OUTPUT_DIR="$TINFOIL_TARGET_DIR/.tinfoil/logs"
+else
+    OUTPUT_DIR="$LOGS_DIR"
+fi
 DRY_RUN="${DRY_RUN:-false}"
 
 # Find latest files for evidence extraction
 find_latest_files() {
-    # Find latest security report
-    local security_report=""
-    if [[ -d "$LOGS_DIR/security-reports" ]]; then
-        security_report=$(find "$LOGS_DIR/security-reports" -name "security-audit-*.txt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+    local search_dirs=("$LOGS_DIR")
+
+    # When extracting for a specific project, also look inside its .tinfoil/logs
+    if [[ -n "${TINFOIL_TARGET_DIR:-}" && -d "$TINFOIL_TARGET_DIR" ]]; then
+        local proj_logs="$TINFOIL_TARGET_DIR/.tinfoil/logs"
+        if [[ -d "$proj_logs" ]]; then
+            search_dirs+=("$proj_logs")
+        fi
+        # Also check for security reports written directly in the project root (from per-project audits)
+        if [[ -d "$TINFOIL_TARGET_DIR" ]]; then
+            search_dirs+=("$TINFOIL_TARGET_DIR")
+        fi
     fi
 
-    # Use current installer.log
-    local installer_log="$LOGS_DIR/installer.log"
+    # Find latest security report (prefer project-specific if available)
+    local security_report=""
+    for d in "${search_dirs[@]}"; do
+        if [[ -d "$d/security-reports" ]]; then
+            local candidate
+            candidate=$(find "$d/security-reports" -name "security-audit-*.txt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+            if [[ -n "$candidate" ]]; then
+                security_report="$candidate"
+                break
+            fi
+        fi
+        # Also check for reports written directly next to the project (new per-project behavior)
+        local direct_report
+        direct_report=$(find "$d" -maxdepth 1 -name "security-audit-*.txt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        if [[ -n "$direct_report" ]]; then
+            security_report="$direct_report"
+            break
+        fi
+    done
+
+    # Use current installer.log (prefer project if present)
+    local installer_log=""
+    for d in "${search_dirs[@]}"; do
+        if [[ -f "$d/installer.log" ]]; then
+            installer_log="$d/installer.log"
+            break
+        fi
+    done
+    if [[ -z "$installer_log" ]]; then
+        installer_log="$LOGS_DIR/installer.log"
+    fi
 
     # Find latest update check JSON
     local update_json=""
-    update_json=$(find "$LOGS_DIR" -name "update-check-*.json" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+    for d in "${search_dirs[@]}"; do
+        local candidate
+        candidate=$(find "$d" -name "update-check-*.json" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        if [[ -n "$candidate" ]]; then
+            update_json="$candidate"
+            break
+        fi
+    done
 
     echo "$security_report|$installer_log|$update_json"
 }
@@ -93,12 +153,19 @@ run_evidence_extraction() {
         summary=$(jq -r '.summary | "Critical: \(.critical_issues), Errors: \(.errors_count), Warnings: \(.warnings_count), Total: \(.total_issues)"' "$output_file" 2>/dev/null || echo "Summary unavailable")
         log_info "Evidence summary: $summary"
 
-        # Optional: Create TOON version if toon is available
+        # Always try to produce a .toon (AI-optimized) version.
+        # Preferred: the `toon` binary if present (very compact).
+        # Fallback: just note that the JSON is already the primary artifact.
+        local toon_file="${output_file%.json}.toon"
         if command_exists toon; then
-            local toon_file="${output_file%.json}.toon"
             if toon "$output_file" -e -o "$toon_file" 2>/dev/null; then
-                log_info "TOON version created: $toon_file"
+                log_info "TOON version created: $toon_file (ultra-compact for LLMs)"
+            else
+                log_warn "toon binary failed to convert; JSON is still excellent for agents"
             fi
+        else
+            log_info "Evidence JSON ready: $output_file"
+            log_info "(Install 'toon' for optional ultra-compact .toon sidecar)"
         fi
     else
         log_error "Failed to create evidence bundle"

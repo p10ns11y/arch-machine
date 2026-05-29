@@ -23,10 +23,23 @@ set -euo pipefail
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../" && pwd)"
+
+# Smart logs directory: use user-writable location when running from installed
+# /usr/share/tinfoil (thin sentinel install). Fall back to repo logs/ in dev.
+get_logs_dir() {
+    if [[ "$ROOT_DIR" == "/usr/share/tinfoil" || "$ROOT_DIR" == /usr/share/tinfoil* ]]; then
+        # Installed mode → per-user location (XDG friendly)
+        local data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+        echo "$data_home/tinfoil/logs"
+    else
+        echo "$ROOT_DIR/logs"
+    fi
+}
+
+LOGS_DIR="$(get_logs_dir)"
+REPORTS_DIR="$LOGS_DIR/security-reports"
 CONFIG_DIR="$ROOT_DIR/config"
 LIB_DIR="$ROOT_DIR/lib"
-LOGS_DIR="$ROOT_DIR/logs"
-REPORTS_DIR="$LOGS_DIR/security-reports"
 
 # Load libraries
 if [[ -f "$LIB_DIR/logger.sh" ]]; then
@@ -44,11 +57,57 @@ else
 fi
 
 # Configuration
-SECURITY_REPORT="$REPORTS_DIR/security-audit-$(date +%Y%m%d-%H%M%S).txt"
+AUDIT_MODE="global"          # "global" | "project" (set via --global / --project from tinfoil)
+AUDIT_TARGET=""
+
+# Choose a good place for the detailed text report
+choose_report_path() {
+    # If the tinfoil CLI told us the target project, prefer writing inside it
+    if [[ -n "${TINFOIL_TARGET_DIR:-}" && -d "$TINFOIL_TARGET_DIR" ]]; then
+        echo "$TINFOIL_TARGET_DIR/security-audit-$(date +%Y%m%d-%H%M%S).txt"
+    elif [[ "$AUDIT_MODE" == "project" && -n "$AUDIT_TARGET" && -d "$AUDIT_TARGET" ]]; then
+        local proj
+        proj=$(cd "$AUDIT_TARGET" && pwd)
+        echo "$proj/security-audit-$(date +%Y%m%d-%H%M%S).txt"
+    else
+        echo "$REPORTS_DIR/security-audit-$(date +%Y%m%d-%H%M%S).txt"
+    fi
+}
+
+SECURITY_REPORT="$(choose_report_path)"
 DRY_RUN="${DRY_RUN:-false}"
 
-# Ensure directories exist
-ensure_dir "$REPORTS_DIR"
+# Parse --global / --project <dir> passed by the tinfoil Go wrapper
+parse_audit_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --global)
+                AUDIT_MODE="global"
+                shift
+                ;;
+            --project)
+                AUDIT_MODE="project"
+                if [[ $# -gt 1 && ! "$2" =~ ^-- ]]; then
+                    AUDIT_TARGET="$2"
+                    shift 2
+                else
+                    AUDIT_TARGET="."
+                    shift
+                fi
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+
+parse_audit_args "$@"
+
+# Ensure the user/global reports dir exists (project-mode reports go beside the target)
+if [[ "$AUDIT_MODE" != "project" ]]; then
+    ensure_dir "$REPORTS_DIR"
+fi
 
 # Helper functions
 check_sudo() {
@@ -143,14 +202,87 @@ install_security_tools() {
 run_native_ecosystem_audits() {
     log_section "Native Ecosystem Vulnerability Audits"
 
-    # Node.js / npm audit
+    # Node.js ecosystem audit — prefer pnpm (user preference), then yarn, then npm
     if [ -f "package.json" ] || [ -f "package-lock.json" ] || [ -f "yarn.lock" ] || [ -f "pnpm-lock.yaml" ]; then
-        log_subsection "Node.js / npm audit"
+        log_subsection "Node.js ecosystem audit"
+
+        local pm="npm"
+        local audit_cmd="npm audit --audit-level=moderate"
+        local install_cmd="npm ci --ignore-scripts --no-audit --prefer-offline"
+
+        # Robust detection that works even under sudo (restricted PATH).
+        # We prefer paths passed by the `tinfoil` Go binary (via TINFOIL_PNPM etc.),
+        # because `tinfoil` runs with the user's full original PATH and can do
+        # a reliable `exec.LookPath` / `which`.
+        find_pm() {
+            local name="$1"
+            local env_var="TINFOIL_$(echo "$name" | tr '[:lower:]' '[:upper:]')"
+
+            # 1. Highest priority: path explicitly passed by tinfoil Go wrapper
+            local from_tinfoil
+            from_tinfoil=$(printenv "$env_var" 2>/dev/null || true)
+            if [[ -n "$from_tinfoil" && -x "$from_tinfoil" ]]; then
+                echo "$from_tinfoil"
+                return 0
+            fi
+
+            # 2. Normal lookup in current PATH
+            local candidate
+            candidate=$(command -v "$name" 2>/dev/null || true)
+            if [[ -n "$candidate" && -x "$candidate" ]]; then
+                echo "$candidate"
+                return 0
+            fi
+
+            # 3. Common fallback locations (fnm, corepack, homebrew, etc.)
+            for candidate in \
+                "$HOME/.local/share/fnm/aliases/default/bin/$name" \
+                "$HOME/.fnm/aliases/default/bin/$name" \
+                "/usr/local/bin/$name" \
+                "/opt/homebrew/bin/$name"
+            do
+                if [[ -n "$candidate" && -x "$candidate" ]]; then
+                    echo "$candidate"
+                    return 0
+                fi
+            done
+
+            # Nothing found
+            echo ""
+            return 0
+        }
+
+        if [ -f "pnpm-lock.yaml" ]; then
+            local pnpm_bin
+            pnpm_bin=$(find_pm pnpm)
+            if [[ -n "$pnpm_bin" ]]; then
+                pm="pnpm"
+                audit_cmd="$pnpm_bin audit --audit-level moderate"
+                install_cmd="$pnpm_bin install --frozen-lockfile --ignore-scripts 2>/dev/null || true"
+            else
+                log_warn "pnpm-lock.yaml found but pnpm not in PATH (common when running under sudo)"
+                log_info "→ Skipping Node.js audit (lockfile present but no package manager available in current environment)"
+                return
+            fi
+        elif [ -f "yarn.lock" ]; then
+            local yarn_bin
+            yarn_bin=$(find_pm yarn)
+            if [[ -n "$yarn_bin" ]]; then
+                pm="yarn"
+                audit_cmd="$yarn_bin audit --level moderate || true"
+                install_cmd="$yarn_bin install --frozen-lockfile --ignore-scripts 2>/dev/null || true"
+            fi
+        elif [ -z "$(find_pm npm)" ]; then
+            log_warn "No supported Node.js package manager found in PATH (pnpm/yarn/npm)"
+            return
+        fi
+
         if [[ "$DRY_RUN" == "true" ]]; then
-            log_info "[DRY RUN] Would run npm audit"
+            log_info "[DRY RUN] Would run $pm audit"
         else
-            npm ci --ignore-scripts --no-audit --prefer-offline >/dev/null 2>&1 || true
-            npm audit --audit-level=moderate || log_warn "npm audit found vulnerabilities"
+            log_info "→ Running $pm audit"
+            eval "$install_cmd" >/dev/null 2>&1 || true
+            eval "$audit_cmd" || log_warn "$pm audit found vulnerabilities"
         fi
     else
         log_info "No Node.js project detected (skipped)"
@@ -202,8 +334,26 @@ run_osv_scanner_audit() {
         return 0
     fi
 
-    log_subsection "Running OSV-Scanner on project"
-    osv-scanner scan --format table . || log_warn "OSV-Scanner found vulnerabilities"
+    # Determine scan root
+    local scan_dir="."
+
+    if [[ "$AUDIT_MODE" == "project" && -n "$AUDIT_TARGET" ]]; then
+        scan_dir="$AUDIT_TARGET"
+        log_subsection "OSV-Scanner (project)"
+    else
+        log_subsection "OSV-Scanner (system)"
+    fi
+
+    # Run with osv-scanner v2+ syntax + modern exclusions + low verbosity.
+    # Filter remaining pnpm noise.
+    osv-scanner scan source -r "$scan_dir" \
+        --experimental-exclude 'node_modules' \
+        --experimental-exclude '.pnpm' \
+        --experimental-exclude '.git' \
+        --verbosity error \
+        --format table 2>&1 \
+        | grep -v -E "(Neither CPE nor PURL found|plugin transitivedependency/pomxml can be risky)" \
+        || log_warn "OSV-Scanner found vulnerabilities or produced warnings"
 }
 
 # Run Syft SBOM generation and Grype scan
@@ -226,9 +376,18 @@ run_sbom_grype_audit() {
     fi
 
     local sbom_file="sbom.cdx.json"
+    local syft_target="."
+
+    if [[ "$AUDIT_MODE" == "project" && -n "$AUDIT_TARGET" ]]; then
+        syft_target="$AUDIT_TARGET"
+    fi
 
     log_subsection "Generating CycloneDX SBOM"
-    syft . -o cyclonedx-json > "$sbom_file" || {
+    # Exclude massive dependency trees by default in project audits
+    syft "$syft_target" \
+        --exclude '**/node_modules/**' \
+        --exclude '**/.git/**' \
+        -o cyclonedx-json > "$sbom_file" || {
         log_error "Failed to generate SBOM"
         return 1
     }
@@ -660,6 +819,46 @@ fi)
 }
 
 
+# Lightweight reminder for updating the modern vulnerability scanners.
+# The tools themselves already emit "A newer version is available" during runs.
+check_for_tool_updates() {
+    log_subsection "Security Tool Update Check"
+
+    log_info "Key scanners checked during this run: syft, grype, osv-scanner"
+
+    local syft_path grype_path
+    syft_path=$(command -v syft 2>/dev/null || true)
+    grype_path=$(command -v grype 2>/dev/null || true)
+
+    if [[ "$syft_path" == */go/bin/* || "$grype_path" == */go/bin/* ]]; then
+        log_info "Detected Go installation. Update with:"
+        echo "    go install github.com/anchore/syft/cmd/syft@latest"
+        echo "    go install github.com/anchore/grype/cmd/grype@latest"
+        echo "    go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest"
+    else
+        # These are the exact same methods used by arch-machine's security.full installer
+        log_info "To update (same method used by 'security.full' in arch-machine):"
+
+        echo ""
+        echo "  # Syft (SBOM generator)"
+        echo "  curl -sSfL https://get.anchore.io/syft | sudo sh -s -- -b /usr/local/bin"
+        echo ""
+        echo "  # Grype (vulnerability scanner)"
+        echo "  curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \\"
+        echo "    | sudo sh -s -- -b /usr/local/bin"
+        echo ""
+        echo "  # OSV-Scanner (universal vulnerability scanner)"
+        echo "  curl -sSfL \"https://github.com/google/osv-scanner/releases/latest/download/\" \\"
+        echo "    \"osv-scanner_\$(uname -s | tr '[:upper:]' '[:lower:]')_\$(uname -m | sed 's/x86_64/amd64/')\" \\"
+        echo "    -o /tmp/osv-scanner && sudo install -m 755 /tmp/osv-scanner /usr/local/bin/osv-scanner"
+    fi
+
+    echo ""
+    log_info "Note: These tools are installed via official scripts / direct binaries by arch-machine,"
+    log_info "not through pacman (except on some custom setups)."
+    log_info "Re-run the security module with 'security.full' after updating if desired."
+}
+
 # Generate security report
 generate_security_report() {
     local tools
@@ -700,34 +899,59 @@ Next steps:
 # Main security audit function
 main() {
     log_section "Security Audit"
+    if [[ "$AUDIT_MODE" == "project" && -n "$AUDIT_TARGET" ]]; then
+        log_info "Mode: Project audit on $AUDIT_TARGET"
+        if [[ "$(id -u)" -eq 0 ]]; then
+            log_warn "Running as root. Package managers (pnpm/npm) and some tools may not be in PATH."
+            log_info "Consider running without sudo for project audits when possible."
+        fi
+    else
+        log_info "Mode: Full system (global) audit"
+    fi
     log_info "Starting comprehensive security audit..."
 
-    # Install security tools
+    # Install security tools (skipped without sudo in both modes)
     install_security_tools
 
-    # Run modern vulnerability scans
+    # Always run project-relevant / directory-scoped modern scans
+    # (these respect current working directory or target)
     run_native_ecosystem_audits
     run_osv_scanner_audit
     run_sbom_grype_audit
 
-    # Run legacy security checks
-    run_lynis_audit
-    # run_clamav_scan
-    run_rootkit_checks
-    check_file_permissions
-    check_running_services
-    check_user_accounts
+    if [[ "$AUDIT_MODE" == "global" ]]; then
+        # Heavy global system checks — only make sense in full machine audit
+        run_lynis_audit
+        # run_clamav_scan
+        run_rootkit_checks
+        check_file_permissions          # includes the expensive /home world-writable scan
+        check_running_services
+        check_user_accounts
+    else
+        log_info "Project mode: Skipping global system checks (services, users, Lynis, rootkits, full /home scan)"
+        log_info "Focus: code-level vulns, SBOM, native ecosystem audits in current directory"
+    fi
 
     # Generate report
     generate_security_report
 
-    # Extract evidence for AI agents
+    # Extract evidence for AI agents (robust path for both installed + dev)
+    local evidence_script
     if [[ -f "$ROOT_DIR/maintenance/extract-evidence.sh" ]]; then
+        evidence_script="$ROOT_DIR/maintenance/extract-evidence.sh"
+    elif [[ -f "/usr/share/tinfoil/maintenance/extract-evidence.sh" ]]; then
+        evidence_script="/usr/share/tinfoil/maintenance/extract-evidence.sh"
+    fi
+
+    if [[ -n "$evidence_script" ]]; then
         log_info "Extracting evidence bundle for AI agents"
-        "$ROOT_DIR/maintenance/extract-evidence.sh" >/dev/null 2>&1 || log_warn "Evidence extraction failed"
+        # In project mode, evidence script will also prefer user-writable smart paths
+        "$evidence_script" >/dev/null 2>&1 || log_warn "Evidence extraction failed"
     fi
 
     log_success "Security audit completed"
+
+    check_for_tool_updates
 }
 
 # Run main function
