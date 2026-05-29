@@ -22,6 +22,7 @@ LIST_PROFILES_ONLY=false
 SHOW_PROFILE=""
 SETUP_VAULT=false
 VAULT_ARGS=()
+INSTALL_TINFOIL_ONLY=true  # Default: thin sentinel CLI only (tinfoil + /usr/share/tinfoil). Use --profile for full.
 
 # Colors for output
 RED='\033[0;31m'
@@ -132,9 +133,16 @@ Usage: $0 [OPTIONS]
 
 Modular installer for development environments on Arch Linux.
 
+DEFAULT BEHAVIOR (no arguments): Thin install only — installs the lightweight
+    'tinfoil' sentinel/guardian CLI to /usr/local/bin + supporting runtime
+    tree to /usr/share/tinfoil/. This gives you the auditor + TUI + ability
+    to later install profiles/tools via tinfoil tui or ./install.sh --profile.
+    Ideal first step on a fresh machine. Does NOT install heavy modules.
+
 OPTIONS:
-    -p, --profile PROFILE    Installation profile (minimal, ml-dev, security-dev)
-                             Default: ml-dev
+    -p, --profile PROFILE    Full profile-driven installation (modules + tools
+                             from config/profiles). Also ensures tinfoil CLI.
+                             (minimal, ml-dev, security-dev)
     -d, --dry-run           Show what would be done without making changes
     -f, --force             Force installation even if components exist
     -v, --verbose           Enable verbose logging
@@ -142,6 +150,7 @@ OPTIONS:
     --list-profiles         List all available installation profiles
     --show-profile PROFILE  Show detailed information about a profile
     --setup-vault [ENC_DIR] [MOUNT_POINT]  Setup encrypted vault (defaults: ~/.securevaultenc ~/securevault)
+    --thin                  Explicit thin tinfoil-only CLI install (default)
     -h, --help              Show this help message
     --tui                   Launch the interactive gum-powered TUI (tinfoil tui)
                             (beautiful menus for audit, remediation, profiles, evidence)
@@ -152,13 +161,134 @@ PROFILES:
     security-dev - Security-focused with Kubernetes and monitoring
 
 EXAMPLES:
+    $0                           # thin tinfoil CLI (recommended first step)
+    $0 --thin                    # same as above (explicit)
     $0 --profile minimal --dry-run
     $0 --profile ml-dev --verbose
     $0 --profile security-dev
     $0 --validate
     $0 --setup-vault ~/.myvault ~/.vault
+    $0 --tui
 
 EOF
+}
+
+# Thin tinfoil CLI installer (default behavior).
+# Installs ONLY the sentinel/guardian: /usr/local/bin/tinfoil (Go binary)
+# + self-contained runtime tree at /usr/share/tinfoil/ (so tinfoil + tui + future
+# `tinfoil install --profile` or TUI profile flows can work without the original clone).
+# Does not run any heavy module/profile installations (ROCm, k3s, etc).
+install_tinfoil_cli() {
+    echo "🔨 Installing thin tinfoil CLI sentinel (guardian) + runtime tree..."
+    echo "   This is the default (and recommended) first step."
+    echo
+
+    # Ensure Go is available for building the static binary
+    if ! command -v go >/dev/null 2>&1; then
+        echo "   Installing Go (required for tinfoil binary)..."
+        sudo pacman -Sy --needed --noconfirm go 2>/dev/null || true
+    fi
+
+    # Prepare targets + clean any stale shell wrapper that might exist
+    # from earlier manual or broken installs (the source of the "bash: line 5" error).
+    sudo mkdir -p /usr/share/tinfoil/bin
+    if [[ -f /usr/local/bin/tinfoil && ! -x /usr/local/bin/tinfoil || $(file -b /usr/local/bin/tinfoil 2>/dev/null | grep -c ELF) -eq 0 ]]; then
+        echo "   Removing stale wrapper at /usr/local/bin/tinfoil..."
+        sudo rm -f /usr/local/bin/tinfoil
+    fi
+    sudo rm -f /usr/share/tinfoil/bin/tinfoil 2>/dev/null || true  # will be replaced by fresh binary
+
+    sudo mkdir -p /usr/share/tinfoil
+
+    # Curated copy of the runtime tree (exclude bloat, logs, dups, private data).
+    # This makes /usr/share/tinfoil/ a fully functional "installed repo" for
+    # tinfoil, tinfoil tui, and launching profile installs from the TUI/CLI.
+    echo "   Copying supporting files to /usr/share/tinfoil/ ..."
+    if command -v tar >/dev/null 2>&1; then
+        (
+            cd "$SCRIPT_DIR"
+            tar -cf - \
+                --exclude='./.git' \
+                --exclude='./.git*' \
+                --exclude='./logs' \
+                --exclude='./logs/*' \
+                --exclude='./systemd' \
+                --exclude='./systemd/*' \
+                --exclude='./.grok' \
+                --exclude='./.grok/*' \
+                --exclude='./.kilo*' \
+                --exclude='./.composer*' \
+                --exclude='./setups' \
+                --exclude='./worktrees' \
+                --exclude='./*.enc' \
+                --exclude='./sentinels-ultimate-masters.jpg' \
+                --exclude='./*.bak' \
+                --exclude='./shellcheck.log' \
+                --exclude='./yamllint.log' \
+                . 2>/dev/null | sudo tar -C /usr/share/tinfoil -xf - --no-same-owner 2>/dev/null || true
+        )
+    fi
+
+    # Fallback / ensure critical pieces exist (in case tar had issues or minimal tar)
+    sudo mkdir -p /usr/share/tinfoil/{bin,lib,config/profiles,maintenance,modules,policies}
+    sudo cp -f "$SCRIPT_DIR/bin/tinfoil.go" /usr/share/tinfoil/bin/tinfoil.go 2>/dev/null || true
+    sudo cp -rf "$SCRIPT_DIR/lib"/* /usr/share/tinfoil/lib/ 2>/dev/null || true
+    sudo cp -rf "$SCRIPT_DIR/config"/* /usr/share/tinfoil/config/ 2>/dev/null || true
+    sudo cp -rf "$SCRIPT_DIR/maintenance"/* /usr/share/tinfoil/maintenance/ 2>/dev/null || true
+    sudo cp -rf "$SCRIPT_DIR/modules"/* /usr/share/tinfoil/modules/ 2>/dev/null || true
+    sudo cp -rf "$SCRIPT_DIR/policies"/* /usr/share/tinfoil/policies/ 2>/dev/null || true
+    sudo cp -f "$SCRIPT_DIR/install.sh" /usr/share/tinfoil/install.sh 2>/dev/null || true
+    # Optional but helpful for reference in installed env
+    sudo cp -rf "$SCRIPT_DIR/docs" /usr/share/tinfoil/ 2>/dev/null || true
+    sudo cp -f "$SCRIPT_DIR"/*.md /usr/share/tinfoil/ 2>/dev/null || true
+
+    # Make scripts executable
+    sudo chmod -R +x /usr/share/tinfoil/install.sh /usr/share/tinfoil/maintenance/*.sh /usr/share/tinfoil/lib/*.sh 2>/dev/null || true
+
+    # Build the static, stripped binary from the (now installed) source for consistency
+    echo "   Building tinfoil binary..."
+    if command -v go >/dev/null 2>&1; then
+        sudo bash -c '
+            set -e
+            cd /usr/share/tinfoil
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /tmp/tinfoil bin/tinfoil.go
+        ' 2>/dev/null || {
+            # Fallback to original tree
+            (cd "$SCRIPT_DIR/bin" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /tmp/tinfoil tinfoil.go 2>/dev/null) || true
+        }
+    fi
+
+    if [[ -f /tmp/tinfoil ]]; then
+        sudo install -Dm755 /tmp/tinfoil /usr/local/bin/tinfoil
+        # Also drop a copy inside the share tree for code that hard-references
+        # $ROOT/bin/tinfoil (e.g. TUI audit flow, older scripts). This makes the
+        # thin install maximally compatible.
+        sudo install -Dm755 /tmp/tinfoil /usr/share/tinfoil/bin/tinfoil
+        rm -f /tmp/tinfoil
+    else
+        log_error "Failed to build tinfoil binary (is Go installed?)"
+        return 1
+    fi
+
+    echo
+    echo "✅ tinfoil CLI installed successfully! 🎉"
+    echo ""
+    echo "   Binary       : /usr/local/bin/tinfoil"
+    echo "   Runtime tree : /usr/share/tinfoil/  (bin/tinfoil.go, lib/, config/, maintenance/, modules/, install.sh)"
+    echo ""
+    echo "Usage:"
+    echo "   tinfoil                  → Global investigator / audit mode"
+    echo "   tinfoil tui              → Interactive TUI (profiles, remediation, evidence...)"
+    echo "   tinfoil .                → Audit current project"
+    echo "   tinfoil /path            → Audit any folder"
+    echo ""
+    echo "Ready to install profiles/tools:"
+    echo "   ./install.sh --profile minimal     (from clone)"
+    echo "   tinfoil tui                        (then choose Profile Installer)"
+    echo ""
+    echo "   (After thin install, the TUI and future tinfoil subcommands can"
+    echo "    launch profile installs using the self-contained tree in /usr/share.)"
+    echo
 }
 
 # Parse command line arguments
@@ -171,14 +301,17 @@ parse_args() {
                     show_usage
                     exit 1
                 fi
+                INSTALL_TINFOIL_ONLY=false
                 PROFILE="$2"
                 shift 2
                 ;;
             -d|--dry-run)
+                INSTALL_TINFOIL_ONLY=false
                 DRY_RUN=true
                 shift
                 ;;
             -f|--force)
+                INSTALL_TINFOIL_ONLY=false
                 FORCE=true
                 shift
                 ;;
@@ -188,6 +321,7 @@ parse_args() {
                 shift
                 ;;
             --validate)
+                INSTALL_TINFOIL_ONLY=false
                 VALIDATE_ONLY=true
                 shift
                 ;;
@@ -216,6 +350,10 @@ parse_args() {
                         shift
                     fi
                 fi
+                shift
+                ;;
+            --thin|--tinfoil-only|--cli-only)
+                INSTALL_TINFOIL_ONLY=true
                 shift
                 ;;
             -h|--help)
@@ -355,7 +493,7 @@ show_completion() {
 main() {
     parse_args "$@"
 
-    # Handle special modes that need libraries
+    # Handle special modes that need libraries (info/setup only — no module install)
     if [[ "$LIST_PROFILES_ONLY" == "true" || -n "$SHOW_PROFILE" || "$SETUP_VAULT" == "true" ]]; then
         load_libraries
         if [[ "$LIST_PROFILES_ONLY" == "true" ]]; then
@@ -372,7 +510,7 @@ main() {
         fi
     fi
 
-    # Handle validation-only mode early
+    # Handle validation-only mode early (explicit opt-in, not thin)
     if [[ "$VALIDATE_ONLY" == "true" ]]; then
         validate_profile
         load_libraries
@@ -380,6 +518,16 @@ main() {
         exit $?
     fi
 
+    # === THIN vs FULL DECISION ===
+    # Default (INSTALL_TINFOIL_ONLY=true and no explicit profile/validate/dry/force):
+    #   Only install the tinfoil sentinel CLI + runtime (no heavy modules).
+    # When user passes --profile (or other install-intent flags), do the full thing.
+    if [[ "$INSTALL_TINFOIL_ONLY" == "true" ]]; then
+        install_tinfoil_cli
+        exit 0
+    fi
+
+    # --- FULL PROFILE INSTALL PATH (only reached when --profile etc. explicitly used) ---
     validate_profile
 
     # Load libraries
@@ -416,32 +564,12 @@ main() {
 
     # Show completion message
     show_completion
+
+    # After a full profile install, also ensure the tinfoil CLI is present/updated
+    # (idempotent, cheap, gives the guardian on "full" machines too).
+    echo
+    install_tinfoil_cli || true
 }
 
 # Run main function
 main "$@"
-
-echo "🔨 Building the 'tinfoil' CLI binary + installing scripts..."
-
-# Install Go if missing
-sudo pacman -Sy --needed --noconfirm go 2>/dev/null || true
-
-# Create system-wide share directory
-sudo mkdir -p /usr/share/tinfoil
-
-# Copy all necessary files so tinfoil can find them after install
-sudo cp -r security-audit.sh lib modules config systemd 2>/dev/null || true
-sudo cp -r . /usr/share/tinfoil/ 2>/dev/null || echo "⚠️  Some files could not be copied (normal in dev)"
-
-# Build static Go binary
-cd bin
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /tmp/tinfoil tinfoil.go
-sudo install -Dm755 /tmp/tinfoil /usr/local/bin/tinfoil
-cd ..
-
-echo "✅ tinfoil CLI installed successfully! 🎉"
-echo ""
-echo "Usage:"
-echo "   tinfoil                  → Global investigator mode"
-echo "   tinfoil .                → Audit current project"
-echo "   tinfoil /path/to/project → Audit any folder"

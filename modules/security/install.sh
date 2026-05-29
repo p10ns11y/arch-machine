@@ -408,19 +408,20 @@ install_toon() {
 }
 
 # Setup encrypted vault (gocryptfs)
+# This function is intentionally resilient. Failing to mount should not
+# kill an entire security module installation.
 setup_encrypted_vault() {
     local vault_enc="${1:-$HOME/.securevaultenc}"
     local vault_mount="${2:-$HOME/securevault}"
 
     log_section "Setting up Encrypted Vault"
 
-    # Validate paths
     if [[ -z "$vault_enc" || -z "$vault_mount" ]]; then
         log_error "Usage: setup_encrypted_vault [encrypted_dir] [mount_point]"
-        log_error "Example: setup_encrypted_vault ~/.myvault ~/.vault"
         return 1
     fi
 
+    # --- Initialize container if it doesn't exist ---
     if [[ -d "$vault_enc" ]]; then
         log_info "Encrypted vault already initialized at $vault_enc"
     else
@@ -437,7 +438,8 @@ setup_encrypted_vault() {
         fi
     fi
 
-    if mountpoint -q "$vault_mount"; then
+    # --- Handle mounting ---
+    if mountpoint -q "$vault_mount" 2>/dev/null; then
         log_info "Vault already mounted at $vault_mount"
         return 0
     fi
@@ -447,15 +449,64 @@ setup_encrypted_vault() {
         return 0
     fi
 
+    # Check if mount point is usable
+    if [[ -d "$vault_mount" ]] && [[ -n "$(ls -A "$vault_mount" 2>/dev/null)" ]]; then
+        log_warn "Mount point '$vault_mount' already exists and is not empty."
+        log_warn "gocryptfs refuses to mount over a non-empty directory."
+
+        # Offer interactive recovery if possible
+        if [[ -t 0 ]] && command -v gum >/dev/null 2>&1; then
+            choice=$(gum choose --header "What would you like to do?" \
+                "Choose a different mount point name" \
+                "Skip mounting for now (you can mount manually later)" \
+                "Abort vault setup")
+        else
+            echo
+            echo "Options:"
+            echo "  1) Choose a different mount point name"
+            echo "  2) Skip mounting for now (mount manually later with: gocryptfs $vault_enc <new-mount>)"
+            echo "  3) Abort vault setup"
+            read -rp "Choice [1-3]: " choice_num
+            case "$choice_num" in
+                1) choice="Choose a different mount point name" ;;
+                2) choice="Skip mounting for now (you can mount manually later)" ;;
+                *) choice="Abort vault setup" ;;
+            esac
+        fi
+
+        case "$choice" in
+            *"different mount point"*)
+                if command -v gum >/dev/null 2>&1; then
+                    vault_mount=$(gum input --placeholder "New mount point (e.g. ~/myvault)" --value "${vault_mount}-2")
+                else
+                    read -rp "Enter new mount point: " vault_mount
+                fi
+                [[ -z "$vault_mount" ]] && { log_warn "No mount point provided. Skipping."; return 0; }
+                ;;
+            *"Skip mounting"*)
+                log_info "Skipping mount step. Your encrypted container is ready at: $vault_enc"
+                log_info "You can mount it later with: gocryptfs $vault_enc <desired-mount-point>"
+                return 0
+                ;;
+            *)
+                log_info "Vault setup aborted by user. Container exists at $vault_enc but is not mounted."
+                return 0
+                ;;
+        esac
+    fi
+
+    # Final attempt to mount
     mkdir -p "$vault_mount"
     log_subsection "Mounting encrypted vault (you will be prompted for password)"
-    gocryptfs "$vault_enc" "$vault_mount" || {
-        log_error "Failed to mount encrypted vault"
-        return 1
-    }
-
-    log_success "Encrypted vault mounted at $vault_mount"
-    log_info "Use 'fusermount -u $vault_mount' to unmount"
+    if gocryptfs "$vault_enc" "$vault_mount"; then
+        log_success "Encrypted vault mounted at $vault_mount"
+        log_info "Use 'fusermount -u $vault_mount' to unmount"
+        return 0
+    else
+        log_error "Failed to mount encrypted vault at $vault_mount"
+        log_info "You can try manually: gocryptfs $vault_enc $vault_mount"
+        return 0   # Do not hard-fail the whole security module
+    fi
 }
 
 # Main security module function
@@ -495,11 +546,11 @@ install_security() {
         install_tetragon || return 1
     fi
 
-    # Setup encrypted vault
+    # Setup encrypted vault (best-effort — should not kill the whole security module)
     local install_encrypted_storage
     install_encrypted_storage=$(yaml_get "$PROFILE_CONFIG/$PROFILE.yaml" "customizations.security.encrypted_storage")
     if [[ "$install_encrypted_storage" == "true" ]]; then
-        setup_encrypted_vault || return 1
+        setup_encrypted_vault || log_warn "Encrypted vault setup did not complete successfully. You can run it manually later."
     fi
 
     # Install vulnerability scanning tools

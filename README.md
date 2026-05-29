@@ -5,6 +5,10 @@
 
 Profile-based bootstrap and maintenance system for Arch Linux workstations focused on ML/AI development and security hardening.
 
+[![CI](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg)](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml)
+[![ShellCheck](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg?job=shellcheck)](https://github.com/p10ns11y/arch-machine/actions)
+[![Evidence](https://img.shields.io/badge/evidence-first-blue)](https://github.com/p10ns11y/arch-machine/tree/sentinel#evidence--the-differentiator)
+
 For a more entertaining introduction, see [FUNREADME.md](FUNREADME.md) – where security meets humor.
 
 ## Prerequisites
@@ -16,9 +20,9 @@ For a more entertaining introduction, see [FUNREADME.md](FUNREADME.md) – where
 
 ## Safety Note
 
-The security-dev profile includes security hardening and scans. Review [Safety & Requirements](SAFETY.md) before choosing profiles.
+The security-dev profile includes security hardening and scans. Review [Safety & Requirements](docs/SECURITY.md) before choosing profiles.
 
-## Quick Start
+## Quick Start (Thin Sentinel First)
 
 ```bash
 # Clone the repository
@@ -28,13 +32,21 @@ cd arch-machine
 # Make scripts executable
 chmod +x install.sh migrate.sh
 
-# Install using ml-dev profile (recommended)
-./install.sh --profile ml-dev
+# 1. Thin install (default — recommended first step)
+#    Only the tinfoil guardian CLI + TUI. Fast, minimal footprint.
+./install.sh
+#    (or ./install.sh --thin)
 
-# Or for security-focused setup
+# 2. Use the sentinel immediately
+tinfoil tui              # interactive menus (audit, profiles, remediation, evidence)
+tinfoil                  # quick global audit
+
+# 3. Later — full hardened workstation (via same installer or from the TUI)
+./install.sh --profile ml-dev
+# or
 ./install.sh --profile security-dev
 
-# Post-installation setup
+# Post-installation (after full profile)
 maintenance/systemd-setup.sh setup
 ```
 
@@ -53,7 +65,7 @@ Pre-configured Conda environments:
 ### `security-dev`
 Everything in `minimal` plus Kubernetes security hardening, runtime monitoring, and encrypted storage.
 
-See [Installation Guide](INSTALLATION.md) for detailed profile information and customization options.
+See [Installation Guide](docs/INSTALLATION.md) for detailed profile information and customization options.
 
 ## Adapting for Other Distributions
 
@@ -103,7 +115,7 @@ The system includes automated weekly maintenance for system updates, security sc
 - **Manual**: Individual maintenance scripts in `maintenance/`
 - **Evidence Extraction**: Generates AI-optimized evidence bundles from logs
 
-See [Maintenance Guide](MAINTENANCE.md) for complete maintenance documentation.
+See [Maintenance Guide](docs/MAINTENANCE.md) for complete maintenance documentation.
 
 ## Interactive TUI (New in 2026 Sentinel)
 
@@ -146,14 +158,14 @@ arch-machine/
 
 ## Documentation
 
-- [Safety & Requirements](SAFETY.md) - Important safety information and system requirements
+- [Safety & Requirements](docs/SECURITY.md) - Important safety information and system requirements
 - [Installation Guide](docs/INSTALLATION.md) - Detailed setup and profiles
 - [Maintenance Guide](docs/MAINTENANCE.md) - System maintenance and automation
-- [Evidence Extraction](EVIDENCE-EXTRACTION.md) - AI-optimized log processing
+- [Evidence Extraction](docs/EVIDENCE.md) - AI-optimized log processing (legacy content in EVIDENCE-EXTRACTION.md during transition)
 - [Backup Guide](docs/BACKUP.md) - Backup and recovery procedures
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Development](docs/DEVELOPMENT.md) - Contributing and development guide
-- [Author's Motto](/AUTHORS-MOTTO.md) - Project philosophy and design decisions
+- [Author's Motto](AUTHORS-MOTTO.md) - Project philosophy ("Solve your own machine first, then empower others to adapt") — prominently linked from docs/INDEX.md too. Full sentinel lore lives only in [FUNREADME.md](FUNREADME.md).
 
 ## Verification
 

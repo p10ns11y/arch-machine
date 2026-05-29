@@ -5,36 +5,142 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 )
 
 const version = "0.2.0-sentinel"
 
 func main() {
-	// TUI subcommand dispatch (Phase 3: shell+ gum TUI, zero extra Go deps)
-	if len(os.Args) >= 2 && os.Args[1] == "tui" {
+	args := os.Args[1:]
+
+	// Set up graceful signal handling so tinfoil never feels like a hard system exit
+	setupGracefulExit()
+
+	if len(args) == 0 {
+		printBannerAndHelp()
+		printGoodbye()
+		return
+	}
+
+	switch args[0] {
+	case "tui", "ui", "menu":
+		// TUI subcommand dispatch (Phase 3: shell+ gum TUI, zero extra Go deps)
 		tuiScript := findTuiScript()
 		cmd := exec.Command("bash", tuiScript)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
-		if err := cmd.Run(); err != nil {
+
+		err := cmd.Run()
+
+		if err != nil {
+			// Distinguish real failures from user-initiated graceful exits.
+			// gum (and many interactive tools) exit with code 1 on Esc/Cancel.
+			// We do NOT want to print a scary "failed" message for that.
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				code := exitErr.ExitCode()
+				// Acceptable "user exit" codes:
+				// 0  = clean exit
+				// 1  = common for gum cancel/Esc
+				// 130 = SIGINT (Ctrl+C)
+				if code == 0 || code == 1 || code == 130 {
+					printGoodbye()
+					return
+				}
+			}
+
+			// Real failure (script not found, permission denied, crash, etc.)
 			fmt.Fprintf(os.Stderr, "❌ tinfoil tui failed: %v\n", err)
+			printGoodbye()
 			os.Exit(1)
 		}
-		return
-	}
 
+		printGoodbye()
+		return
+
+	case "audit", "scan", "check":
+		// Explicit audit subcommand (the powerful non-interactive path)
+		runAudit(args[1:])
+
+	case "version", "--version", "-v":
+		fmt.Printf("tinfoil %s\n", version)
+		return
+
+	case "help", "--help", "-h":
+		printBannerAndHelp()
+		return
+
+	case "vault":
+		handleVault(args[1:])
+
+	case "install":
+		handleInstall(args[1:])
+
+	default:
+		// Backward compat + convenience:
+		//   tinfoil .          → audit current dir
+		//   tinfoil /some/path → audit that dir
+		//   tinfoil --anything → fall through to old implicit project/global
+		if args[0] == "." || filepath.IsAbs(args[0]) || looksLikePath(args[0]) {
+			runAudit(args)
+			return
+		}
+		// Unknown subcommand
+		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", args[0])
+		printBannerAndHelp()
+		os.Exit(1)
+	}
+}
+
+// looksLikePath is a heuristic so `tinfoil /foo` and `tinfoil .` still work like before
+func looksLikePath(s string) bool {
+	return len(s) > 0 && (s[0] == '.' || s[0] == '/' || s[0] == '~')
+}
+
+func printBannerAndHelp() {
+	fmt.Printf("🚀 tinfoil %s — The Good Sentinel is watching 👀🛡️\n\n", version)
+	fmt.Println("arch-machine's advanced sentinel tool for security audits, evidence,")
+	fmt.Println("maintenance, and interactive control of the fortress.")
+	fmt.Println()
+	fmt.Println("USAGE:")
+	fmt.Println("  tinfoil [command] [arguments]")
+	fmt.Println()
+	fmt.Println("COMMANDS:")
+	fmt.Println("  tui, ui, menu     Launch the beautiful interactive TUI (recommended)")
+	fmt.Println("  install           Perform profiled installation (equivalent to ./install.sh)")
+	fmt.Println("  audit [path]      Run full security audit (global or on a directory)")
+	fmt.Println("  vault setup|mount [enc_dir] [mount_point]   Manage encrypted gocryptfs vault")
+	fmt.Println("  version           Show version")
+	fmt.Println("  help              Show this help")
+	fmt.Println()
+	fmt.Println("EXAMPLES:")
+	fmt.Println("  tinfoil tui                    # Full interactive Sentinel experience")
+	fmt.Println("  tinfoil install --profile ml-dev          # Full profiled installation")
+	fmt.Println("  tinfoil install --profile security-dev --dry-run")
+	fmt.Println("  tinfoil audit .                # Audit current directory")
+	fmt.Println("  tinfoil vault setup            # Initialize + mount encrypted vault")
+	fmt.Println()
+	fmt.Println("The TUI is the primary way to drive the advanced capabilities")
+	fmt.Println("(profiles, policy remediation, evidence bundles, maintenance, etc.).")
+	fmt.Println("The CLI gives you direct, scriptable access to the same power.")
+	fmt.Println()
+	fmt.Println("For the full developmental arena experience, start here:")
+	fmt.Println("  tinfoil tui")
+}
+
+func runAudit(extraArgs []string) {
 	fmt.Printf("🚀 tinfoil %s — The Good Sentinel is watching 👀🛡️\n\n", version)
 
 	var mode, targetDir string
 
-	if len(os.Args) == 1 {
+	if len(extraArgs) == 0 {
 		mode = "global"
 		targetDir = os.Getenv("HOME")
 	} else {
 		mode = "project"
-		targetDir = os.Args[1]
+		targetDir = extraArgs[0]
 		abs, err := filepath.Abs(targetDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Failed to resolve path: %v\n", err)
@@ -61,14 +167,50 @@ func main() {
 		cmd.Args = append(cmd.Args, "--project", targetDir)
 	}
 
+	// Discover Node.js package managers from the caller's real environment.
+	// This is crucial when `tinfoil` is invoked under sudo or in restricted PATHs.
+	// The shell script can then use these full paths instead of guessing.
+	// Pass context so downstream scripts (logger, evidence, reports) know where to write artifacts.
+	// This makes "tinfoil audit /some/project" write logs inside that project instead of global tinfoil dirs.
+	env := os.Environ()
+	env = append(env,
+		"TINFOIL_PNPM="+findTool("pnpm"),
+		"TINFOIL_YARN="+findTool("yarn"),
+		"TINFOIL_NPM="+findTool("npm"),
+		"TINFOIL_MODE="+mode,
+	)
+	if mode == "project" {
+		env = append(env, "TINFOIL_TARGET_DIR="+targetDir)
+	}
+	cmd.Env = env
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			code := exitErr.ExitCode()
+			if code == 0 || code == 1 || code == 130 {
+				printGoodbye()
+				return
+			}
+		}
 		fmt.Fprintf(os.Stderr, "❌ tinfoil failed: %v\n", err)
+		printGoodbye()
 		os.Exit(1)
 	}
+	printGoodbye()
+}
+
+// findTool returns the full path to a tool using the current process's PATH.
+// This is the reliable way for `tinfoil` (the Go entrypoint) to discover
+// pnpm/yarn/npm even when later parts of the audit run under sudo.
+func findTool(name string) string {
+	if p, err := exec.LookPath(name); err == nil {
+		return p
+	}
+	return ""
 }
 
 func findScript(scriptName string) string {
@@ -109,4 +251,154 @@ func findTuiScript() string {
 	fmt.Fprintf(os.Stderr, "❌ Could not find lib/tui.sh — is the TUI installed?\n")
 	os.Exit(1)
 	return ""
+}
+
+// handleVault dispatches vault-related commands.
+// It reuses the existing setup_encrypted_vault function from the security module.
+func handleVault(args []string) {
+	if len(args) == 0 {
+		fmt.Println("Usage:")
+		fmt.Println("  tinfoil vault setup [enc_dir] [mount_point]")
+		fmt.Println("  tinfoil vault mount [enc_dir] [mount_point]")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  tinfoil vault setup")
+		fmt.Println("  tinfoil vault setup ~/.myvault ~/myvault")
+		fmt.Println("  tinfoil vault mount ~/.securevaultenc ~/securevault")
+		return
+	}
+
+	subcommand := args[0]
+	rest := args[1:]
+
+	securityScript := findScript("modules/security/install.sh")
+
+	// We source the module and call the appropriate function.
+	// setup_encrypted_vault already handles both init + mount intelligently.
+	var bashCmd string
+	switch subcommand {
+	case "setup":
+		// Call the full setup (init if needed + mount)
+		bashCmd = fmt.Sprintf(`source %q 2>/dev/null || true; setup_encrypted_vault %s`,
+			securityScript, shellJoin(rest))
+	case "mount":
+		// For a pure mount we still delegate to the same function for now
+		// (it gracefully handles "already initialized" case).
+		// Future: we could add a lighter mount-only path.
+		bashCmd = fmt.Sprintf(`source %q 2>/dev/null || true; setup_encrypted_vault %s`,
+			securityScript, shellJoin(rest))
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown vault subcommand: %s\n", subcommand)
+		fmt.Println("Valid subcommands: setup, mount")
+		os.Exit(1)
+	}
+
+	cmd := exec.Command("bash", "-c", bashCmd)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			code := exitErr.ExitCode()
+			if code == 0 || code == 1 || code == 130 {
+				printGoodbye()
+				return
+			}
+		}
+		fmt.Fprintf(os.Stderr, "❌ tinfoil vault %s failed: %v\n", subcommand, err)
+		printGoodbye()
+		os.Exit(1)
+	}
+	printGoodbye()
+}
+
+// shellJoin naively joins arguments for passing into bash -c.
+// For production use we would use proper shell escaping, but this is sufficient
+// for the common case of paths without special characters.
+func shellJoin(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	out := ""
+	for i, a := range args {
+		if i > 0 {
+			out += " "
+		}
+		out += fmt.Sprintf("%q", a)
+	}
+	return out
+}
+
+// setupGracefulExit registers signal handlers so that Ctrl+C or other
+// termination signals result in a warm goodbye instead of an abrupt crash.
+func setupGracefulExit() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		fmt.Println()
+		printGoodbye()
+		os.Exit(0)
+	}()
+}
+
+// printGoodbye prints a consistent, warm closing message for any exit path.
+func printGoodbye() {
+	fmt.Println()
+	fmt.Println("👋  The Good Sentinel tips its hat.")
+	fmt.Println("Thank you for keeping the machines honest today.")
+	fmt.Println("The fortress stands stronger because of your vigilance.")
+	fmt.Println()
+	fmt.Println("Stay sharp. The Sentinel is always watching. 🛡️")
+}
+
+// handleInstall allows the tinfoil CLI to perform full profiled installations
+// exactly like ./install.sh (including all modules, tools, security profiles, etc.).
+// Example: tinfoil install --profile security-dev --dry-run
+func handleInstall(args []string) {
+	if len(args) == 0 {
+		fmt.Println("Usage: tinfoil install [options]")
+		fmt.Println("")
+		fmt.Println("This is equivalent to running ./install.sh with the same arguments.")
+		fmt.Println("")
+		fmt.Println("Common options:")
+		fmt.Println("  --profile <name>     Install using a profile (minimal, ml-dev, security-dev)")
+		fmt.Println("  --dry-run            Show what would be done")
+		fmt.Println("  --verbose            Enable verbose logging")
+		fmt.Println("  --list-profiles      List available profiles")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  tinfoil install --profile ml-dev")
+		fmt.Println("  tinfoil install --profile security-dev --dry-run")
+		fmt.Println("  tinfoil install --list-profiles")
+		return
+	}
+
+	installerScript := findScript("install.sh")
+
+	cmd := exec.Command("bash", installerScript)
+	cmd.Args = append(cmd.Args, args...)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	// Pass through relevant environment (TINFOIL_* vars, etc.)
+	cmd.Env = os.Environ()
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			code := exitErr.ExitCode()
+			if code == 0 || code == 1 || code == 130 {
+				printGoodbye()
+				return
+			}
+		}
+		fmt.Fprintf(os.Stderr, "❌ tinfoil install failed: %v\n", err)
+		printGoodbye()
+		os.Exit(1)
+	}
+	printGoodbye()
 }

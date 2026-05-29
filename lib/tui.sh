@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # lib/tui.sh — The Good Sentinel Interactive TUI (gum powered)
-# Part of arch-machine paranoid security fortress
 # Invoked via: tinfoil tui   (or ./install.sh --tui in future)
-# Tone: humorous, self-aware paranoia. "The Sentinel sees your choices."
+# Tone: humorous, self-aware vigilance. "The Sentinel sees your choices."
 # Zero new deps (uses gum, yq, jq, fzf, whiptail if present — all available in env)
 # Follows Security Remediation Policy for any destructive actions.
 
@@ -10,7 +9,7 @@ set -euo pipefail
 
 # Colors / styles via gum where possible, fallback echoes
 GUM_STYLE="gum style --foreground 212 --bold"
-GUM_CONFIRM="gum confirm --affirmative 'Yes, I am paranoid enough' --negative 'Abort, the aliens win'"
+GUM_CONFIRM="gum confirm --affirmative 'Yes, I am vigilant enough' --negative 'Abort, the aliens win'"
 
 # Find repo root or installed share for calling scripts
 find_root() {
@@ -50,7 +49,7 @@ main_menu() {
       "📜  Extract Evidence Bundle (for the AI overlords)" \
       "🛠️   Maintenance Tasks (weekly checks, timers, updates)" \
       "📜  Browse Logs & Reports (fzf + pager)" \
-      "⚙️   Paranoia Settings (silly toggles, future profiles)" \
+      "⚙️   Vigilance Settings (preferences & toggles)" \
       "🚪  Exit (The Sentinel is always watching...)" )
 
     case "$choice" in
@@ -72,12 +71,11 @@ main_menu() {
       *"Browse Logs"*)
         browse_logs
         ;;
-      *"Paranoia Settings"*)
-        paranoia_settings
+      *"Vigilance Settings"*)
+        vigilance_settings
         ;;
       *"Exit"*)
-        gum style --foreground 99 "👋 The Sentinel nods. Your secrets are safe... for now."
-        exit 0
+        graceful_exit
         ;;
     esac
   done
@@ -96,12 +94,25 @@ run_audit_flow() {
     return
   fi
 
+  # Robust tinfoil binary discovery (prefer PATH after thin install,
+  # then the share tree copy we maintain, then /usr/local fallback)
+  local tinfoil_cmd
+  if command -v tinfoil >/dev/null 2>&1; then
+    tinfoil_cmd="$(command -v tinfoil)"
+  elif [ -x "$ROOT/bin/tinfoil" ]; then
+    tinfoil_cmd="$ROOT/bin/tinfoil"
+  elif [ -x "/usr/local/bin/tinfoil" ]; then
+    tinfoil_cmd="/usr/local/bin/tinfoil"
+  else
+    tinfoil_cmd="tinfoil"  # last resort, will likely fail with clear error
+  fi
+
   gum spin --spinner dot --title "🛡️ The Sentinel is auditing... (live vulns, SBOM, Lynis, etc)" -- \
     bash -c "
       if [ -n '$target' ]; then
-        '$ROOT/bin/tinfoil' '$target' 2>&1 | tee /tmp/tinfoil-audit.log
+        '$tinfoil_cmd' '$target' 2>&1 | tee /tmp/tinfoil-audit.log
       else
-        '$ROOT/bin/tinfoil' 2>&1 | tee /tmp/tinfoil-audit.log
+        '$tinfoil_cmd' 2>&1 | tee /tmp/tinfoil-audit.log
       fi
     " || true
 
@@ -191,11 +202,44 @@ run_installer_flow() {
 
 run_evidence_flow() {
   gum style "📜 Evidence Extraction"
+
+  # Respect per-project targeting, just like tinfoil audit .
+  scope=$(gum choose --header "Extract evidence for..." \
+    "Current system / global (default smart user location)" \
+    "Specific project or folder (recommended when you audited a directory)")
+
+  target_dir=""
+  if [[ "$scope" == *"Specific project"* ]]; then
+    target_dir=$(gum input --placeholder "Path to project (e.g. . or ~/Work/devprofile)" --value ".")
+    # Resolve to absolute for reliability
+    if [[ -n "$target_dir" ]]; then
+      target_dir=$(cd "$target_dir" 2>/dev/null && pwd || echo "$target_dir")
+    fi
+  fi
+
   if [ -f "$ROOT/maintenance/extract-evidence.sh" ]; then
     if gum confirm "Run evidence bundle extraction now?"; then
+
+      export_cmd=""
+      if [[ -n "$target_dir" ]]; then
+        export_cmd="TINFOIL_TARGET_DIR='$target_dir' "
+        gum style --foreground 212 "Target: $target_dir  → Evidence will be written inside the project"
+      fi
+
       gum spin --title "Extracting logs, SBOM, reports, vector traces for the AI auditors..." -- \
-        bash "$ROOT/maintenance/extract-evidence.sh" 2>&1 | tee /tmp/evidence.log || true
-      gum pager < /tmp/evidence.log || ls -l logs/evidence* 2>/dev/null | gum pager
+        bash -c "${export_cmd}bash '$ROOT/maintenance/extract-evidence.sh' 2>&1" | tee /tmp/evidence.log || true
+
+      gum pager < /tmp/evidence.log || true
+
+      # Show created evidence bundles from the correct location
+      if [[ -n "$target_dir" && -d "$target_dir/.tinfoil/logs" ]]; then
+        echo
+        gum style --foreground 99 "Evidence bundles created in project:"
+        ls -l "$target_dir/.tinfoil/logs"/evidence* 2>/dev/null | gum pager || true
+      else
+        echo
+        ls -l logs/evidence* 2>/dev/null | gum pager || ls -l "$HOME/.local/share/tinfoil/logs"/evidence* 2>/dev/null | gum pager || true
+      fi
     fi
   else
     gum style "Evidence script not found. Creating sample bundle (demo)..."
@@ -242,14 +286,32 @@ browse_logs() {
   fi
 }
 
-paranoia_settings() {
-  gum style --foreground 99 "⚙️ Paranoia Settings (demo toggles — persisted in future ~/.config/tinfoil/)"
-  level=$(gum choose "MAX (delete everything suspicious)" "HIGH (upgrade/kill critical only)" "MEDIUM (fix + warn)" "MINIMAL (just audit, no action)")
-  gum style "Paranoia level set to: $level (this session only; full config in Phase 4+)"
+vigilance_settings() {
+  gum style --foreground 99 "⚙️ Vigilance Settings (preferences & toggles)"
+  level=$(gum choose "MAX (aggressive remediation)" "HIGH (upgrade/kill critical issues)" "MEDIUM (fix + warn)" "MINIMAL (audit only, no automatic action)")
+  gum style "Vigilance level set to: $level (this session only)"
   if gum confirm "Enable extra verbose logging for this TUI session?"; then
     export TINFOIL_VERBOSE=1
   fi
 }
+
+# === Graceful Exit Handling ===
+
+graceful_exit() {
+  echo
+  gum style --foreground 212 --border double --margin "1 0" \
+    "👋  The Good Sentinel tips its hat." \
+    "" \
+    "Thank you for keeping the machines honest today." \
+    "The fortress stands stronger because of your vigilance." \
+    "" \
+    "Stay sharp. The Sentinel is always watching. 🛡️"
+  echo
+  exit 0
+}
+
+# Catch interrupts (Ctrl+C, etc.) for a warm goodbye instead of abrupt exit
+trap graceful_exit INT TERM
 
 # === Entry ===
 banner
