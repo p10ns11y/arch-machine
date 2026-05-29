@@ -34,6 +34,12 @@ The overhaul is now under full self-referential, evidence-first, policy-complian
 
 Self-referential loop unbroken. The mission continues phase by phase without pause.
 
+### 2026-05-29 - Accelerated Batch (Phase 2 pull-forward + Phase 4 foundations)
+- docs/INDEX.md created (authoritative architecture map + mermaid + quick start + cross-refs + overhaul status). Major professional surface win (Phase 2/5).
+- .github/workflows/ci.yml + PULL_REQUEST_TEMPLATE.md (Phase 4): full jobs per plan (shellcheck, yamllint, go, profile harness stub, evidence smoke, markdownlint) + enforcement checklist.
+- Evidence 135543 / 135612.
+- Committed as c02cefa under user acceleration directive.
+
 ### 2026-05-29 - Phase 3 Start (Automation Unification): maintenance/systemd-setup.sh Fixed
 - Core Phase 3 micro-step 1 complete: `maintenance/systemd-setup.sh` fully rewritten with dynamic unit generation from inline templates (DRY, --dry-run support, no dependency on killed systemd/ dup tree).
 - Units now written to standard user ($HOME/.config/systemd/user/) or system (/etc/systemd/system/) locations and call weekly-check.sh (evidence pipeline).
