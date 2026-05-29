@@ -13,7 +13,7 @@
 - [ ] Checkpoint 5: Phase 5 (Polish, Branding, Self-Policy Application) complete + mission close PR
 
 ## Current Open Items (High-Security Lens)
-- Exact duplication hell (`systemd/` mirrors ~2883 LOC + `setups/` functional variants) — treat as high-severity vulnerabilities per project's own `policies/security-remediation.md`.
+- Exact duplication hell (`systemd/` mirrors ~2883 LOC — FS kill partial due to sudo env limit; git/reference side complete; `setups/` fully killed in this batch) — treated as high-severity vulnerabilities per project's own `policies/security-remediation.md`.
 - Documentation fragmentation (broken links, no single source of truth).
 - Missing professional surface (no .github/, no CI, limited contributor docs).
 - Evidence UX still raw (opportunity to amplify the differentiator).
