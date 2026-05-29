@@ -8,7 +8,7 @@ CONFIG_FILE="$CONFIG_DIR/tools.yaml"
 
 # Install productivity packages
 install_productivity_tools() {
-    local category="$1"
+    local category="${1:-basic}"
     log_section "Installing Productivity Tools ($category)"
 
     # Define packages based on category
@@ -51,16 +51,6 @@ install_productivity() {
     install_productivity_tools "$category"
 
     log_success "Productivity tools module installation completed ($category)"
-}
-
-# Main productivity module function
-install_productivity() {
-    local category="${1:-basic}"
-    log_section "Productivity Tools Module Installation"
-
-    install_productivity_tools
-
-    log_success "Productivity tools module installation completed"
 }
 
 # Export main function
