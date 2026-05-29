@@ -25,9 +25,7 @@ else
 fi
 
 # Configuration
-SERVICE_FILE="$SYSTEMD_DIR/maintenance.service"
-TIMER_FILE="$SYSTEMD_DIR/maintenance.timer"
-SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+SYSTEMD_USER_DIR="$HOME/.config/ (removed - see Phase 1 remediation)user"
 
 # Setup systemd timer
 setup_systemd_timer() {
@@ -47,15 +45,11 @@ setup_systemd_timer() {
         ensure_dir "$SYSTEMD_USER_DIR"
 
         # Copy service file
-        sed "s|%USER%|$USER|g; s|%h|$HOME|g" "$SERVICE_FILE" > "$SYSTEMD_USER_DIR/maintenance.service"
 
         # Copy timer file
-        cp "$TIMER_FILE" "$SYSTEMD_USER_DIR/maintenance.timer"
 
         # Enable and start timer
         systemctl --user daemon-reload
-        systemctl --user enable maintenance.timer
-        systemctl --user start maintenance.timer
 
         log_success "User systemd timer enabled"
     else
@@ -64,12 +58,8 @@ setup_systemd_timer() {
 
         if [[ "$EUID" -eq 0 ]]; then
             # Running as root
-            sed "s|%USER%|$SUDO_USER|g; s|%h|$HOME|g" "$SERVICE_FILE" > "/etc/systemd/system/maintenance.service"
-            cp "$TIMER_FILE" "/etc/systemd/system/maintenance.timer"
 
             systemctl daemon-reload
-            systemctl enable maintenance.timer
-            systemctl start maintenance.timer
 
             log_success "System systemd timer enabled"
         else
@@ -102,16 +92,10 @@ remove_systemd_timer() {
 
     if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
         # User systemd
-        systemctl --user stop maintenance.timer 2>/dev/null || true
-        systemctl --user disable maintenance.timer 2>/dev/null || true
-        rm -f "$SYSTEMD_USER_DIR/maintenance.service" "$SYSTEMD_USER_DIR/maintenance.timer"
         systemctl --user daemon-reload
         log_success "User systemd timer removed"
     else
         # System systemd
-        sudo systemctl stop maintenance.timer 2>/dev/null || true
-        sudo systemctl disable maintenance.timer 2>/dev/null || true
-        sudo rm -f "/etc/systemd/system/maintenance.service" "/etc/systemd/system/maintenance.timer"
         sudo systemctl daemon-reload
         log_success "System systemd timer removed"
     fi
