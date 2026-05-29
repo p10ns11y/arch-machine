@@ -12,7 +12,7 @@ Basic precautions for installation:
 
 See [Safety & Requirements](../SAFETY.md) for detailed information.
 
-## First-Time Installation
+## First-Time Installation (Thin Sentinel First — Recommended)
 
 ```bash
 # Clone the repository
@@ -25,35 +25,50 @@ chmod +x install.sh migrate.sh
 # Run migration if you have existing setup (optional)
 ./migrate.sh
 
-# Install using ml-dev profile (recommended)
-./install.sh --profile ml-dev
+# STEP 1 (default / recommended): Thin install ONLY the tinfoil guardian CLI
+# This is fast, installs almost nothing, and gives you the auditor + TUI.
+./install.sh
+# or explicitly:
+./install.sh --thin
 
-# For security-focused setup
+# Now you have:
+#   /usr/local/bin/tinfoil
+#   /usr/share/tinfoil/  (self-contained runtime for tui + profile launches)
+
+# Try the CLI immediately:
+tinfoil                  # global audit
+tinfoil tui              # interactive control center (profiles, remediation, evidence)
+tinfoil .                # audit this folder
+
+# STEP 2 (when ready): Full profile install via the same installer or from TUI
+./install.sh --profile ml-dev     # recommended full ML/AI + ROCm workstation
+# or
 ./install.sh --profile security-dev
-
-# For minimal development setup
+# or
 ./install.sh --profile minimal
 
-# List available profiles
+# List / inspect profiles (no install performed)
 ./install.sh --list-profiles
-
-# Show detailed profile information
 ./install.sh --show-profile ml-dev
 
-# Validate system readiness
+# Validate system readiness (no changes)
 ./install.sh --validate
 ```
 
-## Post-Installation Setup
+## Post-Installation Setup (after full profile)
 
 ```bash
-# Log out and back in for group changes
-# Set up automated maintenance
+# After a full --profile install:
+# Log out and back in for group changes (ROCm, docker, etc.)
+
+# Set up automated weekly maintenance + evidence (recommended)
 maintenance/systemd-setup.sh setup
 
-# Or use cron if systemd is not available
+# Or cron fallback:
 maintenance/cron-setup.sh setup
 ```
+
+Note: the thin `tinfoil` install alone does not require logout or systemd setup — you get the auditor + TUI immediately. Full maintenance timers are part of the profile + maintenance layer.
 
 ## Installation Profiles
 
@@ -122,27 +137,38 @@ The original standalone scripts are still available for backward compatibility:
 
 These provide one-shot installation but lack the profile-based approach of the new system.
 
-## The tinfoil CLI
+## The tinfoil CLI (The Good Sentinel)
 
-The `tinfoil` CLI is automatically built and installed by the main `./install.sh` process (it runs after the profile installation completes).
+`tinfoil` is the lightweight sentinel/guardian CLI. By default `./install.sh` (or `./install.sh --thin`) installs **only** this — the recommended first step.
 
 ### Installation details
 - Binary: `/usr/local/bin/tinfoil`
-- Supporting files: `/usr/share/tinfoil/`
+- Supporting runtime (for tui, audits, and launching profiles): `/usr/share/tinfoil/`
+  (contains `bin/tinfoil.go`, `lib/`, `config/profiles/`, `maintenance/`, `modules/`, `install.sh` etc.)
 
-### Basic usage after installation
+### Basic usage after thin install
 
 ```bash
-tinfoil                  # Full system audit
-tinfoil .                # Current directory
-tinfoil /some/path       # Specific target
-tinfoil tui              # Interactive interface (when present)
+tinfoil                  # Full system audit (global investigator mode)
+tinfoil tui              # Beautiful interactive TUI (audit, remediation, profile installer, evidence)
+tinfoil .                # Audit current directory
+tinfoil /some/path       # Audit any folder
 ```
 
-For development use without running the full installer:
+From inside the TUI you can launch profile installs (it uses the self-contained tree under /usr/share/tinfoil).
+
+For development (before any install):
 
 ```bash
 go run bin/tinfoil.go tui
+# or
+./install.sh --tui
 ```
 
-See the tinfoil section in the main README and `tinfoil-name-explained.md` for more context.
+After the thin CLI is installed you can still do full workstation bootstrap with:
+
+```bash
+./install.sh --profile ml-dev
+```
+
+See `tinfoil-name-explained.md`, the main README, and docs/INDEX.md for philosophy + architecture.

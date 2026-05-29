@@ -267,3 +267,17 @@ refactor: improve evidence extraction
 3. Run full maintenance cycle
 4. Update changelog
 5. Tag release: `git tag v1.x.x`
+## CI and Quality (Phase 4+)
+
+All contributions must pass the automated checks defined in `.github/workflows/ci.yml` and the PR template.
+
+Before pushing:
+```bash
+make lint
+make validate-profiles
+make evidence-smoke
+```
+
+The project enforces its own security-remediation policy and evidence-first culture on every change.
+
+See [docs/CONTRIBUTING.md](CONTRIBUTING.md) for the full process.
