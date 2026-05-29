@@ -157,7 +157,7 @@ arch-machine/
 - [Backup Guide](docs/BACKUP.md) - Backup and recovery procedures
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Development](docs/DEVELOPMENT.md) - Contributing and development guide
-- [Author's Motto](AUTHORS-MOTTO.md) - Project philosophy and design decisions
+- [Author's Motto](AUTHORS-MOTTO.md) - Project philosophy ("Solve your own machine first, then empower others to adapt") — prominently linked from docs/INDEX.md too. Full sentinel lore lives only in [FUNREADME.md](FUNREADME.md).
 
 ## Verification
 

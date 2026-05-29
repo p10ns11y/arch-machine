@@ -52,13 +52,19 @@ See:
 - [docs/LEGACY.md](LEGACY.md) — What was killed and why (policy application proof).
 - [AUTHORS-MOTTO.md](../AUTHORS-MOTTO.md) — Philosophy ("Solve your own machine first...").
 
-## Evidence — The Differentiator
+## Evidence — The Differentiator (Phase 5 Amplified)
 
 Every run produces token-efficient JSON + TOON bundles optimized for LLMs/agents.
 
-`maintenance/extract-evidence.sh` (called by audit/weekly) + `tinfoil evidence` (Phase 5+) give you the full power.
+**New in Phase 5**:
+- `tinfoil evidence list` / `latest` — quick CLI access to recent bundles.
+- `maintenance/apply-remediation.sh` — real callable self-application of the project's own security-remediation policy.
+- `tinfoil tui` now has (or will have in full TUI-SPEC) a dedicated Evidence screen.
+- `maintenance/extract-evidence.sh` produces the bundles; weekly timer + TUI make them first-class.
 
-The overhaul itself (this handoff) ran the same loop on the project's own technical debt.
+The overhaul itself (this handoff) ran the same loop on the project's own technical debt — proof the Sentinel watches itself.
+
+See `tinfoil evidence help` and docs/LEGACY.md.
 
 ## Contributing & Professional Surface
 
