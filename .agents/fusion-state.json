@@ -1,0 +1,26 @@
+{
+  "project": "arch-machine",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "VigilantGuardianLoop",
+      "label": "Sentinel → ProfileEngine → ModuleBay → EvidenceReactor",
+      "paths": ["docs/INDEX.md", "install.sh", "maintenance/extract-evidence.sh", "bin/tinfoil.go"],
+      "binding_energy": 0.92
+    },
+    {
+      "id": "SentinelSurface",
+      "label": "tinfoil CLI + gum TUI",
+      "paths": ["bin/tinfoil.go", "lib/tui.sh"],
+      "binding_energy": 0.85
+    },
+    {
+      "id": "RemediationPolicy",
+      "label": "6-step security remediation meta-rule",
+      "paths": ["policies/security-remediation.md", "maintenance/apply-remediation.sh"],
+      "binding_energy": 0.88
+    }
+  ],
+  "surplus_backlog": [
+  ]
+}

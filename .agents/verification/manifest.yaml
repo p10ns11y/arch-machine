@@ -1,0 +1,41 @@
+# Generated for arch-machine — edit when verify commands change.
+project: arch-machine
+risk_profile: medium
+layout: golden-4
+phi_major: 62
+phi_minor: 38
+
+panes:
+  - id: watch-lint
+    title: WATCH
+    tier: watch
+    priority: 1
+    space_profile: scroll
+    cwd: .
+    command: 'while true; do make lint 2>&1 | tail -40; sleep 30; done'
+    value: shellcheck/yamllint/markdownlint drift
+
+  - id: console
+    title: CMD
+    tier: monitor
+    priority: 2
+    space_profile: interactive
+    value: agent_scan, manual verify
+
+  - id: git
+    title: GIT
+    tier: monitor
+    priority: 3
+    space_profile: tui-side
+    command: lazygit
+    tool: lazygit
+    value: Review agent diffs on sentinel branch
+
+  - id: verify-suite
+    title: VERIFY
+    tier: verify
+    priority: 4
+    space_profile: confirm-burst
+    cwd: .
+    command: 'make lint && make validate-profiles && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...'
+    value: Pre-PR gate from AGENTS.md

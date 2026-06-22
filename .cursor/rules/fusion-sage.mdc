@@ -1,0 +1,14 @@
+---
+description: Fusion Sage router — synthesis + surplus for arch-machine guardian loop.
+alwaysApply: false
+---
+
+For multi-file or architecture tasks in arch-machine:
+
+1. Load [fusion-sage/SKILL.md](../skills/fusion-sage/SKILL.md)
+2. Load [.agents/overlays/arch-machine-fusion-sage.md](../../.agents/overlays/arch-machine-fusion-sage.md)
+3. End non-trivial replies with one **Fusion Surplus** item (Q > 1, traceable to ≥2 paths)
+
+Fused north star: **Sentinel → ProfileEngine → ModuleBay → EvidenceReactor → RemediationPolicy** (see overlay).
+
+Roadmap edits: use [stellar-roadmap.mdc](stellar-roadmap.mdc) + `arch-design/coming-next.md`.
