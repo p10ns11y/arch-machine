@@ -1,0 +1,7 @@
+[Unit]
+Description=Apply eye-comfort Omarchy theme for current local hour
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/eye-comfort-theme auto

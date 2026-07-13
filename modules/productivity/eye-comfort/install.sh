@@ -8,7 +8,7 @@ THEMES_SRC="$SCRIPT_DIR/themes"
 DOCS_SRC="$SCRIPT_DIR/docs"
 BIN_SRC="$SCRIPT_DIR/bin/eye-comfort-theme"
 LIB_SRC="$SCRIPT_DIR/lib"
-SYSTEMD_SRC="$SCRIPT_DIR/systemd"
+SYSTEMD_SRC="$SCRIPT_DIR/units"
 
 OMARCHY_THEMES="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/themes"
 LOCAL_BIN="$HOME/.local/bin"
