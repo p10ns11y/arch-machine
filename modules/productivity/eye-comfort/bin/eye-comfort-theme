@@ -1,0 +1,280 @@
+#!/usr/bin/env bash
+# Circadian / manual switcher for eye-comfort Omarchy themes.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Circadian / manual switcher for eye-comfort Omarchy themes.
+
+Usage:
+  eye-comfort-theme [MODE] [flags]
+
+MODE (positional, default auto):
+  auto                              Resolve phase from clock (+ optional --lat)
+  dawn|morning|midday|afternoon|dusk|evening|night
+  day|light                         Alias → midday
+  dark                              Alias → night
+
+Flags:
+  --phase NAME                      Same as MODE (overrides positional)
+  --hour N                          Local hour 0–23 (also: HOUR=N)
+  --minute N                        Local minute 0–59
+  --lat DEG | --latitude DEG        Approximate solar phases (-90..90)
+  --indoor | --outdoor              Ambient lighting context
+  --ambient auto|indoor|outdoor     Ambient (default: auto)
+  --intensity soft|balanced|crisp   Comfort intensity (default: balanced)
+  --comfort soft|balanced|crisp     Alias for --intensity
+  --high-contrast                   Push ink contrast (outdoor glare / a11y)
+  --reduced-motion                  Record motion preference in state file
+  --no-dynamic                      Collapse to light/dark packages only
+  --dry-run                         Print plan; do not apply
+  --preview | --print-only          Print theme name only
+  --json                            Machine-readable CircadianState (no apply)
+  --css                             Emit OKLCH CSS custom properties to stdout
+  --no-render                       Skip writing resolved roles into theme dir
+  --state-dir DIR                   State file dir (default ~/.config/eye-comfort)
+  -h | --help                       Show this help
+
+Schedule (fixed windows when --lat unset):
+  dawn 05–07 · morning 07–10 · midday 10–14 · afternoon 14–17
+  dusk 17–19 · evening 19–22 · night 22–05
+
+With --lat, sunrise/sunset shift those boundaries (e.g. summer 18:00 can stay afternoon).
+
+Examples:
+  eye-comfort-theme
+  eye-comfort-theme --phase dusk --indoor --intensity soft
+  eye-comfort-theme auto --lat 28.6 --outdoor --json
+  HOUR=22 eye-comfort-theme --dry-run
+EOF
+}
+
+# Early help — works even if later setup fails
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+export PYTHONPATH="${HOME}/.local/lib/eye-comfort${PYTHONPATH:+:$PYTHONPATH}"
+# Prefer module lib when running from a checkout (dev)
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -d "${_SCRIPT_DIR}/../lib" ]]; then
+  export PYTHONPATH="${_SCRIPT_DIR}/../lib:${PYTHONPATH}"
+fi
+
+MODE="auto"
+DRY=0
+PRINT_ONLY=0
+JSON=0
+CSS=0
+NO_RENDER=0
+HOUR_OVERRIDE=""
+MINUTE_OVERRIDE=""
+LAT=""
+AMBIENT="auto"
+INTENSITY="balanced"
+HIGH_CONTRAST=0
+REDUCED_MOTION=0
+NO_DYNAMIC=0
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/eye-comfort"
+PHASE_FLAG=""
+
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY=1; shift ;;
+    --preview|--print-only) PRINT_ONLY=1; shift ;;
+    --json) JSON=1; shift ;;
+    --css) CSS=1; shift ;;
+    --no-render) NO_RENDER=1; shift ;;
+    --high-contrast) HIGH_CONTRAST=1; shift ;;
+    --reduced-motion) REDUCED_MOTION=1; shift ;;
+    --no-dynamic) NO_DYNAMIC=1; shift ;;
+    --indoor) AMBIENT="indoor"; shift ;;
+    --outdoor) AMBIENT="outdoor"; shift ;;
+    --ambient)
+      AMBIENT="${2:-}"; shift 2 ;;
+    --ambient=*)
+      AMBIENT="${1#--ambient=}"; shift ;;
+    --intensity|--comfort)
+      INTENSITY="${2:-}"; shift 2 ;;
+    --intensity=*|--comfort=*)
+      INTENSITY="${1#*=}"; shift ;;
+    --phase)
+      PHASE_FLAG="${2:-}"; shift 2 ;;
+    --phase=*)
+      PHASE_FLAG="${1#--phase=}"; shift ;;
+    --hour)
+      HOUR_OVERRIDE="${2:-}"; shift 2 ;;
+    --hour=*)
+      HOUR_OVERRIDE="${1#--hour=}"; shift ;;
+    --minute)
+      MINUTE_OVERRIDE="${2:-}"; shift 2 ;;
+    --minute=*)
+      MINUTE_OVERRIDE="${1#--minute=}"; shift ;;
+    --lat|--latitude)
+      LAT="${2:-}"; shift 2 ;;
+    --lat=*|--latitude=*)
+      LAT="${1#*=}"; shift ;;
+    --state-dir)
+      STATE_DIR="${2:-}"; shift 2 ;;
+    --state-dir=*)
+      STATE_DIR="${1#--state-dir=}"; shift ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      ARGS+=("$@")
+      break
+      ;;
+    -*)
+      echo "unknown flag: $1 (try --help)" >&2
+      exit 2
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ -n "$PHASE_FLAG" ]]; then
+  MODE="$PHASE_FLAG"
+elif ((${#ARGS[@]} > 0)); then
+  MODE="${ARGS[0]}"
+fi
+
+# Env HOUR still supported for tests
+if [[ -z "$HOUR_OVERRIDE" && -n "${HOUR:-}" ]]; then
+  HOUR_OVERRIDE="$HOUR"
+fi
+
+export EC_MODE="$MODE"
+export EC_DRY="$DRY"
+export EC_PRINT_ONLY="$PRINT_ONLY"
+export EC_JSON="$JSON"
+export EC_CSS="$CSS"
+export EC_NO_RENDER="$NO_RENDER"
+export EC_HOUR="${HOUR_OVERRIDE}"
+export EC_MINUTE="${MINUTE_OVERRIDE}"
+export EC_LAT="$LAT"
+export EC_AMBIENT="$AMBIENT"
+export EC_INTENSITY="$INTENSITY"
+export EC_HIGH_CONTRAST="$HIGH_CONTRAST"
+export EC_REDUCED_MOTION="$REDUCED_MOTION"
+export EC_NO_DYNAMIC="$NO_DYNAMIC"
+export EC_STATE_DIR="$STATE_DIR"
+
+python3 - <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+from schedule import resolve, state_to_dict
+from palette import css_custom_properties
+from render import write_theme_package
+
+def env_bool(name: str) -> bool:
+    return os.environ.get(name, "0") in ("1", "true", "True", "yes")
+
+mode = os.environ.get("EC_MODE", "auto")
+hour_s = os.environ.get("EC_HOUR", "").strip()
+minute_s = os.environ.get("EC_MINUTE", "").strip()
+lat_s = os.environ.get("EC_LAT", "").strip()
+ambient = os.environ.get("EC_AMBIENT", "auto")
+intensity = os.environ.get("EC_INTENSITY", "balanced")
+
+kwargs = dict(
+    mode=mode,
+    ambient=ambient,  # type: ignore[arg-type]
+    intensity=intensity,  # type: ignore[arg-type]
+    high_contrast=env_bool("EC_HIGH_CONTRAST"),
+    reduced_motion=env_bool("EC_REDUCED_MOTION"),
+    no_dynamic=env_bool("EC_NO_DYNAMIC"),
+)
+if hour_s != "":
+    kwargs["hour"] = int(hour_s)
+if minute_s != "":
+    kwargs["minute"] = int(minute_s)
+if lat_s != "":
+    kwargs["latitude"] = float(lat_s)
+
+try:
+    state = resolve(**kwargs)
+except (ValueError, RuntimeError) as e:
+    print(f"eye-comfort-theme: error: {e}", file=sys.stderr)
+    sys.exit(2)
+
+if os.environ.get("EC_CSS", "0") == "1":
+    sys.stdout.write(css_custom_properties(state.roles, state.phase))
+    sys.exit(0)
+
+if os.environ.get("EC_JSON", "0") == "1":
+    print(json.dumps(state_to_dict(state), indent=2))
+    # still continue to apply unless dry/print — JSON is additive print
+    # Actually for scripting, --json alone should not apply. Treat like preview.
+    # Fall through only if not json-only... User may want --json --dry-run.
+    # Convention: --json prints and exits unless also applying without dry.
+    # Prefer: --json implies print-only for safety.
+    sys.exit(0)
+
+if os.environ.get("EC_PRINT_ONLY", "0") == "1":
+    print(state.theme)
+    sys.exit(0)
+
+print(
+    f"eye-comfort-theme: phase={state.phase} theme={state.theme} "
+    f"ambient={state.ambient} intensity={state.intensity} "
+    f"source={state.source} contrast={state.contrast_fg_bg}:1 "
+    f"cct≈{state.cct_k}K"
+)
+
+state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
+if state_dir.as_posix():
+    state_path = state_dir / "state.json"
+    payload = state_to_dict(state)
+    payload["motion"] = "reduce" if state.reduced_motion else "ok"
+    if os.environ.get("EC_DRY", "0") == "1":
+        print(f"(dry-run) would write {state_path}")
+    else:
+        try:
+            state_dir.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        except OSError as e:
+            print(f"warn: could not write state file ({e})", file=sys.stderr)
+
+if os.environ.get("EC_DRY", "0") == "1":
+    print(f"(dry-run) would run: omarchy-theme-set {state.theme}")
+    if os.environ.get("EC_NO_RENDER", "0") != "1":
+        print(f"(dry-run) would render roles into theme package {state.theme}")
+    sys.exit(0)
+
+# Live-render resolved roles into installed Omarchy theme (morning≠midday, etc.)
+if os.environ.get("EC_NO_RENDER", "0") != "1":
+    themes_root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "omarchy" / "themes"
+    dest = themes_root / state.theme
+    if dest.is_dir():
+        icons = dest / "icons.theme"
+        write_theme_package(
+            dest,
+            state.roles,
+            name=state.theme,
+            phase=state.phase,
+            icons_src=icons if icons.is_file() else None,
+        )
+    else:
+        print(f"warn: theme dir missing ({dest}); skip live render", file=sys.stderr)
+
+import shutil
+if shutil.which("omarchy-theme-set") is None:
+    print("warn: omarchy-theme-set not on PATH; theme resolved but not applied", file=sys.stderr)
+    sys.exit(0)
+
+import subprocess
+subprocess.check_call(["omarchy-theme-set", state.theme])
+active = Path.home() / ".config" / "omarchy" / "current" / "theme.name"
+print(f"active: {active.read_text(encoding='utf-8').strip() if active.is_file() else 'unknown'}")
+PY

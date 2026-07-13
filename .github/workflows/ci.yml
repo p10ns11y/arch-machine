@@ -63,3 +63,13 @@ jobs:
         run: |
           npm install -g markdownlint-cli 2>/dev/null || true
           markdownlint '**/*.md' --ignore 'FUNREADME.md' --ignore 'node_modules' || true
+
+  # SN-EC-2 + Fusion Surplus: eye-comfort schedule tests + SoT drift check
+  eye-comfort:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Schedule unit tests
+        run: make eye-comfort-test
+      - name: Generated package SoT check
+        run: make eye-comfort-generate-check
