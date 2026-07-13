@@ -34,6 +34,7 @@ PYTHONPATH=lib python3 lib/test_schedule.py
 | `themes/eye-comfort-{dawn,light,dusk,dark}` | Omarchy packages |
 | `tokens/phases.css` | OKLCH CSS custom properties per phase |
 | `bin/eye-comfort-theme` | Circadian switcher (flags below) |
+| `units/eye-comfort-theme.{service,timer}` | Hourly systemd user timer |
 | `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
 | `yazi/` | File manager flavors (dark/light) |
 
@@ -91,6 +92,44 @@ On apply (not `--json`/`--dry-run`), the switcher live-renders resolved roles in
 
 State file: `~/.config/eye-comfort/state.json` (phase, CCT hint, contrast, motion preference).
 
+## Scheduled apply (systemd user timer)
+
+The timer runs `eye-comfort-theme auto` every hour (`OnCalendar=hourly`, `Persistent=true` so it catches up after sleep).
+
+### Enable with install
+
+```bash
+./install.sh --with-timer
+```
+
+### Enable manually (switcher already installed)
+
+```bash
+cp units/eye-comfort-theme.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now eye-comfort-theme.timer
+```
+
+### Check / run once
+
+```bash
+systemctl --user status eye-comfort-theme.timer
+systemctl --user list-timers eye-comfort-theme.timer
+systemctl --user start eye-comfort-theme.service    # apply now
+journalctl --user -u eye-comfort-theme.service -n 20
+```
+
+### Customize flags
+
+Default `ExecStart` is `%h/.local/bin/eye-comfort-theme auto`. To pass `--lat`, `--indoor`, etc., edit `~/.config/systemd/user/eye-comfort-theme.service`, then:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user restart eye-comfort-theme.timer
+```
+
+Disable later: `systemctl --user disable --now eye-comfort-theme.timer`.
+
 ## Live targets
 
 Install copies into:
@@ -98,5 +137,6 @@ Install copies into:
 - `~/.config/omarchy/themes/`
 - `~/.local/bin/eye-comfort-theme`
 - `~/.local/lib/eye-comfort/`
+- `~/.config/systemd/user/eye-comfort-theme.{service,timer}` (with `--with-timer`)
 
 Does **not** commit live `~/.config` (gitignored at repo root).
