@@ -1,46 +1,59 @@
 #!/usr/bin/env bash
 # Circadian / manual switcher for eye-comfort Omarchy themes.
-#
-# Usage:
-#   eye-comfort-theme [MODE] [flags]
-#
-# MODE (positional, default auto):
-#   auto                         Resolve phase from clock (+ optional --lat)
-#   dawn|morning|midday|afternoon|dusk|evening|night
-#   day|light                    Alias → midday
-#   dark                         Alias → night
-#   dawn|dusk                    Force transitional packages
-#
-# Flags:
-#   --phase NAME                 Same as MODE (overrides positional)
-#   --hour N                     Local hour 0–23 (also: HOUR=N)
-#   --minute N                   Local minute 0–59
-#   --lat DEG | --latitude DEG   Approximate solar phases (-90..90)
-#   --indoor | --outdoor         Ambient lighting context (default: auto)
-#   --ambient auto|indoor|outdoor
-#   --intensity soft|balanced|crisp
-#   --comfort soft|balanced|crisp   Alias for --intensity
-#   --high-contrast              Push ink contrast (outdoor glare / a11y)
-#   --reduced-motion             Record motion preference in state file
-#   --no-dynamic                 Collapse to light/dark packages only
-#   --dry-run                    Print plan; do not apply
-#   --preview | --print-only     Print theme name only
-#   --json                       Machine-readable CircadianState
-#   --css                        Emit OKLCH CSS custom properties to stdout
-#   --no-render                  Skip writing resolved roles into theme dir
-#   --state-dir DIR              Where to write state.json (default ~/.config/eye-comfort)
-#   -h | --help                  This help
-#
-# Schedule (fixed windows when --lat unset):
-#   dawn 05–07 · morning 07–10 · midday 10–14 · afternoon 14–17
-#   dusk 17–19 · evening 19–22 · night 22–05
-#
-# Examples:
-#   eye-comfort-theme
-#   eye-comfort-theme --phase dusk --indoor --intensity soft
-#   eye-comfort-theme auto --lat 28.6 --outdoor --json
-#   HOUR=22 eye-comfort-theme --dry-run
 set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Circadian / manual switcher for eye-comfort Omarchy themes.
+
+Usage:
+  eye-comfort-theme [MODE] [flags]
+
+MODE (positional, default auto):
+  auto                              Resolve phase from clock (+ optional --lat)
+  dawn|morning|midday|afternoon|dusk|evening|night
+  day|light                         Alias → midday
+  dark                              Alias → night
+
+Flags:
+  --phase NAME                      Same as MODE (overrides positional)
+  --hour N                          Local hour 0–23 (also: HOUR=N)
+  --minute N                        Local minute 0–59
+  --lat DEG | --latitude DEG        Approximate solar phases (-90..90)
+  --indoor | --outdoor              Ambient lighting context
+  --ambient auto|indoor|outdoor     Ambient (default: auto)
+  --intensity soft|balanced|crisp   Comfort intensity (default: balanced)
+  --comfort soft|balanced|crisp     Alias for --intensity
+  --high-contrast                   Push ink contrast (outdoor glare / a11y)
+  --reduced-motion                  Record motion preference in state file
+  --no-dynamic                      Collapse to light/dark packages only
+  --dry-run                         Print plan; do not apply
+  --preview | --print-only          Print theme name only
+  --json                            Machine-readable CircadianState (no apply)
+  --css                             Emit OKLCH CSS custom properties to stdout
+  --no-render                       Skip writing resolved roles into theme dir
+  --state-dir DIR                   State file dir (default ~/.config/eye-comfort)
+  -h | --help                       Show this help
+
+Schedule (fixed windows when --lat unset):
+  dawn 05–07 · morning 07–10 · midday 10–14 · afternoon 14–17
+  dusk 17–19 · evening 19–22 · night 22–05
+
+With --lat, sunrise/sunset shift those boundaries (e.g. summer 18:00 can stay afternoon).
+
+Examples:
+  eye-comfort-theme
+  eye-comfort-theme --phase dusk --indoor --intensity soft
+  eye-comfort-theme auto --lat 28.6 --outdoor --json
+  HOUR=22 eye-comfort-theme --dry-run
+EOF
+}
+
+# Early help — works even if later setup fails
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
 
 export PYTHONPATH="${HOME}/.local/lib/eye-comfort${PYTHONPATH:+:$PYTHONPATH}"
 # Prefer module lib when running from a checkout (dev)
@@ -108,7 +121,7 @@ while [[ $# -gt 0 ]]; do
     --state-dir=*)
       STATE_DIR="${1#--state-dir=}"; shift ;;
     -h|--help)
-      sed -n '2,48p' "$0"
+      usage
       exit 0
       ;;
     --)
