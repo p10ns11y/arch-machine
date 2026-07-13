@@ -81,7 +81,7 @@ Strategic context: [PRODUCT.md](./PRODUCT.md) · Token lock: [PALETTE.md](./PALE
 | File | Role |
 |------|------|
 | `0-signature-lantern.jpg` | **Delight** — single paper lantern on vast umber; discovery when desk is clear |
-| `1-candle-still-life.jpg` | Quieter still-life vignette (lower-left) |
+| `1-journals-tea.jpg` | Quieter journals-tea vignette (lower-left) |
 | `2-sage-amber-ribbons.jpg` | Quieter ribbon band (bottom third only) |
 | `3-mist-valley-ink.jpg` | Quieter night ink landscape |
 
