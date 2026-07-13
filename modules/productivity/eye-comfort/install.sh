@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install eye-comfort Omarchy themes + circadian switcher onto this machine.
-# Usage: ./install.sh [--set dark|light|auto] [--with-timer] [--dry-run]
+# Usage: ./install.sh [--set dark|light|dawn|dusk|auto] [--with-timer] [--dry-run]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,6 +9,7 @@ DOCS_SRC="$SCRIPT_DIR/docs"
 BIN_SRC="$SCRIPT_DIR/bin/eye-comfort-theme"
 LIB_SRC="$SCRIPT_DIR/lib"
 SYSTEMD_SRC="$SCRIPT_DIR/units"
+TOKENS_SRC="$SCRIPT_DIR/tokens"
 
 OMARCHY_THEMES="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/themes"
 LOCAL_BIN="$HOME/.local/bin"
@@ -37,7 +38,7 @@ while [[ $# -gt 0 ]]; do
       DRY=1
       shift
       ;;
-    dark|light|auto)
+    dark|light|dawn|dusk|auto)
       SET_MODE="$1"
       shift
       ;;
@@ -60,6 +61,24 @@ run() {
   fi
 }
 
+link_backgrounds() {
+  # Share wallpapers: dawn←light, dusk←dark (avoid duplicating JPGs in git)
+  local dest="$1"
+  local src="$2"
+  run mkdir -p "$dest/backgrounds"
+  if (( DRY )); then
+    echo "DRY: symlink backgrounds $src → $dest"
+    return
+  fi
+  local f
+  shopt -s nullglob
+  for f in "$src"/backgrounds/*; do
+    [[ -e "$f" ]] || continue
+    ln -sfn "$f" "$dest/backgrounds/$(basename "$f")"
+  done
+  shopt -u nullglob
+}
+
 echo "eye-comfort install → $OMARCHY_THEMES"
 run mkdir -p "$OMARCHY_THEMES" "$LOCAL_BIN" "$LOCAL_LIB"
 
@@ -69,17 +88,38 @@ for f in PALETTE.md PRODUCT.md DESIGN.md; do
   fi
 done
 
-for t in eye-comfort-dark eye-comfort-light; do
+if [[ -d "$TOKENS_SRC" ]]; then
+  run mkdir -p "$OMARCHY_THEMES/eye-comfort-tokens"
+  if (( DRY )); then
+    echo "DRY: copy tokens"
+  else
+    rsync -a "$TOKENS_SRC/" "$OMARCHY_THEMES/eye-comfort-tokens/"
+  fi
+fi
+
+for t in eye-comfort-dark eye-comfort-light eye-comfort-dawn eye-comfort-dusk; do
   if [[ -d "$THEMES_SRC/$t" ]]; then
     run mkdir -p "$OMARCHY_THEMES/$t"
     if (( DRY )); then
       echo "DRY: rsync $THEMES_SRC/$t/ → $OMARCHY_THEMES/$t/"
     else
-      rsync -a --delete "$THEMES_SRC/$t/" "$OMARCHY_THEMES/$t/"
+      rsync -a --delete --exclude backgrounds "$THEMES_SRC/$t/" "$OMARCHY_THEMES/$t/"
     fi
     echo "  installed theme: $t"
   fi
 done
+
+# Wallpaper sharing after rsync --exclude backgrounds
+if [[ -d "$OMARCHY_THEMES/eye-comfort-light" ]]; then
+  if (( DRY )); then
+    echo "DRY: ensure light/dark backgrounds present"
+  else
+    rsync -a "$THEMES_SRC/eye-comfort-light/backgrounds/" "$OMARCHY_THEMES/eye-comfort-light/backgrounds/"
+    rsync -a "$THEMES_SRC/eye-comfort-dark/backgrounds/" "$OMARCHY_THEMES/eye-comfort-dark/backgrounds/"
+  fi
+fi
+link_backgrounds "$OMARCHY_THEMES/eye-comfort-dawn" "$OMARCHY_THEMES/eye-comfort-light"
+link_backgrounds "$OMARCHY_THEMES/eye-comfort-dusk" "$OMARCHY_THEMES/eye-comfort-dark"
 
 run cp -a "$BIN_SRC" "$LOCAL_BIN/eye-comfort-theme"
 run chmod +x "$LOCAL_BIN/eye-comfort-theme"
@@ -91,7 +131,6 @@ else
 fi
 echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
 echo "  lib: $LOCAL_LIB"
-
 
 # Yazi flavors (optional)
 YAZI_SRC="$SCRIPT_DIR/yazi"
@@ -136,13 +175,15 @@ if [[ -n "$SET_MODE" ]]; then
     case "$SET_MODE" in
       dark) omarchy-theme-set eye-comfort-dark ;;
       light) omarchy-theme-set eye-comfort-light ;;
+      dawn) omarchy-theme-set eye-comfort-dawn ;;
+      dusk) omarchy-theme-set eye-comfort-dusk ;;
       auto) "$LOCAL_BIN/eye-comfort-theme" auto ;;
-      *) echo "unknown --set $SET_MODE (use dark|light|auto)" >&2; exit 1 ;;
+      *) echo "unknown --set $SET_MODE (use dark|light|dawn|dusk|auto)" >&2; exit 1 ;;
     esac
   fi
 fi
 
 echo "done."
-echo "  Apply: omarchy-theme-set eye-comfort-dark|eye-comfort-light"
-echo "  Circadian: eye-comfort-theme [day|night|auto]"
+echo "  Apply: omarchy-theme-set eye-comfort-{dawn,light,dusk,dark}"
+echo "  Circadian: eye-comfort-theme [--help]"
 echo "  Cycle wallpaper: omarchy theme bg next"

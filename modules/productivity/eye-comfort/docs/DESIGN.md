@@ -1,44 +1,33 @@
 # Design System — Eye Comfort
 
-Visual system for Omarchy themes `eye-comfort-dark` and `eye-comfort-light`.  
+Visual system for Omarchy themes `eye-comfort-{dawn,light,dusk,dark}` with seven circadian phases.  
 Strategic context: [PRODUCT.md](./PRODUCT.md) · Token lock: [PALETTE.md](./PALETTE.md)
 
 ## Theme
 
 | Mode | Scene | Strategy |
 |------|--------|----------|
-| Dark | Evening lamp / umber room | Restrained: warm off-black + parchment ink + sage/amber accents |
-| Light | Soft day paper | Restrained: cream paper + warm charcoal + deeper sage/amber |
+| Dawn | First light through linen | Restrained: peach-rose paper + warm charcoal |
+| Light / day phases | Soft day paper | Restrained: cream + warm charcoal + sage/amber |
+| Dusk | Residual gold sky | Restrained: lifted warm dark + amber attention |
+| Dark / night | Evening lamp / umber room | Restrained: warm off-black + parchment ink |
+
+**Color strategy:** Restrained (product). Accent ≤10% for structure/attention; semantic error/warning only at higher chroma.
+
+**Scene sentence:** Single operator at a Linux desk under mixed indoor lamp and window light — chrome disappears into long coding sessions; luminance follows the sun without spectacle.
 
 ## Colors
 
-### Dark (`eye-comfort-dark`)
+See [PALETTE.md](./PALETTE.md) for locked hex + OKLCH. Phase refinements live in `lib/palette.py`; CSS mirrors in `tokens/phases.css`.
 
-| Token | Hex | Role |
-|-------|-----|------|
-| `bg` | `#181614` | Surface base |
-| `surface` | `#2F2924` | Selection / elevated |
-| `fg` | `#E6DFD3` | Primary text |
-| `muted` | `#8A8278` | Comments / secondary |
-| `accent` | `#7D9A8C` | Sage structure |
-| `warm` | `#C9A66B` | Amber attention / cursor |
-| `clay` | `#A88B6E` | Tertiary accent |
-| `error` | `#C47064` | Critical |
-| `warning` | `#D4A05A` | Caution (`color11`) |
+### Identity locks (balanced indoor)
 
-### Light (`eye-comfort-light`)
+| Package | bg | fg |
+|---------|----|----|
+| light (midday) | `#F5F0E8` | `#2A2622` |
+| dark (night) | `#181614` | `#E6DFD3` |
 
-| Token | Hex | Role |
-|-------|-----|------|
-| `bg` | `#F5F0E8` | Cream paper |
-| `surface` | `#E0D9CE` | Selection |
-| `fg` | `#2A2622` | Warm charcoal |
-| `muted` | `#6E665C` | Comments |
-| `accent` | `#4A6B5C` | Sage |
-| `warm` | `#8A6030` | Amber |
-| `clay` | `#8B6B4E` | Tertiary |
-| `error` | `#B54A40` | Critical |
-| `warning` | `#8B6020` | Caution |
+Dawn/dusk are transitional siblings — same family, not a second brand.
 
 ## Typography
 
@@ -46,15 +35,22 @@ Strategic context: [PRODUCT.md](./PRODUCT.md) · Token lock: [PALETTE.md](./PALE
 - **Omarchy UI font:** CaskaydiaMono Nerd Font (system)
 - Product (code): one monospace family per host; no display fonts in UI chrome
 
+## Motion
+
+- Desktop theme swaps are instant (product tool).
+- `--reduced-motion` writes `motion: reduce` to `~/.config/eye-comfort/state.json` for companions (Hyprland animations, etc.).
+- No decorative page-load choreography.
+
 ## Components / hosts
 
 | Host | Source |
 |------|--------|
 | Omarchy templates | `colors.toml` → generated surfaces |
-| Ghostty | theme `ghostty.conf` only (no local palette fight) |
-| nvim | `neovim.lua` → soft gruvbox + dark SoT overrides |
-| Yazi | flavors `eye-comfort-{dark,light}` |
-| Wallpaper | `backgrounds/*.jpg` — stage, not hero |
+| Ghostty | theme `ghostty.conf` only |
+| nvim | `neovim.lua` → soft gruvbox + SoT overrides |
+| Yazi | flavors `eye-comfort-{dark,light}` (dawn→light, dusk→dark) |
+| Wallpaper | shared: dawn←light, dusk←dark backgrounds |
+| CSS tokens | `tokens/phases.css` / `eye-comfort-theme --css` |
 
 ## Layout (wallpaper)
 
@@ -65,27 +61,19 @@ Strategic context: [PRODUCT.md](./PRODUCT.md) · Token lock: [PALETTE.md](./PALE
 
 ## Do / Don't
 
-**Do:** warm R>B darks; OKLCH-aware spacing of accents; semantic error/warning only.  
-**Don't:** cool blue night BGs; pure #000/#FFF; dual Ghostty palettes; busy wall art fighting the HUD.
+**Do:** warm R>B darks; OKLCH phase tokens; semantic error/warning only; ≥4.5:1 body contrast.  
+**Don't:** cool blue night BGs; pure #000/#FFF; dual Ghostty palettes; busy wall art; cream SaaS marketing as decoration; purple cyber defaults.
 
 ## Polish notes (impeccable)
 
-- Wallpapers graded to SoT tokens; subject mass kept off the upper field for floating windows.
-- Ghostty: theme file owns color; local config owns font + `background-opacity = 0.96` (stage, not wash).
-- nvim soft gruvbox; dark palette_overrides lock `dark0`/`light1` to SoT.
+- Four packages cover seven phases; live render keeps morning/afternoon/evening distinct.
+- Outdoor ambient deepens ink; soft intensity gentles contrast without breaking AA.
+- Wallpapers graded to SoT; dawn/dusk share day/night sets via install symlinks.
 - Helix optional / not required.
 
-## Wallpaper set (quieter + delight)
+## Wallpaper set
 
-**Dark** (`eye-comfort-dark/backgrounds/`):
-| File | Role |
-|------|------|
-| `0-signature-lantern.jpg` | **Delight** — single paper lantern on vast umber; discovery when desk is clear |
-| `1-journals-tea.jpg` | Quieter journals-tea vignette (lower-left) |
-| `2-sage-amber-ribbons.jpg` | Quieter ribbon band (bottom third only) |
-| `3-mist-valley-ink.jpg` | Quieter night ink landscape |
-
-**Light**: `1-parchment-dunes.jpg`, `2-cream-botanical.jpg` (quieter edge botanicals).
+**Dark / dusk:** lantern · journals-tea · sage-amber ribbons · mist valley  
+**Light / dawn:** parchment dunes · cream botanical  
 
 Cycle: `omarchy theme bg next`. Personality: subtle sophistication, not spectacle.
-

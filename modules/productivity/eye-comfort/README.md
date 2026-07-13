@@ -1,18 +1,18 @@
 # Eye-comfort themes (Omarchy)
 
-Vision-science light/dark desktop themes for long coding sessions and circadian rhythm.
+Vision-science circadian desktop themes for long coding sessions — warm nights, soft days, transitional dawn/dusk.
 
-## Install (any Omarchy / Arch machine)
+## Install
 
 ```bash
 cd modules/productivity/eye-comfort
 ./install.sh
-./install.sh --set dark          # apply immediately
-./install.sh --set auto          # local hour schedule
+./install.sh --set auto          # resolve phase from local hour
+./install.sh --set dawn          # force dawn package
 ./install.sh --with-timer        # optional hourly systemd user timer
 ```
 
-Requires: `omarchy-theme-set` on PATH for apply; Python 3 for schedule tests.
+Requires: `omarchy-theme-set` on PATH for apply; Python 3 for schedule + OKLCH helpers.
 
 ## Layout
 
@@ -20,18 +20,65 @@ Requires: `omarchy-theme-set` on PATH for apply; Python 3 for schedule tests.
 |------|---------|
 | `docs/PALETTE.md` | Color SoT + vision justifications |
 | `docs/PRODUCT.md` / `DESIGN.md` | Impeccable design context |
-| `themes/eye-comfort-dark` | Night package (wallpapers, colors, ghostty, nvim) |
-| `themes/eye-comfort-light` | Day package + `light.mode` |
-| `bin/eye-comfort-theme` | Circadian / manual switcher |
-| `lib/schedule.py` | Pure hour→theme + contrast helpers (tested) |
-| `snippets/ghostty.fragment.conf` | Font/opacity only (palette stays Omarchy) |
-| `yazi/` | File manager flavors |
+| `themes/eye-comfort-{dawn,light,dusk,dark}` | Omarchy packages |
+| `tokens/phases.css` | OKLCH CSS custom properties per phase |
+| `bin/eye-comfort-theme` | Circadian switcher (flags below) |
+| `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
+| `yazi/` | File manager flavors (dark/light) |
 
-## Schedule
+## Circadian phases
 
-- Light: local 07:00–17:59  
-- Dark: 18:00–06:59  
-- Override: `HOUR=22 eye-comfort-theme` or `eye-comfort-theme day|night`
+| Phase | Local hours (no `--lat`) | Omarchy package | Feel |
+|-------|--------------------------|-----------------|------|
+| dawn | 05–07 | `eye-comfort-dawn` | Peach-linen first light |
+| morning | 07–10 | `eye-comfort-light` | Soft cream focus |
+| midday | 10–14 | `eye-comfort-light` | Day paper (locked SoT) |
+| afternoon | 14–17 | `eye-comfort-light` | Warmer amber lean |
+| dusk | 17–19 | `eye-comfort-dusk` | Residual gold dark |
+| evening | 19–22 | `eye-comfort-dark` | Lamp umber |
+| night | 22–05 | `eye-comfort-dark` | Deepest warm night |
+
+With `--lat DEG`, boundaries follow approximate sunrise/sunset for that latitude.
+
+## Flags
+
+```bash
+eye-comfort-theme [MODE] [flags]
+
+# MODE: auto | dawn|morning|midday|afternoon|dusk|evening|night
+#       aliases: day|light → midday; dark → night
+
+--phase NAME              Force phase (overrides positional MODE)
+--hour N / --minute N     Clock override (or HOUR=N)
+--lat DEG                 Solar phase boundaries
+--indoor | --outdoor      Ambient context (default auto)
+--ambient auto|indoor|outdoor
+--intensity soft|balanced|crisp   # --comfort is an alias
+--high-contrast           Extra ink contrast
+--reduced-motion          Record motion=reduce in state.json
+--no-dynamic              Collapse to light/dark packages only
+--dry-run                 Plan only
+--preview / --print-only  Print theme name
+--json                    Full CircadianState JSON (no apply)
+--css                     Emit OKLCH CSS variables
+--no-render               Skip live role write into theme dir
+--state-dir DIR           Default: ~/.config/eye-comfort
+-h / --help
+```
+
+### Examples
+
+```bash
+eye-comfort-theme
+eye-comfort-theme --phase dusk --indoor --intensity soft
+eye-comfort-theme auto --lat 28.6 --outdoor --json
+HOUR=22 eye-comfort-theme --dry-run
+eye-comfort-theme --css --phase night > /tmp/ec-night.css
+```
+
+On apply (not `--json`/`--dry-run`), the switcher live-renders resolved roles into the installed Omarchy theme so morning/afternoon/evening get phase-tuned tokens, then runs `omarchy-theme-set`.
+
+State file: `~/.config/eye-comfort/state.json` (phase, CCT hint, contrast, motion preference).
 
 ## Live targets
 
