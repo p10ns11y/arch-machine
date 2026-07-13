@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# Install eye-comfort Omarchy themes + circadian switcher onto this machine.
+# Usage: ./install.sh [--set dark|light|auto] [--with-timer] [--dry-run]
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+THEMES_SRC="$SCRIPT_DIR/themes"
+DOCS_SRC="$SCRIPT_DIR/docs"
+BIN_SRC="$SCRIPT_DIR/bin/eye-comfort-theme"
+LIB_SRC="$SCRIPT_DIR/lib"
+SYSTEMD_SRC="$SCRIPT_DIR/systemd"
+
+OMARCHY_THEMES="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/themes"
+LOCAL_BIN="$HOME/.local/bin"
+LOCAL_LIB="$HOME/.local/lib/eye-comfort"
+SYSTEMD_USER="$HOME/.config/systemd/user"
+
+SET_MODE=""
+WITH_TIMER=0
+DRY=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --set)
+      SET_MODE="${2:-}"
+      shift 2
+      ;;
+    --set=*)
+      SET_MODE="${1#--set=}"
+      shift
+      ;;
+    --with-timer)
+      WITH_TIMER=1
+      shift
+      ;;
+    --dry-run)
+      DRY=1
+      shift
+      ;;
+    dark|light|auto)
+      SET_MODE="$1"
+      shift
+      ;;
+    -h|--help)
+      sed -n '2,4p' "$0"
+      exit 0
+      ;;
+    *)
+      echo "unknown arg: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+run() {
+  if (( DRY )); then
+    echo "DRY: $*"
+  else
+    "$@"
+  fi
+}
+
+echo "eye-comfort install → $OMARCHY_THEMES"
+run mkdir -p "$OMARCHY_THEMES" "$LOCAL_BIN" "$LOCAL_LIB"
+
+for f in PALETTE.md PRODUCT.md DESIGN.md; do
+  if [[ -f "$DOCS_SRC/$f" ]]; then
+    run cp -a "$DOCS_SRC/$f" "$OMARCHY_THEMES/$f"
+  fi
+done
+
+for t in eye-comfort-dark eye-comfort-light; do
+  if [[ -d "$THEMES_SRC/$t" ]]; then
+    run mkdir -p "$OMARCHY_THEMES/$t"
+    if (( DRY )); then
+      echo "DRY: rsync $THEMES_SRC/$t/ → $OMARCHY_THEMES/$t/"
+    else
+      rsync -a --delete "$THEMES_SRC/$t/" "$OMARCHY_THEMES/$t/"
+    fi
+    echo "  installed theme: $t"
+  fi
+done
+
+run cp -a "$BIN_SRC" "$LOCAL_BIN/eye-comfort-theme"
+run chmod +x "$LOCAL_BIN/eye-comfort-theme"
+if (( DRY )); then
+  echo "DRY: rsync lib"
+else
+  rsync -a "$LIB_SRC/" "$LOCAL_LIB/"
+  chmod +x "$LOCAL_LIB/test_schedule.py" 2>/dev/null || true
+fi
+echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
+echo "  lib: $LOCAL_LIB"
+
+
+# Yazi flavors (optional)
+YAZI_SRC="$SCRIPT_DIR/yazi"
+YAZI_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/yazi"
+if [[ -d "$YAZI_SRC/flavors" ]]; then
+  run mkdir -p "$YAZI_CFG/flavors"
+  for fl in "$YAZI_SRC/flavors"/*.yazi; do
+    [[ -d "$fl" ]] || continue
+    name=$(basename "$fl")
+    if (( DRY )); then
+      echo "DRY: rsync yazi flavor $name"
+    else
+      rsync -a --delete "$fl/" "$YAZI_CFG/flavors/$name/"
+    fi
+    echo "  yazi flavor: $name"
+  done
+  if [[ -f "$YAZI_SRC/theme.toml" ]]; then
+    run cp -a "$YAZI_SRC/theme.toml" "$YAZI_CFG/theme.toml"
+  fi
+fi
+
+if [[ -f "$LOCAL_LIB/test_schedule.py" ]] && (( ! DRY )); then
+  PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_schedule.py"
+fi
+
+if (( WITH_TIMER )); then
+  run mkdir -p "$SYSTEMD_USER"
+  run cp -a "$SYSTEMD_SRC/eye-comfort-theme.service" "$SYSTEMD_SRC/eye-comfort-theme.timer" "$SYSTEMD_USER/"
+  if (( ! DRY )); then
+    systemctl --user daemon-reload
+    systemctl --user enable --now eye-comfort-theme.timer
+    echo "  timer enabled"
+  fi
+fi
+
+if [[ -n "$SET_MODE" ]]; then
+  if ! command -v omarchy-theme-set >/dev/null 2>&1; then
+    echo "warn: omarchy-theme-set not on PATH; skip --set" >&2
+  elif (( DRY )); then
+    echo "DRY: would set mode $SET_MODE"
+  else
+    case "$SET_MODE" in
+      dark) omarchy-theme-set eye-comfort-dark ;;
+      light) omarchy-theme-set eye-comfort-light ;;
+      auto) "$LOCAL_BIN/eye-comfort-theme" auto ;;
+      *) echo "unknown --set $SET_MODE (use dark|light|auto)" >&2; exit 1 ;;
+    esac
+  fi
+fi
+
+echo "done."
+echo "  Apply: omarchy-theme-set eye-comfort-dark|eye-comfort-light"
+echo "  Circadian: eye-comfort-theme [day|night|auto]"
+echo "  Cycle wallpaper: omarchy theme bg next"
