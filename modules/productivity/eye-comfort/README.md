@@ -4,15 +4,26 @@ Vision-science circadian desktop themes for long coding sessions — warm nights
 
 ## Install
 
+**Standalone-only** — not wired into profile YAML / ModuleBay yet. Install from this directory (see [docs/MODULES.md](../../../docs/MODULES.md)).
+
 ```bash
 cd modules/productivity/eye-comfort
 ./install.sh
-./install.sh --set auto          # resolve phase from local hour
-./install.sh --set dawn          # force dawn package
+./install.sh --set auto          # resolve phase from local hour (full switcher)
+./install.sh --set dawn          # force dawn via switcher (live render + state.json)
 ./install.sh --with-timer        # optional hourly systemd user timer
 ```
 
+All `--set` modes route through `eye-comfort-theme` (not a bare `omarchy-theme-set`), so applied packages get live role render and `~/.config/eye-comfort/state.json`.
+
 Requires: `omarchy-theme-set` on PATH for apply; Python 3 for schedule + OKLCH helpers.
+
+Regenerate committed host files after palette changes:
+
+```bash
+PYTHONPATH=lib python3 lib/generate_packages.py
+PYTHONPATH=lib python3 lib/test_schedule.py
+```
 
 ## Layout
 
