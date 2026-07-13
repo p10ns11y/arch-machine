@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, time
 from typing import Any, Dict, Optional, Sequence
@@ -274,7 +275,16 @@ def resolve(
     fails = validate_roles(roles, dark=is_dark_phase(phase))
     if fails:
         # Soften to balanced indoor if validation fails after extreme flags
+        print(
+            "eye-comfort: resolve softened to indoor/balanced "
+            f"(requested ambient={amb} intensity={intensity} "
+            f"high_contrast={high_contrast}; validation: {fails})",
+            file=sys.stderr,
+        )
         roles = roles_for_phase(phase, ambient="indoor", intensity="balanced", high_contrast=False)
+        amb = "indoor"
+        intensity = "balanced"
+        high_contrast = False
         fails = validate_roles(roles, dark=is_dark_phase(phase))
         if fails:
             raise RuntimeError(f"palette validation failed for {phase}: {fails}")

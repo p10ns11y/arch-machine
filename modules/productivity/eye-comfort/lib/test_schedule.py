@@ -130,6 +130,40 @@ def test_bad_inputs():
         pass
 
 
+def test_resolve_soften_warns():
+    """SN-EC-4: when extreme roles fail validation, resolve softens and warns."""
+    import contextlib
+    import io
+    import schedule as sched
+
+    real_validate = sched.validate_roles
+    calls = {"n": 0}
+
+    def flaky_validate(roles, *, dark):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return ["fg/bg contrast 1.00 < 4.5"]
+        return real_validate(roles, dark=dark)
+
+    buf = io.StringIO()
+    orig = sched.validate_roles
+    sched.validate_roles = flaky_validate  # type: ignore[assignment]
+    try:
+        with contextlib.redirect_stderr(buf):
+            s = resolve(
+                mode="dusk",
+                ambient="outdoor",
+                intensity="crisp",
+                high_contrast=True,
+            )
+        assert s.ambient == "indoor"
+        assert s.intensity == "balanced"
+        assert s.high_contrast is False
+        assert "softened to indoor/balanced" in buf.getvalue()
+    finally:
+        sched.validate_roles = orig  # type: ignore[assignment]
+
+
 if __name__ == "__main__":
     test_hour_day_night()
     test_mode()
@@ -140,4 +174,5 @@ if __name__ == "__main__":
     test_contrast_and_warm()
     test_parse_and_theme_map()
     test_bad_inputs()
+    test_resolve_soften_warns()
     print("test_schedule.py: OK")

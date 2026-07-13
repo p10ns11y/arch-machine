@@ -172,12 +172,12 @@ if [[ -n "$SET_MODE" ]]; then
   elif (( DRY )); then
     echo "DRY: would set mode $SET_MODE"
   else
+    # All --set modes go through the switcher (live render + state.json),
+    # not a bare omarchy-theme-set (SN-EC-3).
     case "$SET_MODE" in
-      dark) omarchy-theme-set eye-comfort-dark ;;
-      light) omarchy-theme-set eye-comfort-light ;;
-      dawn) omarchy-theme-set eye-comfort-dawn ;;
-      dusk) omarchy-theme-set eye-comfort-dusk ;;
-      auto) "$LOCAL_BIN/eye-comfort-theme" auto ;;
+      dark|light|dawn|dusk|auto)
+        "$LOCAL_BIN/eye-comfort-theme" "$SET_MODE"
+        ;;
       *) echo "unknown --set $SET_MODE (use dark|light|dawn|dusk|auto)" >&2; exit 1 ;;
     esac
   fi
