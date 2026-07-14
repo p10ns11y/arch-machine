@@ -371,6 +371,36 @@ def wallpaper_hint(tinai: Tinai, siru: Siru, nazhigai: int) -> str:
     return f"{tinai}-{siru}-{variant}.jpg"
 
 
+def wallpaper_fallback_names(hint: str) -> list[str]:
+    """Resolve order: exact → -b→-a → tinai×characteristic siru a/b → tinai-*-a scan key.
+
+    Keeps switcher quiet when only signature walls ship; full siru×a/b sets optional.
+    """
+    names: list[str] = []
+    seen: set[str] = set()
+
+    def add(name: str) -> None:
+        if name and name not in seen:
+            seen.add(name)
+            names.append(name)
+
+    add(hint)
+    if hint.endswith("-b.jpg"):
+        add(hint[: -len("-b.jpg")] + "-a.jpg")
+
+    # {tinai}-{siru}-{a|b}.jpg
+    parts = hint.rsplit(".", 1)[0].split("-")
+    if len(parts) >= 3 and parts[-1] in ("a", "b"):
+        tinai = parts[0]
+        if tinai in TINAI_META:
+            char_siru = TINAI_META[tinai]["siru"]
+            add(f"{tinai}-{char_siru}-a.jpg")
+            add(f"{tinai}-{char_siru}-b.jpg")
+            add(f"{tinai}-default.jpg")
+
+    return names
+
+
 def scene_line(tinai: Tinai, perum: Perum, siru: Siru, nazhigai: int) -> str:
     meta = TINAI_META[tinai]
     return (

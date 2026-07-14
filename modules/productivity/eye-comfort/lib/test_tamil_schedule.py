@@ -23,6 +23,7 @@ from tamil_schedule import (
     perum_for_date,
     resolve_tamil,
     siru_for_hour,
+    wallpaper_fallback_names,
 )
 
 
@@ -77,6 +78,14 @@ def test_infer_tinai_geo():
     assert t3 == "marutham" and src3 == "default"
     t4, _ = infer_tinai(10.0, 78.1, perum="mudhu_venil")
     assert t4 == "palai"
+
+
+def test_wallpaper_fallback_chain():
+    names = wallpaper_fallback_names("marutham-erpaadu-b.jpg")
+    assert names[0] == "marutham-erpaadu-b.jpg"
+    assert "marutham-erpaadu-a.jpg" in names
+    assert "marutham-vidiyal-a.jpg" in names  # characteristic dawn signature
+    assert "marutham-default.jpg" in names
 
 
 def test_resolve_flags():

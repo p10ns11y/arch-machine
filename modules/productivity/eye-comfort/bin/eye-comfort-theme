@@ -324,15 +324,45 @@ def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_
         bg_set = str(omarchy_bin_dir / "omarchy-theme-bg-set")
     hint = wallpaper_hint
     if bg_set and hint:
-        candidates = [
-            Path.home() / ".config" / "omarchy" / "current" / "theme" / "backgrounds" / hint,
-            Path.home() / ".config" / "omarchy" / "themes" / theme / "backgrounds" / hint,
+        bg_roots = [
+            Path.home() / ".config" / "omarchy" / "current" / "theme" / "backgrounds",
+            Path.home() / ".config" / "omarchy" / "themes" / theme / "backgrounds",
         ]
-        wallpaper = next((p for p in candidates if p.is_file()), None)
+        # TN: exact → -b→-a → tinai signature; classic phase hints stay single-name
+        try:
+            from tamil_schedule import wallpaper_fallback_names
+
+            name_order = wallpaper_fallback_names(hint)
+        except ImportError:
+            name_order = [hint]
+        wallpaper = None
+        resolved_name = hint
+        for name in name_order:
+            hit = next((root / name for root in bg_roots if (root / name).is_file()), None)
+            if hit is not None:
+                wallpaper = hit
+                resolved_name = name
+                break
+        if wallpaper is None and hint.startswith(
+            ("kurinji-", "mullai-", "marutham-", "neythal-", "palai-")
+        ):
+            # Last resort: any tinai-*-a.jpg already installed
+            tinai_prefix = hint.split("-", 1)[0] + "-"
+            for root in bg_roots:
+                if not root.is_dir():
+                    continue
+                alts = sorted(root.glob(f"{tinai_prefix}*-a.jpg"))
+                if alts:
+                    wallpaper = alts[0]
+                    resolved_name = wallpaper.name
+                    break
         if wallpaper is not None:
             try:
                 subprocess.check_call([bg_set, str(wallpaper)], env=env)
-                print(f"wallpaper: {hint}")
+                if resolved_name == hint:
+                    print(f"wallpaper: {hint}")
+                else:
+                    print(f"wallpaper: {resolved_name} (fallback from {hint})")
             except subprocess.CalledProcessError as e:
                 print(f"warn: wallpaper set failed (exit {e.returncode})", file=sys.stderr)
         else:

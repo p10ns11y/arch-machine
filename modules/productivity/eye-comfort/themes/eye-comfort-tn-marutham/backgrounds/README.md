@@ -17,18 +17,22 @@ Hints from the switcher: `{tinai}-{siru}-{a|b}.jpg`
 
 `a` = Nazhigai steps 0–4 · `b` = steps 5–9 (micro variation only).
 
+## Ships with (marutham)
+
+| File | Notes |
+|------|-------|
+| `marutham-vidiyal-{a,b}.jpg` | Signature dawn plains (tinai meta siru) |
+| `marutham-erpaadu-{a,b}.jpg` | Afternoon plains (real art) |
+| other `{siru}-{a,b}.jpg` | Softlinks → vidiyal signature |
+| `marutham-default.jpg` | Softlink → vidiyal-a |
+
+Switcher also falls back: exact → `-b`→`-a` → tinai signature → `*-default.jpg`.
+
 ## Karu Porul (14 elements) — composition guide
 
-Compose wallpapers from landscape cues, not myth cosplay. Optional elements to
-blend softly into negative space:
+Compose wallpapers from landscape cues, not myth cosplay. Optional soft atmosphere
+only (flower / water / bird as haze, not encyclopedia icons).
 
-1. Deity symbol (abstract mark only) · 2. Food · 3. Animal · 4. Tree · 5. Bird  
-6. Drum / instrument · 7. Settlement type · 8. Water · 9. Season weather  
-10. Flower (tinai flower) · 11. Occupation tool · 12. Path / road · 13. Sky  
-14. Time-of-day light (Siru)
-
-v1 may ship **README-only** (no JPG binaries). Shared circadian backgrounds are
-a fine interim. Add art under this directory; install rsyncs it to
-`~/.config/omarchy/themes/<package>/backgrounds/`.
+Install rsyncs to `~/.config/omarchy/themes/<package>/backgrounds/`.
 
 Cycle: `omarchy theme bg next` · Apply hint: `eye-comfort-theme tn …`

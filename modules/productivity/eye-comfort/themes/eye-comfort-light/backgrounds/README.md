@@ -16,3 +16,5 @@ Do / don't:
 
 Phase hints (filename under `backgrounds/`): see `PHASE_WALLPAPER_HINT` in `lib/palette.py`.
 Dawn/light packages share light backgrounds; dusk/dark share dark backgrounds (install symlinks).
+
+Ships: `1-parchment-dunes.jpg` · `2-cream-botanical.jpg` (2560×1440 JPEG).

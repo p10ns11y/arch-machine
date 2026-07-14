@@ -16,3 +16,6 @@ Do / don't:
 
 Phase hints (filename under `backgrounds/`): see `PHASE_WALLPAPER_HINT` in `lib/palette.py`.
 Dawn packages symlink light backgrounds; dusk packages symlink dark backgrounds.
+
+Ships (2560×1440 JPEG): `0-signature-lantern.jpg` · `1-journals-tea.jpg` ·
+`2-sage-amber-ribbons.jpg` · `3-mist-valley-ink.jpg`.
