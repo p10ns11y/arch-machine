@@ -177,6 +177,7 @@ if [[ -d "$WAYBAR_SRC" ]]; then
     chmod +x "$LOCAL_LIB/waybar/tn-status.sh" 2>/dev/null || true
   fi
   echo "  waybar: $LOCAL_LIB/waybar/tn-status.sh (see waybar/module.jsonc — enable in ~/.config/waybar)"
+  echo "  waybar CSS: $LOCAL_LIB/waybar/eye-comfort.css — @import into ~/.config/waybar/style.css"
 fi
 echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
 echo "  lib: $LOCAL_LIB"

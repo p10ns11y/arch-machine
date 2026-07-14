@@ -66,7 +66,7 @@ Instant theme swaps. Nazhigai timer (~24 min) only soft-tints — no page choreo
 
 Same render path (`colors.toml`, Ghostty, nvim). Yazi uses an install-only dual map (`eye-comfort-dark` / `eye-comfort-light`); no apply rematch — reopen after light↔dark if contrast looks wrong.
 CLI: `eye-comfort-theme tn …` · `status` / `waybar`. State key `calendar: tamil_nadu`.
-Opt-in Waybar: `waybar/module.jsonc` → `custom/eye-comfort` (bar + tooltip + notify).
+Opt-in Waybar: `waybar/module.jsonc` → `custom/eye-comfort` (bar + Pango tooltip + notify); CSS `waybar/eye-comfort.css` for chip gap + tooltip padding.
 
 ## Layout (wallpaper)
 

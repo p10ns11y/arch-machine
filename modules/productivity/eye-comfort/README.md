@@ -49,13 +49,17 @@ Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your*
 
 1. Add `"custom/eye-comfort"` to `modules-center` (or `modules-right`).
 2. Paste the module block from [`waybar/module.jsonc`](waybar/module.jsonc).
-3. Restart Waybar (`omarchy restart waybar` / the eye-comfort wrapper).
+3. Import CSS — add to `~/.config/waybar/style.css`:
+   `@import url("file://$HOME/.local/lib/eye-comfort/waybar/eye-comfort.css");`
+   (expands `$HOME`; or paste rules from [`waybar/eye-comfort.css`](waybar/eye-comfort.css)).
+   This adds chip margin (stops clock `…2026` glued to `marutham`) and tooltip padding.
+4. Restart Waybar (`omarchy restart waybar` / the eye-comfort wrapper).
 
 | Surface | Shows |
 |---------|--------|
-| **Bar text** | `tinai · siru · nN` (live clock; tinai from last `tn` apply) |
-| **Tooltip** | Full scene: jaamam split, nazhigai elapsed, perum, theme |
-| **Click** | `notify-send` with the same rich body (lightweight second widget) |
+| **Bar text** | `tinai · siru · nN` (compact; tinai from last `tn` apply) |
+| **Tooltip** | Date line → scene → labeled fields (Pango; full nazhigai/jaamam wording) |
+| **Click** | `notify-send` plain-text body (same content, no markup) |
 | **CLI** | `eye-comfort-theme status` · `eye-comfort-theme waybar` |
 
 Does not change the existing `omarchy-restart-waybar` PATH wrappers.
@@ -77,7 +81,7 @@ Does not change the existing `omarchy-restart-waybar` PATH wrappers.
 | `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
 | `lib/tamil_{schedule,palette}.py` | Perum/Siru/Tinai/Nazhigai/Jaamam + tint |
 | `lib/waybar_status.py` | Waybar JSON + notify tooltip body |
-| `waybar/tn-status.sh` + `module.jsonc` | Custom Waybar module (opt-in) |
+| `waybar/tn-status.sh` + `module.jsonc` + `eye-comfort.css` | Custom Waybar module + chip/tooltip CSS (opt-in) |
 | `yazi/` | Install-only dual flavors (`eye-comfort-dark` / `eye-comfort-light`); no apply hook |
 
 ## Circadian phases

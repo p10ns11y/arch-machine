@@ -157,8 +157,14 @@ def test_waybar_payload():
     )
     # erpaadu 14:00 → 15:00 = 60 min → nazhigai 2
     assert p["text"] == "neythal · erpaadu · n2"
-    assert "jaamam 5 (full)" in p["tooltip"]
-    assert "nazhigai" in p["tooltip"]
+    tip = p["tooltip"]
+    assert "jaamam 5 (full)" in tip
+    assert "nazhigai 2" in tip
+    assert "week 29" in tip  # ISO week; date line separate from tinai
+    assert "2026neythal" not in tip.replace(" ", "")
+    assert "14 July" in tip
+    assert "<b>" in tip  # Pango hierarchy
+    assert "seashore" in tip
     # JSON-serializable for waybar
     json.dumps(p)
     p2 = waybar_payload(
