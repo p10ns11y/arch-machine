@@ -8,10 +8,14 @@ from palette import is_dark_phase, Phase
 
 
 def ansi_from_roles(roles: Dict[str, str]) -> Dict[str, str]:
-    """Map roles → colors.toml / ghostty ANSI slots."""
+    """Map roles → colors.toml / ghostty ANSI slots.
+
+    Cursor is always accent amber (product *bolder* / *colorize*): one sharp
+    attention point on both light and dark paper — not ink-colored on day mode.
+    """
     return {
         "accent": roles["accent_sage"],
-        "cursor": roles["accent_amber"] if is_dark_phase_roles(roles) else roles["foreground"],
+        "cursor": roles["accent_amber"],
         "foreground": roles["foreground"],
         "background": roles["background"],
         "selection_foreground": roles["foreground"],
@@ -26,7 +30,7 @@ def ansi_from_roles(roles: Dict[str, str]) -> Dict[str, str]:
         "color7": roles["color7"],
         "color8": roles["comment"],
         "color9": roles["color9"],
-        "color10": roles["color10"],
+        "color10": roles["color10"],  # success-adjacent sage lift
         "color11": roles["warning"],
         "color12": roles["color12"],
         "color13": roles["color13"],

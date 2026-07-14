@@ -65,9 +65,10 @@ ANSI `color4` / `color12` are **warm slate-teal** (OKLCH H≈200–205°), not c
 
 ## Typography
 
-- **Code terminal:** JetBrainsMono Nerd Font, size 10, ligatures on, cell-height +3
+- **Code terminal:** JetBrainsMono Nerd Font, size **10**, ligatures on, `adjust-cell-height +3` (~1.15× optical leading)
 - **Omarchy UI font:** CaskaydiaMono Nerd Font (system)
-- Product (code): one monospace family per host; no display fonts in UI chrome
+- Product scale is **fixed** (not fluid `clamp`): one family, Regular weight; bold via SGR only
+- Snippet: `snippets/ghostty.fragment.conf` → install copies to `~/.config/eye-comfort/ghostty.fragment.conf`
 
 ## Motion
 
@@ -115,6 +116,8 @@ Critique + audit (product register) — flagship bar for a focus tool:
 **Audit (adapted):** a11y contrast **4/4** (42 ambient×intensity combos ≥4.5:1 fg/bg); theming **4/4** after soft-key + hotreload fix; anti-patterns **3/4** (cream day is intentional circadian, not SaaS decoration — guarded in anti-references).
 
 This pass: quieter color4/12 hue; softer dark color15; DESIGN frontmatter; phases.css in generate `--check`; CLI help clarifies live reload.
+
+**Follow-up commands (2026-07-14):** `colorize`/`bolder` (amber cursor on light+dark); `extract` (`tokens/roles.json`); `typeset` (Ghostty fragment + scale docs); `harden` (missing theme/omarchy exit 1, wallpaper errors); `delight` (scene line + phase wallpaper); `layout` (wallpaper safe-zone READMEs). Skipped `live` (no browser surface).
 
 ## Wallpaper set
 

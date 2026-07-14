@@ -1,6 +1,6 @@
 # eye-comfort-dawn — circadian dawn (OKLCH SoT → hex)
 accent = "#476655"
-cursor = "#332C28"
+cursor = "#895F2E"
 foreground = "#332C28"
 background = "#F8E7DE"
 selection_foreground = "#332C28"

@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional, Sequence
 
 from palette import (
     PHASE_CCT_K,
+    PHASE_SCENE,
     PHASE_THEME,
     PHASE_WALLPAPER_HINT,
     Ambient,
@@ -62,6 +63,7 @@ class CircadianState:
     latitude: Optional[float]
     cct_k: int
     wallpaper_hint: str
+    scene: str
     roles: Dict[str, str]
     contrast_fg_bg: float
     source: str  # "solar" | "fixed" | "forced"
@@ -304,6 +306,7 @@ def resolve(
         latitude=latitude,
         cct_k=PHASE_CCT_K[phase],
         wallpaper_hint=PHASE_WALLPAPER_HINT[phase],
+        scene=PHASE_SCENE[phase],
         roles=roles,
         contrast_fg_bg=round(cr(roles["foreground"], roles["background"]), 2),
         source=source,

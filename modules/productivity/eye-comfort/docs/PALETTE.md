@@ -96,7 +96,8 @@ Residual-gold transitional dark — lighter L than night umber (~0.275), warmer 
 | Selection | `selection_background` / `selection_foreground` |
 | Comment | `color8` |
 | Accent sage | `accent`, `color2` |
-| Accent amber | `cursor` (dark packages), `color3` |
+| Accent amber | `cursor` (all packages — attention focal), `color3` |
+| Success-adjacent | `accent_sage`, `color2`, `color10` |
 | Accent clay | `color5` |
 | Error | `color1` |
 | Warning | `color11` |

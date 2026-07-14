@@ -7,4 +7,5 @@ Type=oneshot
 # Templates (hyprland.conf etc.) require OMARCHY_PATH; timer runs without login env.
 Environment=OMARCHY_PATH=%h/.local/share/omarchy
 Environment=PATH=%h/.local/share/omarchy/bin:%h/.local/bin:/usr/local/bin:/usr/bin
+# Harden: surface failures in journalctl instead of silent skip
 ExecStart=%h/.local/bin/eye-comfort-theme auto

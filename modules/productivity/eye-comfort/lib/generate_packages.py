@@ -76,6 +76,48 @@ def generate_phases_css(dest: Path | None = None) -> Path:
     return out
 
 
+def generate_roles_json(dest: Path | None = None) -> Path:
+    """Extract machine-readable role tokens (midday + night locks + semantic map)."""
+    import json
+
+    out = dest or (Path(__file__).resolve().parent.parent / "tokens" / "roles.json")
+    from palette import HEX_LOCKS, PHASE_SCENE, PHASE_WALLPAPER_HINT
+
+    payload = {
+        "version": 1,
+        "semantic": {
+            "background": "surface paper / umber",
+            "foreground": "body ink",
+            "selection": "elevated surface",
+            "comment": "secondary ink",
+            "accent_sage": "structure / success-adjacent",
+            "accent_amber": "attention / cursor",
+            "accent_clay": "tertiary harmony",
+            "error": "critical",
+            "warning": "caution",
+            "color10": "success lift (ANSI)",
+        },
+        "locks": {
+            "midday": HEX_LOCKS["midday"],
+            "night": HEX_LOCKS["night"],
+        },
+        "scenes": dict(PHASE_SCENE),
+        "wallpapers": dict(PHASE_WALLPAPER_HINT),
+        "typography": {
+            "terminal": {
+                "fontFamily": "JetBrainsMono Nerd Font",
+                "fontSize": 10,
+                "ligatures": True,
+                "adjustCellHeight": 3,
+            },
+            "system": {"fontFamily": "CaskaydiaMono Nerd Font"},
+        },
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
 def generate_all(root: Path) -> None:
     for name in PACKAGE_PHASE:
         dest = root / name
@@ -85,6 +127,8 @@ def generate_all(root: Path) -> None:
         print(f"generated {name} ← {PACKAGE_PHASE[name]}")
     css = generate_phases_css()
     print(f"generated {css.relative_to(root.parent)}")
+    roles = generate_roles_json()
+    print(f"generated {roles.relative_to(root.parent)}")
 
 
 def check_all(root: Path) -> int:
@@ -120,6 +164,13 @@ def check_all(root: Path) -> int:
             drifts.append("tokens/phases.css: missing")
         elif css_src.read_text(encoding="utf-8") != css_tmp.read_text(encoding="utf-8"):
             drifts.append("tokens/phases.css: drifts from OKLCH SoT")
+        roles_tmp = tmp_root / "roles.json"
+        generate_roles_json(roles_tmp)
+        roles_src = Path(__file__).resolve().parent.parent / "tokens" / "roles.json"
+        if not roles_src.is_file():
+            drifts.append("tokens/roles.json: missing")
+        elif roles_src.read_text(encoding="utf-8") != roles_tmp.read_text(encoding="utf-8"):
+            drifts.append("tokens/roles.json: drifts from OKLCH SoT")
     if drifts:
         print("eye-comfort generate --check FAILED:", file=sys.stderr)
         for d in drifts:

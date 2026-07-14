@@ -253,6 +253,17 @@ PHASE_WALLPAPER_HINT: Dict[Phase, str] = {
     "night": "0-signature-lantern.jpg",
 }
 
+# One-line scene (delight): printed on apply; never blocks the task
+PHASE_SCENE: Dict[Phase, str] = {
+    "dawn": "peach linen · first light",
+    "morning": "soft cream · clear desk",
+    "midday": "day paper · long focus",
+    "afternoon": "warm paper · amber lean",
+    "dusk": "residual gold · lamp just on",
+    "evening": "journals & tea · evening lamp",
+    "night": "lantern umber · deep night",
+}
+
 
 def is_dark_phase(phase: Phase) -> bool:
     return phase in ("dusk", "evening", "night")

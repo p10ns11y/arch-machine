@@ -123,6 +123,13 @@ link_backgrounds "$OMARCHY_THEMES/eye-comfort-dusk" "$OMARCHY_THEMES/eye-comfort
 
 run cp -a "$BIN_SRC" "$LOCAL_BIN/eye-comfort-theme"
 run chmod +x "$LOCAL_BIN/eye-comfort-theme"
+# Typeset fragment (optional merge into Ghostty user config)
+GHOSTTY_FRAG="$SCRIPT_DIR/snippets/ghostty.fragment.conf"
+if [[ -f "$GHOSTTY_FRAG" ]]; then
+  run mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/eye-comfort"
+  run cp -a "$GHOSTTY_FRAG" "${XDG_CONFIG_HOME:-$HOME/.config}/eye-comfort/ghostty.fragment.conf"
+  echo "  ghostty fragment: ~/.config/eye-comfort/ghostty.fragment.conf"
+fi
 if (( DRY )); then
   echo "DRY: rsync lib"
 else
