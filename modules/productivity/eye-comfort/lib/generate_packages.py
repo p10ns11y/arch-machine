@@ -11,7 +11,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from palette import Phase, roles_for_phase
+from palette import Phase, css_custom_properties, roles_for_phase
 from render import write_theme_package
 
 # Canonical phase baked into each committed host package
@@ -22,11 +22,26 @@ PACKAGE_PHASE: dict[str, Phase] = {
     "eye-comfort-dark": "night",
 }
 
+# All schedule phases for CSS token mirrors (morning/afternoon share light package)
+CSS_PHASES: tuple[Phase, ...] = (
+    "dawn",
+    "morning",
+    "midday",
+    "afternoon",
+    "dusk",
+    "evening",
+    "night",
+)
+
 HOST_FILES = ("colors.toml", "ghostty.conf", "neovim.lua", "light.mode")
 
 
 def themes_root() -> Path:
     return Path(__file__).resolve().parent.parent / "themes"
+
+
+def tokens_css_path() -> Path:
+    return Path(__file__).resolve().parent.parent / "tokens" / "phases.css"
 
 
 def generate_one(name: str, dest: Path) -> None:
@@ -42,6 +57,25 @@ def generate_one(name: str, dest: Path) -> None:
     )
 
 
+def generate_phases_css(dest: Path | None = None) -> Path:
+    """Write [data-ec-phase] OKLCH mirrors for all seven phases (balanced indoor)."""
+    out = dest or tokens_css_path()
+    chunks = [
+        "/* Eye-comfort circadian tokens — OKLCH SoT mirrors (balanced indoor). */",
+        "/* Generate: PYTHONPATH=lib python3 lib/generate_packages.py */",
+        "",
+    ]
+    for phase in CSS_PHASES:
+        roles = roles_for_phase(phase, ambient="indoor", intensity="balanced")
+        body = css_custom_properties(roles, phase)
+        chunks.append(
+            body.replace(":root {", f'[data-ec-phase="{phase}"] {{').rstrip() + "\n"
+        )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(chunks) + "\n", encoding="utf-8")
+    return out
+
+
 def generate_all(root: Path) -> None:
     for name in PACKAGE_PHASE:
         dest = root / name
@@ -49,6 +83,8 @@ def generate_all(root: Path) -> None:
             raise SystemExit(f"missing theme package dir: {dest}")
         generate_one(name, dest)
         print(f"generated {name} ← {PACKAGE_PHASE[name]}")
+    css = generate_phases_css()
+    print(f"generated {css.relative_to(root.parent)}")
 
 
 def check_all(root: Path) -> int:
@@ -77,6 +113,13 @@ def check_all(root: Path) -> int:
                     continue
                 if a.read_text(encoding="utf-8") != b.read_text(encoding="utf-8"):
                     drifts.append(f"{name}/{fname}: drifts from OKLCH SoT")
+        css_tmp = tmp_root / "phases.css"
+        generate_phases_css(css_tmp)
+        css_src = tokens_css_path()
+        if not css_src.is_file():
+            drifts.append("tokens/phases.css: missing")
+        elif css_src.read_text(encoding="utf-8") != css_tmp.read_text(encoding="utf-8"):
+            drifts.append("tokens/phases.css: drifts from OKLCH SoT")
     if drifts:
         print("eye-comfort generate --check FAILED:", file=sys.stderr)
         for d in drifts:

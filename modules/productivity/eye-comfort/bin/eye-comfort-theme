@@ -41,6 +41,10 @@ Schedule (fixed windows when --lat unset):
 
 With --lat, sunrise/sunset shift those boundaries (e.g. summer 18:00 can stay afternoon).
 
+Apply also live-renders the active Omarchy package, sets OMARCHY_PATH for templates
+(hyprland.conf), and relies on install's nvim hotreload + theme-set.d hook so open
+editors update without restart.
+
 Examples:
   eye-comfort-theme
   eye-comfort-theme --phase dusk --indoor --intensity soft

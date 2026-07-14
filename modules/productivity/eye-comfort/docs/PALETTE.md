@@ -100,6 +100,8 @@ Residual-gold transitional dark — lighter L than night umber (~0.275), warmer 
 | Accent clay | `color5` |
 | Error | `color1` |
 | Warning | `color11` |
+| Warm slate (not cyber blue) | `color4`, `color12` |
+| Soft teal | `color6`, `color14` |
 
 ---
 
