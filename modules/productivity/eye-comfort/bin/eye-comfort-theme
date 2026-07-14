@@ -76,6 +76,12 @@ _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -d "${_SCRIPT_DIR}/../lib" ]]; then
   export PYTHONPATH="${_SCRIPT_DIR}/../lib:${PYTHONPATH}"
 fi
+# PATH wrappers (uwsm-app / waybar) — install target or checkout
+if [[ -d "${HOME}/.local/lib/eye-comfort/wrappers" ]]; then
+  export EC_WRAPPERS_DIR="${HOME}/.local/lib/eye-comfort/wrappers"
+elif [[ -d "${_SCRIPT_DIR}/../wrappers" ]]; then
+  export EC_WRAPPERS_DIR="${_SCRIPT_DIR}/../wrappers"
+fi
 
 MODE="auto"
 TN_MODE=0
@@ -237,6 +243,51 @@ def env_bool(name: str) -> bool:
 
 
 def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_render: bool) -> None:
+    import fcntl
+
+    # Serialize applies: hourly + TN timers can both fire on the same second and
+    # race omarchy-theme-set's `rm -rf current/theme; mv next current` → empty
+    # current/theme (broken nvim symlink + Hyprland source=).
+    # Prefer XDG_RUNTIME_DIR so a prior root/sandbox run cannot leave an unwritable
+    # lock under ~/.config/eye-comfort/.
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
+    lock_candidates = [
+        runtime / "eye-comfort-apply.lock",
+        Path(os.environ.get("EC_STATE_DIR") or (Path.home() / ".config" / "eye-comfort"))
+        / "apply.lock",
+    ]
+    lock_f = None
+    lock_path = lock_candidates[0]
+    for cand in lock_candidates:
+        try:
+            cand.parent.mkdir(parents=True, exist_ok=True)
+            lock_f = cand.open("w", encoding="utf-8")
+            lock_path = cand
+            break
+        except OSError:
+            continue
+    if lock_f is None:
+        print(
+            "error: cannot create apply lock "
+            f"(tried {[str(c) for c in lock_candidates]})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    with lock_f:
+        fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
+        _apply_theme_locked(theme, roles, phase, wallpaper_hint, no_render=no_render)
+
+
+def _uwsm_pipes_ok() -> bool:
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
+    return (runtime / "uwsm-app-daemon-in").is_fifo() and (
+        runtime / "uwsm-app-daemon-out"
+    ).is_fifo()
+
+
+def _apply_theme_locked(
+    theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_render: bool
+) -> None:
     themes_root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "omarchy" / "themes"
     dest = themes_root / theme
     if not no_render:
@@ -261,8 +312,21 @@ def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_
     env = os.environ.copy()
     env["OMARCHY_PATH"] = str(omarchy_home)
     omarchy_bin_dir = omarchy_home / "bin"
-    path_parts = [str(omarchy_bin_dir), str(Path.home() / ".local/bin"), env.get("PATH", "")]
+    # Wrappers first: bypass wedged uwsm-app (App failure notifications) without
+    # editing ~/.local/share/omarchy.
+    wrap_dirs: list[Path] = []
+    if os.environ.get("EC_WRAPPERS_DIR"):
+        wrap_dirs.append(Path(os.environ["EC_WRAPPERS_DIR"]))
+    wrap_dirs.append(Path.home() / ".local" / "lib" / "eye-comfort" / "wrappers")
+    wrap_paths = [str(d) for d in wrap_dirs if d.is_dir()]
+    path_parts = [
+        *wrap_paths,
+        str(omarchy_bin_dir),
+        str(Path.home() / ".local/bin"),
+        env.get("PATH", ""),
+    ]
     env["PATH"] = os.pathsep.join(p for p in path_parts if p)
+    env.setdefault("EC_UWSM_APP_REAL", "/usr/bin/uwsm-app")
 
     theme_set = shutil.which("omarchy-theme-set", path=env["PATH"])
     if theme_set is None and (omarchy_bin_dir / "omarchy-theme-set").is_file():
@@ -275,11 +339,42 @@ def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_
         )
         sys.exit(1)
 
+    if not _uwsm_pipes_ok():
+        print(
+            "warn: UWSM app-daemon pipes missing; using eye-comfort wrappers "
+            "(hyprctl) so theme-set restarts do not time out",
+            file=sys.stderr,
+        )
+
     try:
         subprocess.check_call([theme_set, theme], env=env)
     except subprocess.CalledProcessError as e:
         print(f"error: omarchy-theme-set failed (exit {e.returncode})", file=sys.stderr)
         sys.exit(e.returncode or 1)
+
+    cur_theme = Path.home() / ".config" / "omarchy" / "current" / "theme"
+    required = ("neovim.lua", "hyprland.conf")
+    missing = [name for name in required if not (cur_theme / name).is_file()]
+    if missing:
+        print(
+            f"warn: current/theme incomplete after theme-set (missing {', '.join(missing)}); "
+            "recovering from package (likely concurrent timer race)",
+            file=sys.stderr,
+        )
+        src = themes_root / theme
+        if src.is_dir():
+            if cur_theme.exists():
+                shutil.rmtree(cur_theme)
+            shutil.copytree(src, cur_theme)
+            templates = shutil.which("omarchy-theme-set-templates", path=env["PATH"])
+            if templates:
+                subprocess.call([templates], env=env)
+            name_file = Path.home() / ".config" / "omarchy" / "current" / "theme.name"
+            name_file.write_text(f"{theme}\n", encoding="utf-8")
+            # Push nvim reload even if stock hook never ran.
+            hook = shutil.which("omarchy-hook", path=env["PATH"])
+            if hook:
+                subprocess.call([hook, "theme-set", theme], env=env)
 
     def _waybar_running() -> bool:
         return (
@@ -289,20 +384,24 @@ def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_
             == 0
         )
 
-    if not _waybar_running():
-        time.sleep(0.4)
-    if not _waybar_running():
-        hyprctl = shutil.which("hyprctl", path=env["PATH"]) or shutil.which("hyprctl")
-        if hyprctl:
-            subprocess.call([hyprctl, "dispatch", "exec", "waybar"], env=env)
-            time.sleep(0.6)
+    # When UWSM is wedged, stock restart may leave a stale waybar or none —
+    # always ensure a live bar via our wrapper / hyprctl.
+    if not _waybar_running() or not _uwsm_pipes_ok():
+        time.sleep(0.2)
+        restart_wb = shutil.which("omarchy-restart-waybar", path=env["PATH"])
+        if restart_wb:
+            subprocess.call([restart_wb], env=env)
+            time.sleep(0.45)
         if not _waybar_running():
-            restart_wb = shutil.which("omarchy-restart-waybar", path=env["PATH"])
-            if restart_wb:
-                subprocess.call([restart_wb], env=env)
-                time.sleep(0.6)
+            hyprctl = shutil.which("hyprctl", path=env["PATH"]) or shutil.which("hyprctl")
+            if hyprctl:
+                subprocess.call([hyprctl, "dispatch", "exec", "waybar"], env=env)
+                time.sleep(0.45)
         if _waybar_running():
-            print("waybar: restored after theme-set")
+            if not _uwsm_pipes_ok():
+                print("waybar: restored via hyprctl (UWSM bypass)")
+            else:
+                print("waybar: restored after theme-set")
         else:
             print(
                 "warn: waybar not running after theme-set. "
@@ -310,7 +409,7 @@ def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_
                 file=sys.stderr,
             )
 
-    hypr_conf = Path.home() / ".config" / "omarchy" / "current" / "theme" / "hyprland.conf"
+    hypr_conf = cur_theme / "hyprland.conf"
     if not hypr_conf.is_file():
         print(
             f"warn: missing {hypr_conf} after theme-set "

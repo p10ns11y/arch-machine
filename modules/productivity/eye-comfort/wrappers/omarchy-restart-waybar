@@ -1,0 +1,29 @@
+#!/bin/bash
+# Eye-comfort PATH override for stock omarchy-restart-waybar.
+# Stock: pkill -9 waybar; uwsm-app -- waybar  (fails hard when UWSM pipes are gone).
+# Here: kill, try UWSM when healthy, always fall back to hyprctl dispatch exec.
+set -euo pipefail
+
+pkill -9 -x waybar 2>/dev/null || true
+
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+if [[ -p "${RUNTIME}/uwsm-app-daemon-in" && -p "${RUNTIME}/uwsm-app-daemon-out" ]]; then
+  REAL_UWSM="${EC_UWSM_APP_REAL:-/usr/bin/uwsm-app}"
+  if [[ -x "$REAL_UWSM" ]]; then
+    setsid "$REAL_UWSM" -- waybar >/dev/null 2>&1 &
+    sleep 0.35
+  fi
+fi
+
+if pgrep -x waybar >/dev/null 2>&1; then
+  exit 0
+fi
+
+if command -v hyprctl >/dev/null 2>&1; then
+  hyprctl dispatch exec waybar >/dev/null 2>&1 || true
+  sleep 0.35
+fi
+
+if ! pgrep -x waybar >/dev/null 2>&1; then
+  setsid waybar >/dev/null 2>&1 &
+fi

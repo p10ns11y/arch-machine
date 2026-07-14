@@ -156,6 +156,17 @@ else
   chmod +x "$LOCAL_LIB/test_schedule.py" 2>/dev/null || true
   chmod +x "$LOCAL_LIB/test_tamil_schedule.py" 2>/dev/null || true
 fi
+WRAP_SRC="$SCRIPT_DIR/wrappers"
+if [[ -d "$WRAP_SRC" ]]; then
+  if (( DRY )); then
+    echo "DRY: install uwsm/waybar wrappers → $LOCAL_LIB/wrappers"
+  else
+    mkdir -p "$LOCAL_LIB/wrappers"
+    rsync -a "$WRAP_SRC/" "$LOCAL_LIB/wrappers/"
+    chmod +x "$LOCAL_LIB/wrappers"/uwsm-app "$LOCAL_LIB/wrappers"/omarchy-restart-waybar
+  fi
+  echo "  wrappers: $LOCAL_LIB/wrappers (UWSM bypass for theme-set restart)"
+fi
 echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
 echo "  lib: $LOCAL_LIB"
 
@@ -212,8 +223,10 @@ if (( WITH_TIMER )); then
   run cp -a "$SYSTEMD_SRC/eye-comfort-theme.service" "$SYSTEMD_SRC/eye-comfort-theme.timer" "$SYSTEMD_USER/"
   if (( ! DRY )); then
     systemctl --user daemon-reload
+    # Mutually exclusive with TN timer: concurrent omarchy-theme-set races wipe current/theme.
+    systemctl --user disable --now eye-comfort-tn.timer 2>/dev/null || true
     systemctl --user enable --now eye-comfort-theme.timer
-    echo "  timer enabled"
+    echo "  circadian timer enabled (TN timer disabled — they race on current/theme)"
   fi
 fi
 
@@ -222,8 +235,9 @@ if (( WITH_TN_TIMER )); then
   run cp -a "$SYSTEMD_SRC/eye-comfort-tn.service" "$SYSTEMD_SRC/eye-comfort-tn.timer" "$SYSTEMD_USER/"
   if (( ! DRY )); then
     systemctl --user daemon-reload
+    systemctl --user disable --now eye-comfort-theme.timer 2>/dev/null || true
     systemctl --user enable --now eye-comfort-tn.timer
-    echo "  tn timer enabled (Nazhigai ≈24 min; waybar restore in switcher)"
+    echo "  tn timer enabled (Nazhigai ≈24 min; circadian hourly disabled — mutual exclusion)"
   fi
 fi
 

@@ -1,0 +1,46 @@
+#!/bin/bash
+# Eye-comfort PATH override: when UWSM app-daemon pipes are missing/wedged,
+# skip the stock 10s timeout + notify-send "App failure" spam and launch via
+# hyprctl (or setsid). Never edits ~/.local/share/omarchy.
+set -euo pipefail
+
+REAL="${EC_UWSM_APP_REAL:-/usr/bin/uwsm-app}"
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+PIPE_IN="${RUNTIME}/uwsm-app-daemon-in"
+PIPE_OUT="${RUNTIME}/uwsm-app-daemon-out"
+
+if [[ -x "$REAL" && -p "$PIPE_IN" && -p "$PIPE_OUT" ]]; then
+  exec "$REAL" "$@"
+fi
+
+# Control verbs still need the real client (may restart daemon).
+case "${1:-}" in
+  ping | stop)
+    if [[ -x "$REAL" ]]; then
+      exec "$REAL" "$@"
+    fi
+    exit 1
+    ;;
+esac
+
+args=()
+seen_sep=0
+for a in "$@"; do
+  if ((seen_sep)); then
+    args+=("$a")
+  elif [[ "$a" == "--" ]]; then
+    seen_sep=1
+  fi
+done
+if ((${#args[@]} == 0)); then
+  args=("$@")
+fi
+((${#args[@]} > 0)) || exit 1
+
+if command -v hyprctl >/dev/null 2>&1; then
+  # Prefer compositor launch — survives wedged uwsm-app daemon.
+  hyprctl dispatch exec "$(printf '%q ' "${args[@]}")" >/dev/null 2>&1 &
+else
+  setsid "${args[@]}" >/dev/null 2>&1 &
+fi
+exit 0
