@@ -35,6 +35,8 @@ PYTHONPATH=lib python3 lib/test_schedule.py
 | `tokens/phases.css` | OKLCH CSS custom properties per phase |
 | `bin/eye-comfort-theme` | Circadian switcher (flags below) |
 | `units/eye-comfort-theme.{service,timer}` | Hourly systemd user timer |
+| `nvim/omarchy-theme-hotreload.lua` | Live nvim light/dark reload (install → `~/.config/nvim/…`) |
+| `hooks/theme-set.d/90-reload-nvim-tmux.sh` | Omarchy hook: push LazyReload + tmux refresh |
 | `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
 | `yazi/` | File manager flavors (dark/light) |
 
@@ -88,7 +90,13 @@ HOUR=22 eye-comfort-theme --dry-run
 eye-comfort-theme --css --phase night > /tmp/ec-night.css
 ```
 
-On apply (not `--json`/`--dry-run`), the switcher live-renders resolved roles into the installed Omarchy theme so morning/afternoon/evening get phase-tuned tokens, then runs `omarchy-theme-set`.
+On apply (not `--json`/`--dry-run`), the switcher live-renders resolved roles into the installed Omarchy theme so morning/afternoon/evening get phase-tuned tokens, then runs `omarchy-theme-set` with `OMARCHY_PATH` set so Omarchy templates always emit `hyprland.conf` / `waybar.css` / etc. (missing `hyprland.conf` makes Hyprland fail `source = ~/.config/omarchy/current/theme/hyprland.conf`).
+
+`install.sh` also deploys:
+- `~/.config/nvim/lua/plugins/omarchy-theme-hotreload.lua` — reads Omarchy `light.mode`, re-applies gruvbox soft overrides (`dark0_soft` / `light0_soft`), listens for `LazyReload`
+- `~/.config/omarchy/hooks/theme-set.d/90-reload-nvim-tmux.sh` — pushes `LazyReload` to open nvim sockets + reloads tmux
+
+Open editors pick up the new theme without restart; if a socket is missing, focus the nvim window once (`FocusGained` fallback).
 
 State file: `~/.config/eye-comfort/state.json` (phase, CCT hint, contrast, motion preference).
 

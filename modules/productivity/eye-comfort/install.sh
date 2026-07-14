@@ -132,6 +132,27 @@ fi
 echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
 echo "  lib: $LOCAL_LIB"
 
+# Neovim hotreload (fix stock omarchy forcing background=dark on LazyReload)
+NVIM_HOTRELOAD_SRC="$SCRIPT_DIR/nvim/omarchy-theme-hotreload.lua"
+NVIM_PLUGINS="${XDG_CONFIG_HOME:-$HOME/.config}/nvim/lua/plugins"
+if [[ -f "$NVIM_HOTRELOAD_SRC" ]]; then
+  run mkdir -p "$NVIM_PLUGINS"
+  run cp -a "$NVIM_HOTRELOAD_SRC" "$NVIM_PLUGINS/omarchy-theme-hotreload.lua"
+  echo "  nvim: $NVIM_PLUGINS/omarchy-theme-hotreload.lua"
+fi
+
+# Omarchy theme-set.d hook → reload open nvim + tmux after omarchy-theme-set
+HOOK_SRC="$SCRIPT_DIR/hooks/theme-set.d/90-reload-nvim-tmux.sh"
+HOOK_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
+if [[ -f "$HOOK_SRC" ]]; then
+  run mkdir -p "$HOOK_DIR"
+  run cp -a "$HOOK_SRC" "$HOOK_DIR/90-reload-nvim-tmux.sh"
+  if (( ! DRY )); then
+    chmod +x "$HOOK_DIR/90-reload-nvim-tmux.sh"
+  fi
+  echo "  hook: $HOOK_DIR/90-reload-nvim-tmux.sh"
+fi
+
 # Yazi flavors (optional)
 YAZI_SRC="$SCRIPT_DIR/yazi"
 YAZI_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/yazi"

@@ -75,41 +75,32 @@ def render_ghostty(roles: Dict[str, str]) -> str:
 
 
 def render_neovim(roles: Dict[str, str], *, dark: bool) -> str:
+    """Render LazyVim theme plugin spec.
+
+    gruvbox.nvim with contrast=\"soft\" reads dark0_soft / light0_soft for Normal
+    bg — overriding only dark0/light0 leaves stock soft greys and looks like a
+    half-applied theme after light↔dark switches.
+    """
     bg = roles["background"]
     surface = roles["selection"]
     fg = roles["foreground"]
     if dark:
-        return f"""return {{
-  {{ "ellisonleao/gruvbox.nvim" }},
-  {{
-    "ellisonleao/gruvbox.nvim",
-    opts = {{
-      contrast = "soft",
-      palette_overrides = {{
-        dark0 = "{bg}",
+        overrides = f"""        dark0 = "{bg}",
+        dark0_soft = "{bg}",
         dark1 = "{surface}",
-        light1 = "{fg}",
-      }},
-    }},
-  }},
-  {{
-    "LazyVim/LazyVim",
-    opts = {{
-      colorscheme = "gruvbox",
-    }},
-  }},
-}}
-"""
+        light1 = "{fg}","""
+    else:
+        overrides = f"""        light0 = "{bg}",
+        light0_soft = "{bg}",
+        light1 = "{surface}",
+        dark1 = "{fg}","""
     return f"""return {{
-  {{ "ellisonleao/gruvbox.nvim" }},
   {{
     "ellisonleao/gruvbox.nvim",
     opts = {{
       contrast = "soft",
       palette_overrides = {{
-        light0 = "{bg}",
-        light1 = "{surface}",
-        dark1 = "{fg}",
+{overrides}
       }},
     }},
   }},

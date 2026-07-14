@@ -268,13 +268,38 @@ if os.environ.get("EC_NO_RENDER", "0") != "1":
     else:
         print(f"warn: theme dir missing ({dest}); skip live render", file=sys.stderr)
 
+import os
 import shutil
-if shutil.which("omarchy-theme-set") is None:
-    print("warn: omarchy-theme-set not on PATH; theme resolved but not applied", file=sys.stderr)
+import subprocess
+
+# Omarchy templates (hyprland.conf, waybar.css, …) need OMARCHY_PATH.
+# Non-login contexts (systemd timer, minimal PATH) often lack it — without it
+# omarchy-theme-set-templates silently generates nothing and Hyprland errors on:
+#   source = ~/.config/omarchy/current/theme/hyprland.conf
+omarchy_home = Path(os.environ.get("OMARCHY_PATH") or (Path.home() / ".local/share/omarchy"))
+env = os.environ.copy()
+env["OMARCHY_PATH"] = str(omarchy_home)
+omarchy_bin_dir = omarchy_home / "bin"
+path_parts = [str(omarchy_bin_dir), str(Path.home() / ".local/bin"), env.get("PATH", "")]
+env["PATH"] = os.pathsep.join(p for p in path_parts if p)
+
+theme_set = shutil.which("omarchy-theme-set", path=env["PATH"])
+if theme_set is None and (omarchy_bin_dir / "omarchy-theme-set").is_file():
+    theme_set = str(omarchy_bin_dir / "omarchy-theme-set")
+if theme_set is None:
+    print("warn: omarchy-theme-set not found; theme resolved but not applied", file=sys.stderr)
     sys.exit(0)
 
-import subprocess
-subprocess.check_call(["omarchy-theme-set", state.theme])
+subprocess.check_call([theme_set, state.theme], env=env)
+
+hypr_conf = Path.home() / ".config" / "omarchy" / "current" / "theme" / "hyprland.conf"
+if not hypr_conf.is_file():
+    print(
+        f"warn: missing {hypr_conf} after theme-set "
+        f"(OMARCHY_PATH={env['OMARCHY_PATH']}); Hyprland source= will fail",
+        file=sys.stderr,
+    )
+
 active = Path.home() / ".config" / "omarchy" / "current" / "theme.name"
 print(f"active: {active.read_text(encoding='utf-8').strip() if active.is_file() else 'unknown'}")
 PY
