@@ -32,7 +32,7 @@ PYTHONPATH=lib python3 lib/test_tamil_schedule.py
 
 ## Tamil Nadu overlay (v1)
 
-Eye comfort remains primary. Cultural structure: Perum × Siru × Tinai × Nazhigai.
+Eye comfort remains primary. Cultural structure: Perum × Siru × Tinai × Nazhigai × Jaamam.
 Docs: [docs/DESIGN-TN.md](docs/DESIGN-TN.md) · [docs/PRODUCT-TN.md](docs/PRODUCT-TN.md).
 
 ```bash
@@ -41,6 +41,24 @@ eye-comfort-theme tn --lat 13.08 --lon 80.27 --json
 ```
 
 Packages: `eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}`.
+
+### Waybar (TN schedule on the bar)
+
+Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your**
+`~/.config/waybar/config.jsonc` (never edit `~/.local/share/omarchy/`):
+
+1. Add `"custom/eye-comfort"` to `modules-center` (or `modules-right`).
+2. Paste the module block from [`waybar/module.jsonc`](waybar/module.jsonc).
+3. Restart Waybar (`omarchy restart waybar` / the eye-comfort wrapper).
+
+| Surface | Shows |
+|---------|--------|
+| **Bar text** | `tinai · siru · nN` (live clock; tinai from last `tn` apply) |
+| **Tooltip** | Full scene: jaamam split, nazhigai elapsed, perum, theme |
+| **Click** | `notify-send` with the same rich body (lightweight second widget) |
+| **CLI** | `eye-comfort-theme status` · `eye-comfort-theme waybar` |
+
+Does not change the existing `omarchy-restart-waybar` PATH wrappers.
 
 ## Layout
 
@@ -57,7 +75,9 @@ Packages: `eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}`.
 | `nvim/omarchy-theme-hotreload.lua` | Live nvim light/dark reload (install → `~/.config/nvim/…`) |
 | `hooks/theme-set.d/90-reload-nvim-tmux.sh` | Omarchy hook: push LazyReload + tmux refresh |
 | `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
-| `lib/tamil_{schedule,palette}.py` | Perum/Siru/Tinai/Nazhigai + tint |
+| `lib/tamil_{schedule,palette}.py` | Perum/Siru/Tinai/Nazhigai/Jaamam + tint |
+| `lib/waybar_status.py` | Waybar JSON + notify tooltip body |
+| `waybar/tn-status.sh` + `module.jsonc` | Custom Waybar module (opt-in) |
 | `yazi/` | Install-only dual flavors (`eye-comfort-dark` / `eye-comfort-light`); no apply hook |
 
 ## Circadian phases

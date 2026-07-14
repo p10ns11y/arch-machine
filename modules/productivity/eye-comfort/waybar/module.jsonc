@@ -1,0 +1,13 @@
+// Paste into ~/.config/waybar/config.jsonc (Omarchy user config — not ~/.local/share/omarchy).
+// 1) Add "custom/eye-comfort" to modules-center (or modules-right).
+// 2) Merge the block below.
+// Bar: tinai · siru · nN   Tooltip: full scene (jaamam + nazhigai elapsed)   Click: notify
+
+"custom/eye-comfort": {
+  "exec": "$HOME/.local/lib/eye-comfort/waybar/tn-status.sh",
+  "return-type": "json",
+  "interval": 60,
+  "tooltip": true,
+  "on-click": "$HOME/.local/lib/eye-comfort/waybar/tn-status.sh notify",
+  "on-click-right": "omarchy-launch-floating-terminal-with-presentation eye-comfort-theme status"
+}

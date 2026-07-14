@@ -65,7 +65,8 @@ Instant theme swaps. Nazhigai timer (~24 min) only soft-tints — no page choreo
 ## Components / hosts
 
 Same render path (`colors.toml`, Ghostty, nvim). Yazi uses an install-only dual map (`eye-comfort-dark` / `eye-comfort-light`); no apply rematch — reopen after light↔dark if contrast looks wrong.
-CLI: `eye-comfort-theme tn …`. State key `calendar: tamil_nadu`.
+CLI: `eye-comfort-theme tn …` · `status` / `waybar`. State key `calendar: tamil_nadu`.
+Opt-in Waybar: `waybar/module.jsonc` → `custom/eye-comfort` (bar + tooltip + notify).
 
 ## Layout (wallpaper)
 
@@ -83,6 +84,12 @@ Kār →Oct · Kulir →Dec · Munpani →Feb · Pinpani →Apr.
 
 **Siru:** 02–06 vidiyal · 06–10 kaalai · 10–14 nanpagal · 14–18 erpaadu ·
 18–22 maalai · 22–02 yaamam.
+
+**Jaamam / saamam (design grid):** 8 × 3 h watches from the vidiyal epoch (02:00),
+not live astronomy. Each Siru (4 h ≈ 10 Nazhigai) overlaps the 3 h grid as
+**7.5+2.5**, **5+5**, or **2.5+7.5** Nazhigai (1 Nazhigai ≈ 24 min). Scene lines
+use the term **jaamam** (synonym of saamam; distinct from Siru *yaamam*). Example:
+`vidiyal · jaamam 1 (full) + jaamam 2 (2.5 nazhigai) · nazhigai …`.
 
 **Tinai geo (v1 heuristic):**
 

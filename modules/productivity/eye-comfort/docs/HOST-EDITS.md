@@ -18,6 +18,7 @@ Omarchy rule of thumb: **never edit `~/.local/share/omarchy/`** (upstream git tr
 | `~/.local/bin/eye-comfort-theme` | `install.sh` | Circadian switcher CLI. |
 | `~/.local/lib/eye-comfort/*.py` | `install.sh` | Schedule / palette / render helpers (`PYTHONPATH`). |
 | `~/.local/lib/eye-comfort/wrappers/{uwsm-app,omarchy-restart-waybar}` | `install.sh` | PATH overrides when UWSM pipes are missing — hyprctl launch instead of 10s “App failure” timeouts. Does **not** patch `~/.local/share/omarchy`. |
+| `~/.local/lib/eye-comfort/waybar/{tn-status.sh,module.jsonc}` | `install.sh` | Opt-in Waybar custom module (TN bar + rich tooltip / notify). Enable by editing **`~/.config/waybar/config.jsonc`** — see snippet in `module.jsonc`. Does not auto-patch Waybar config. |
 | `~/.config/eye-comfort/apply.lock` (fallback) or `$XDG_RUNTIME_DIR/eye-comfort-apply.lock` | switcher flock | Serializes concurrent `eye-comfort-theme` applies (hourly + TN timers otherwise race `rm -rf current/theme`). Prefer runtime dir. |
 | `~/.config/systemd/user/eye-comfort-theme.{service,timer}` | `install.sh --with-timer` | Hourly `auto` apply. Imports Wayland/Hyprland env so waybar restart works; service sets `OMARCHY_PATH`. Mutually exclusive with TN timer. |
 | `~/.config/systemd/user/eye-comfort-tn.{service,timer}` | `install.sh --with-tn-timer` | Nazhigai ≈24 min. Disables circadian timer on enable (same race). |

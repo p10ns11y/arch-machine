@@ -167,6 +167,17 @@ if [[ -d "$WRAP_SRC" ]]; then
   fi
   echo "  wrappers: $LOCAL_LIB/wrappers (UWSM bypass for theme-set restart)"
 fi
+WAYBAR_SRC="$SCRIPT_DIR/waybar"
+if [[ -d "$WAYBAR_SRC" ]]; then
+  if (( DRY )); then
+    echo "DRY: install waybar TN status → $LOCAL_LIB/waybar"
+  else
+    mkdir -p "$LOCAL_LIB/waybar"
+    rsync -a "$WAYBAR_SRC/" "$LOCAL_LIB/waybar/"
+    chmod +x "$LOCAL_LIB/waybar/tn-status.sh" 2>/dev/null || true
+  fi
+  echo "  waybar: $LOCAL_LIB/waybar/tn-status.sh (see waybar/module.jsonc — enable in ~/.config/waybar)"
+fi
 echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
 echo "  lib: $LOCAL_LIB"
 

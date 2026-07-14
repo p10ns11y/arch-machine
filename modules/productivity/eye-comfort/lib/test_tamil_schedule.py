@@ -2,8 +2,9 @@
 """Tests for Tamil Nadu schedule + tinai palette gates."""
 from __future__ import annotations
 
+import json
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -12,9 +13,13 @@ from oklch import contrast_ratio as cr_ok
 from palette import is_dark_phase, validate_roles
 from tamil_palette import roles_for_tamil
 from tamil_schedule import (
+    SIRU,
     SIRU_TO_PHASE,
     TINAI,
     TINAI_THEME,
+    jaamam_detail_for,
+    jaamam_index_at,
+    jaamam_split_for_siru,
     infer_tinai,
     nazhigai_in_siru,
     nazhigai_of_day,
@@ -25,6 +30,7 @@ from tamil_schedule import (
     siru_for_hour,
     wallpaper_fallback_names,
 )
+from waybar_status import tn_waybar_payload, waybar_payload
 
 
 def test_perum_windows():
@@ -68,6 +74,35 @@ def test_nazhigai_steps():
     assert nazhigai_of_day(23, 59) == 59
 
 
+def test_jaamam_splits():
+    """Siru (4 h) vs jaamam (3 h) from vidiyal epoch → 7.5+2.5 / 5+5 / 2.5+7.5."""
+    expected = {
+        "vidiyal": [(1, 7.5, True), (2, 2.5, False)],
+        "kaalai": [(2, 5.0, False), (3, 5.0, False)],
+        "nanpagal": [(3, 2.5, False), (4, 7.5, True)],
+        "erpaadu": [(5, 7.5, True), (6, 2.5, False)],
+        "maalai": [(6, 5.0, False), (7, 5.0, False)],
+        "yaamam": [(7, 2.5, False), (8, 7.5, True)],
+    }
+    for siru in SIRU:
+        parts = jaamam_split_for_siru(siru)
+        got = [(p.index, p.nazhigai, p.full) for p in parts]
+        assert got == expected[siru], f"{siru}: {got}"
+        assert abs(sum(p.nazhigai for p in parts) - 10.0) < 1e-9
+
+    assert jaamam_index_at(2, 0) == 1
+    assert jaamam_index_at(5, 0) == 2
+    assert jaamam_index_at(12, 0) == 4
+    assert jaamam_index_at(1, 59) == 8
+
+    d = jaamam_detail_for("vidiyal", 0)
+    assert d.current == 1
+    assert d.label == "jaamam 1 (full) + jaamam 2 (2.5 nazhigai)"
+    d2 = jaamam_detail_for("nanpagal", 5)
+    assert d2.current == 4
+    assert "jaamam 3 (2.5 nazhigai) + jaamam 4 (full)" == d2.label
+
+
 def test_infer_tinai_geo():
     t, src = infer_tinai(13.0, 80.2)  # Chennai coast
     assert t == "neythal"
@@ -96,18 +131,42 @@ def test_resolve_flags():
     assert s.phase == "afternoon"
     assert 0 <= s.nazhigai <= 9
     assert "neythal-erpaadu" in s.wallpaper_hint
+    assert s.jaamam.current == 5
+    assert "jaamam 5 (full) + jaamam 6 (2.5 nazhigai)" in s.scene
 
     s2 = resolve_tamil(hour=23, minute=0, latitude=11.0, longitude=76.5)
     assert s2.siru == "yaamam"
     assert s2.tinai == "kurinji"
     assert s2.theme == TINAI_THEME["kurinji"]
+    assert "jaamam 7 (2.5 nazhigai) + jaamam 8 (full)" in s2.scene
 
     s3 = resolve_tamil(siru="maalai", nazhigai=3, tinai="mullai")
     assert s3.siru == "maalai" and s3.nazhigai == 3
     assert "nazhigai 3 (≈3×24 min ≈ 72 min elapsed)" in s3.scene
+    assert "jaamam 6 (5 nazhigai) + jaamam 7 (5 nazhigai)" in s3.scene
 
     s5 = resolve_tamil(siru="nanpagal", nazhigai=5, tinai="marutham")
     assert "nazhigai 5 (≈5×24 min ≈ 120 min elapsed)" in s5.scene
+    assert "jaamam 3 (2.5 nazhigai) + jaamam 4 (full)" in s5.scene
+
+
+def test_waybar_payload():
+    p = tn_waybar_payload(
+        state={"tinai": "neythal", "calendar": "tamil_nadu"},
+        now=datetime(2026, 7, 14, 15, 0),
+    )
+    # erpaadu 14:00 → 15:00 = 60 min → nazhigai 2
+    assert p["text"] == "neythal · erpaadu · n2"
+    assert "jaamam 5 (full)" in p["tooltip"]
+    assert "nazhigai" in p["tooltip"]
+    # JSON-serializable for waybar
+    json.dumps(p)
+    p2 = waybar_payload(
+        state_path=Path("/nonexistent/state.json"),
+        now=datetime(2026, 7, 14, 10, 0),
+    )
+    assert " · " in p2["text"]
+    assert p2["alt"] in ("tn", "error")
 
 
 def test_parse_aliases():
@@ -151,8 +210,11 @@ if __name__ == "__main__":
     test_perum_windows()
     test_siru_windows()
     test_nazhigai_steps()
+    test_jaamam_splits()
     test_infer_tinai_geo()
+    test_wallpaper_fallback_chain()
     test_resolve_flags()
+    test_waybar_payload()
     test_parse_aliases()
     test_all_tinai_siru_contrast()
     test_bad_inputs()

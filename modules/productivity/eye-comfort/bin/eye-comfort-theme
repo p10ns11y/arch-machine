@@ -9,15 +9,18 @@ Circadian / Tamil Nadu switcher for eye-comfort Omarchy themes.
 Usage:
   eye-comfort-theme [MODE] [flags]
   eye-comfort-theme tn [flags]
+  eye-comfort-theme status|waybar
 
 MODE (positional, default auto) — circadian:
   auto                              Resolve phase from clock (+ optional --lat)
   dawn|morning|midday|afternoon|dusk|evening|night
   day|light                         Alias → midday
   dark                              Alias → night
+  status                            Human scene (reads state + live clock)
+  waybar                            Waybar JSON {text,tooltip,class} (no apply)
 
 Tamil Nadu (cultural overlay; eye comfort still primary):
-  tn                                Resolve Perum × Siru × Tinai × Nazhigai
+  tn                                Resolve Perum × Siru × Tinai × Nazhigai × Jaamam
   --tinai NAME                      kurinji|mullai|marutham|neythal|palai
   --lon DEG | --longitude DEG       With --lat: infer tinai (TN coastal/hills/plains)
   --perum NAME                      Force season (ila_venil|mudhu_venil|kar|kulir|munpani|pinpani)
@@ -48,11 +51,12 @@ Circadian schedule (fixed windows when --lat unset):
   dawn 05–07 · morning 07–10 · midday 10–14 · afternoon 14–17
   dusk 17–19 · evening 19–22 · night 22–05
 
-Tamil Siru (≈4 h) / Nazhigai (≈24 min):
+Tamil Siru (≈4 h) / Nazhigai (≈24 min) / Jaamam (≈3 h, 8/day from vidiyal):
   vidiyal 02–06 · kaalai 06–10 · nanpagal 10–14 · erpaadu 14–18
   maalai 18–22 · yaamam 22–02
   Packages: eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}
   Timer: install.sh --with-tn-timer → every 24 min (reuses waybar restore)
+  Waybar: see waybar/module.jsonc (custom/eye-comfort + tooltip / notify)
 
 Examples:
   eye-comfort-theme
@@ -60,6 +64,8 @@ Examples:
   eye-comfort-theme tn --tinai neythal
   eye-comfort-theme tn --lat 13.08 --lon 80.27 --json
   eye-comfort-theme tn --siru yaamam --nazhigai 3 --dry-run
+  eye-comfort-theme status
+  eye-comfort-theme waybar
   HOUR=22 eye-comfort-theme --dry-run
 EOF
 }
@@ -198,12 +204,18 @@ if [[ "$MODE" == "tn" || "$MODE" == "tamil" || "$MODE" == "tamil-nadu" ]]; then
   MODE="tn"
 fi
 
+STATUS_MODE=0
+if [[ "$MODE" == "status" || "$MODE" == "waybar" ]]; then
+  STATUS_MODE=1
+fi
+
 # Env HOUR still supported for tests
 if [[ -z "$HOUR_OVERRIDE" && -n "${HOUR:-}" ]]; then
   HOUR_OVERRIDE="$HOUR"
 fi
 
 export EC_MODE="$MODE"
+export EC_STATUS="$STATUS_MODE"
 export EC_TN="$TN_MODE"
 export EC_DRY="$DRY"
 export EC_PRINT_ONLY="$PRINT_ONLY"
@@ -240,6 +252,20 @@ from render import write_theme_package
 
 def env_bool(name: str) -> bool:
     return os.environ.get(name, "0") in ("1", "true", "True", "yes")
+
+
+# Readonly status / waybar JSON (no theme apply)
+if env_bool("EC_STATUS"):
+    from waybar_status import status_text, waybar_payload
+
+    mode = os.environ.get("EC_MODE", "status")
+    state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
+    sp = (state_dir / "state.json") if state_dir.as_posix() else None
+    if mode == "waybar":
+        print(json.dumps(waybar_payload(state_path=sp), ensure_ascii=False))
+    else:
+        print(status_text(state_path=sp))
+    sys.exit(0)
 
 
 def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_render: bool) -> None:
@@ -672,7 +698,8 @@ if tn_mode:
 
     print(
         f"eye-comfort-theme tn: tinai={state.tinai} siru={state.siru} "
-        f"perum={state.perum} nazhigai={state.nazhigai} theme={state.theme} "
+        f"perum={state.perum} nazhigai={state.nazhigai} "
+        f"jaamam={state.jaamam.current} theme={state.theme} "
         f"phase={state.phase} tinai_src={state.tinai_source} "
         f"contrast={contrast}:1"
     )
