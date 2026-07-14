@@ -176,7 +176,7 @@ class TamilState:
     tinai: Tinai
     perum: Perum
     siru: Siru
-    nazhigai: int  # 0–9 within current Siru
+    nazhigai: int  # 0–9 step index within current Siru (UI ordinal = index + 1)
     theme: str
     phase: str  # circadian mirror for hosts/render
     hour: int
@@ -343,6 +343,37 @@ def nazhigai_of_day(hour: int, minute: int = 0) -> int:
     """Absolute Nazhigai index 0–59 from local midnight (informational)."""
     total = (hour * 60 + minute) // NAZHIGAI_MINUTES
     return max(0, min(59, total))
+
+
+def nazhigai_ordinal(index: int) -> int:
+    """1-based Nazhigai ordinal for UI (storage index 0 → 1 … index 9 → 10).
+
+    API/storage stays 0-based; humans read ordinals. Index 1 at ≈24 min elapsed
+    means *Running Nazhigai 2*, not “first nazhigai”.
+    """
+    if not isinstance(index, int) or not (0 <= index <= 9):
+        raise ValueError(f"nazhigai must be int 0–9, got {index!r}")
+    return index + 1
+
+
+def nazhigai_running_copy(index: int) -> str:
+    """Plain-language Running Nazhigai N (…) for tooltips and scene lines."""
+    ordinal = nazhigai_ordinal(index)
+    into_min = index * NAZHIGAI_MINUTES
+    if ordinal == 1:
+        return (
+            f"Running Nazhigai 1 "
+            f"(first {NAZHIGAI_MINUTES} minutes of this Siru)"
+        )
+    if ordinal == 2:
+        return (
+            f"Running Nazhigai 2 "
+            f"(after {into_min} minutes, first nazhigai over)"
+        )
+    return (
+        f"Running Nazhigai {ordinal} "
+        f"(after {into_min} minutes, first {ordinal - 1} nazhigai over)"
+    )
 
 
 def _expand_hour_window(start: float, end: float) -> list[tuple[float, float]]:
@@ -542,15 +573,12 @@ def scene_line(
 ) -> str:
     """One-line delight string for CLI apply (never blocks the task).
 
-    Nazhigai step N ≈ N × 24 min into the current Siru (design: 1 Nazhigai ≈ 24 min).
-    Jaamam detail is the Siru's derived 3 h-grid split (jaamam ≡ saamam).
+    ``nazhigai`` is the 0-based step index; copy uses 1-based ordinals
+    (design: 1 Nazhigai ≈ 24 min). Jaamam detail is the Siru's derived
+    3 h-grid split (jaamam ≡ saamam).
     """
     meta = TINAI_META[tinai]
-    into_min = nazhigai * NAZHIGAI_MINUTES
-    nazh = (
-        f"nazhigai {nazhigai} "
-        f"(≈{nazhigai}×{NAZHIGAI_MINUTES} min ≈ {into_min} min elapsed)"
-    )
+    nazh = nazhigai_running_copy(nazhigai)
     jam = jaamam or jaamam_detail_for(siru, nazhigai)
     return (
         f"{meta['landscape']} · {meta['flower']} · "

@@ -20,6 +20,7 @@ from tamil_schedule import (
     PERUM_LABEL,
     SIRU_LABEL,
     TINAI_META,
+    nazhigai_ordinal,
     resolve_tamil,
 )
 
@@ -132,17 +133,24 @@ def _jaamam_heart_lines(tn: Any) -> List[str]:
 
 
 def _nazhigai_heart_lines(tn: Any) -> List[str]:
-    """Nazhigai as elapsed pulse inside the current Siru."""
-    n = tn.nazhigai
-    into_min = n * NAZHIGAI_MINUTES
+    """Nazhigai as elapsed pulse inside the current Siru (1-based ordinal copy)."""
+    index = tn.nazhigai  # 0-based storage
+    ordinal = nazhigai_ordinal(index)
+    into_min = index * NAZHIGAI_MINUTES
     siru_title = _pango_esc(_title_tinai(tn.siru))
+    if ordinal == 1:
+        detail = f"first {NAZHIGAI_MINUTES} minutes of this Siru"
+    elif ordinal == 2:
+        detail = f"after {into_min} minutes, first nazhigai over"
+    else:
+        detail = f"after {into_min} minutes, first {ordinal - 1} nazhigai over"
     return [
         _accent_b("Nazhigai"),
-        f"  Nazhigai <b>{n}</b>  ·  step of {NAZHIGAIS_PER_SIRU} into {siru_title}",
-        _soft(
-            f"  ≈ {into_min} min elapsed"
-            f"  ·  {n} × {NAZHIGAI_MINUTES} min into this Siru"
+        (
+            f"  Running Nazhigai <b>{ordinal}</b>"
+            f"  ·  {ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"
         ),
+        _soft(f"  {_pango_esc(detail)}"),
     ]
 
 
@@ -207,7 +215,8 @@ def tn_waybar_payload(
             pass
 
     tn = resolve_tamil(**kwargs)
-    text = f"{tn.tinai} · {tn.siru} · n{tn.nazhigai}"
+    # Compact bar: N{ordinal} (1-based). Storage tn.nazhigai stays 0-based.
+    text = f"{tn.tinai} · {tn.siru} · N{nazhigai_ordinal(tn.nazhigai)}"
     tooltip = tn_tooltip_markup(tn, now)
     return {
         "text": text,
