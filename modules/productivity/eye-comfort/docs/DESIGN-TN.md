@@ -79,21 +79,53 @@ See each `themes/eye-comfort-tn-*/backgrounds/README.md`:
 
 ## Schedule & harden
 
-**Perum** (approx Gregorian mid-month): Ila Venil mid-Apr→Jun · Mudhu Venil →Aug ·
-Kār →Oct · Kulir →Dec · Munpani →Feb · Pinpani →Apr.
+**Perum** (approx Gregorian mid-month): Iḷavēṉil mid-Apr→Jun · Mutuvēṉil →Aug ·
+Kār →Oct · Kuḷir →Dec · Muṉpaṉi →Feb · Piṉpaṉi →Apr.
 
-**Siru:** 02–06 vidiyal · 06–10 kaalai · 10–14 nanpagal · 14–18 erpaadu ·
-18–22 maalai · 22–02 yaamam.
+**Ciṟu:** 02–06 viṭiyal · 06–10 kālai · 10–14 naṇpakal · 14–18 eṟpāṭu ·
+18–22 mālai · 22–02 yāmam.
 
-**Jaamam / saamam (design grid):** 8 × 3 h watches from the vidiyal epoch (02:00),
-not live astronomy. Each Siru (4 h ≈ 10 Nazhigai) overlaps the 3 h grid as
+**Jāmam / cāmam (design grid):** 8 × 3 h watches from the viṭiyal epoch (02:00),
+not live astronomy. Each Ciṟu (4 h ≈ 10 Nāḻikai) overlaps the 3 h grid as
 **7.5+2.5**, **5+5**, or **2.5+7.5** Nāḻikai (1 Nāḻikai ≈ 24 min; ISO 15919 display —
-API field remains `nazhigai`). Scene lines use the term **jaamam** (synonym of
-saamam; distinct from Siru *Yaamam*). Example:
-`Vidiyal · jaamam 1 (full) + jaamam 2 (2.5 nāḻikai) · Running Nāḻikai …`.
+API field remains `nazhigai`). Scene lines use the term **jāmam** (API `jaamam`;
+synonym of **cāmam** / saamam; distinct from Ciṟu *Yāmam*). Example:
+`Viṭiyal · jāmam 1 (full) + jāmam 2 (2.5 nāḻikai) · Running Nāḻikai …`.
 
-Bar / tooltip Title Case tinai and siru (`Marutham · Yaamam · N3`). Tinai line is
-landscape gloss + tinai once (`Plains — Marutham`), not a flower/id echo.
+Bar / tooltip Title Case ISO tiṇai and ciṟu (`Marutam · Yāmam · N3`). Tiṇai line is
+landscape gloss + tiṇai once (`Plains — Marutam`), not a flower/id echo.
+
+## ISO 15919 glossary (display)
+
+API / CLI / package ids stay ASCII (`tinai`, `kurinji`, `nazhigai`, `jaamam`, …).
+User-facing copy uses ISO 15919:
+
+| Role | Tamil | API id | ISO 15919 |
+|------|-------|--------|-----------|
+| Landscape class | திணை | `tinai` | tiṇai |
+| Season class | பெரும்(பொழுது) | `perum` | perum (poḻutu) |
+| Day-part class | சிறு(பொழுது) | `siru` | ciṟu (poḻutu) |
+| Time unit | நாழிகை | `nazhigai` | nāḻikai |
+| 3 h watch | ஜாமம் / சாமம் | `jaamam` | jāmam / cāmam |
+| Mountains | குறிஞ்சி | `kurinji` | kuṟiñci |
+| Forest | முல்லை | `mullai` | mullai |
+| Plains | மருதம் | `marutham` | marutam |
+| Seashore | நெய்தல் | `neythal` | neytal |
+| Wasteland | பாலை | `palai` | pālai |
+| Early summer | இளவேனில் | `ila_venil` | iḷavēṉil |
+| Harsh summer | முதுவேனில் | `mudhu_venil` | mutuvēṉil |
+| Monsoon | கார் | `kar` | kār |
+| Cool | குளிர் | `kulir` | kuḷir |
+| Early dew | முன்பனி | `munpani` | muṉpaṉi |
+| Late dew | பின்பனி | `pinpani` | piṉpaṉi |
+| Dawn | விடியல் / வைகறை | `vidiyal` | viṭiyal / vaikaṟai |
+| Morning | காலை | `kaalai` | kālai |
+| Midday | நண்பகல் | `nanpagal` | naṇpakal |
+| Afternoon | எற்பாடு | `erpaadu` | eṟpāṭu |
+| Evening | மாலை | `maalai` | mālai |
+| Night (ciṟu) | யாமம் | `yaamam` | yāmam |
+| Stage matter | கருப்பொருள் | (docs) | karupporuḷ |
+| Mood matter | உரிப்பொருள் | (docs) | uripporuḷ |
 
 **Tinai geo (v1 heuristic):**
 

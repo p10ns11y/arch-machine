@@ -57,8 +57,8 @@ Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your*
 
 | Surface | Shows |
 |---------|--------|
-| **Bar text** | `Marutham · Yaamam · N3` (Title Case; tinai from last `tn` apply) |
-| **Tooltip** | Date → Tinai → Pozhuthu (Perum+Siru) → Jaamam/Nāḻikai heart → Theme (Pango) |
+| **Bar text** | `Marutam · Yāmam · N3` (ISO 15919 Title Case; tinai from last `tn` apply) |
+| **Tooltip** | Date → Tiṇai → Poḻutu (Perum+Ciṟu) → Jāmam/Nāḻikai heart → Theme (Pango) |
 | **Click** | `notify-send` plain-text body (same content, no markup) |
 | **CLI** | `eye-comfort-theme status` · `eye-comfort-theme waybar` |
 

@@ -14,10 +14,14 @@ sessions; chrome must disappear into the task.
 
 **Tamil Nadu overlay** structures the same eye-comfort SoT with:
 
-- **Perum Pozhuthugal** (6 seasons) — seasonal context in state + wallpaper hints
-- **Siru Pozhuthugal** (6 daily ~4 h divisions) — luminance / package live-render
-- **Tinai** (5 landscapes) — Omarchy package identity + restrained hue lean
-- **Nāḻikai** (~24 min; ISO 15919; API field `nazhigai`) — soft micro-tint within Siru (optional 24-min timer)
+- **Perum Poḻutukaḷ** (6 seasons) — seasonal context in state + wallpaper hints
+- **Ciṟu Poḻutukaḷ** (6 daily ~4 h divisions) — luminance / package live-render
+- **Tiṇai** (5 landscapes) — Omarchy package identity + restrained hue lean
+- **Nāḻikai** (~24 min; ISO 15919; API field `nazhigai`) — soft micro-tint within Ciṟu (optional 24-min timer)
+- **Jāmam** (~3 h; API `jaamam`; synonym **cāmam**) — design watch grid overlapping Ciṟu
+
+Display romanization follows ISO 15919; see the glossary in [DESIGN-TN.md](./DESIGN-TN.md).
+CLI/package ids stay ASCII (`tinai`, `marutham`, `yaamam`, …).
 
 Success = AA contrast and warm restraint first; Tamil calendar as meaningful
 structure, not costume spectacle.

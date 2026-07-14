@@ -52,13 +52,63 @@ SIRU: Sequence[Siru] = (
 # 1 Nazhigai ≈ 24 minutes; 60 Nazhigais per civil day; 10 per Siru (~4 h)
 NAZHIGAI_MINUTES = 24
 NAZHIGAIS_PER_SIRU = 10
-# ISO 15919 display for நாழிகை (API/field ids stay nazhigai).
-NAZHIGAI_DISPLAY = "nāḻikai"
+
+# ---------------------------------------------------------------------------
+# ISO 15919 display (user-facing). API / CLI / package ids stay ASCII aliases.
+# ---------------------------------------------------------------------------
+NAZHIGAI_DISPLAY = "nāḻikai"  # நாழிகை
 NAZHIGAI_DISPLAY_TITLE = "Nāḻikai"
+
+TINAI_DISPLAY = "tiṇai"  # திணை
+TINAI_DISPLAY_TITLE = "Tiṇai"
+PERUM_DISPLAY = "perum"  # பெரும்
+PERUM_DISPLAY_TITLE = "Perum"
+SIRU_DISPLAY = "ciṟu"  # சிறு
+SIRU_DISPLAY_TITLE = "Ciṟu"
+POZHUTU_DISPLAY = "poḻutu"  # பொழுது
+POZHUTU_DISPLAY_TITLE = "Poḻutu"
+# 3 h watch: API `jaamam` ← ஜாமம்; classical synonym சாமம் → cāmam.
+# Distinct from Siru yāmam (யாமம்).
+JAAMAM_DISPLAY = "jāmam"
+JAAMAM_DISPLAY_TITLE = "Jāmam"
+JAAMAM_SYNONYM_DISPLAY = "cāmam"  # சாமம்
+
+# Landscape (திணை) — API keys → ISO 15919
+TINAI_ISO: Dict[Tinai, str] = {
+    "kurinji": "kuṟiñci",  # குறிஞ்சி
+    "mullai": "mullai",  # முல்லை
+    "marutham": "marutam",  # மருதம்
+    "neythal": "neytal",  # நெய்தல்
+    "palai": "pālai",  # பாலை
+}
+
+# Seasons (பெரும்பொழுது) — API keys → ISO 15919
+PERUM_ISO: Dict[Perum, str] = {
+    "ila_venil": "iḷavēṉil",  # இளவேனில்
+    "mudhu_venil": "mutuvēṉil",  # முதுவேனில்
+    "kar": "kār",  # கார்
+    "kulir": "kuḷir",  # குளிர்
+    "munpani": "muṉpaṉi",  # முன்பனி
+    "pinpani": "piṉpaṉi",  # பின்பனி
+}
+
+# Day parts (சிறுபொழுது) — API keys → ISO 15919
+SIRU_ISO: Dict[Siru, str] = {
+    "vidiyal": "viṭiyal",  # விடியல் (also வைகறை vaikaṟai)
+    "kaalai": "kālai",  # காலை
+    "nanpagal": "naṇpakal",  # நண்பகல்
+    "erpaadu": "eṟpāṭu",  # எற்பாடு
+    "maalai": "mālai",  # மாலை
+    "yaamam": "yāmam",  # யாமம்
+}
+
+# Stage / mood terms (docs + Karu Porul wallpaper hints)
+KARU_PORUL_DISPLAY = "karupporuḷ"  # கருப்பொருள்
+URI_PORUL_DISPLAY = "uripporuḷ"  # உரிப்பொருள்
 
 # Jaamam / saamam (design grid, not live astronomy): 8 × 3 h from vidiyal epoch.
 # Each Siru (4 h) covers one full jaamam + a partial of the next (or 5+5 mid-splits).
-# Term: "jaamam" in code/UI — synonym of saamam; distinct from Siru "yaamam".
+# Term: "jaamam" in code — synonym of saamam; distinct from Siru "yaamam".
 JAAMAM_HOURS = 3
 JAAMAMS_PER_DAY = 8
 JAAMAM_EPOCH_HOUR = 2  # aligns with vidiyal start
@@ -66,8 +116,28 @@ NAZHIGAIS_PER_JAAMAM = JAAMAM_HOURS * 60 / NAZHIGAI_MINUTES  # 7.5
 
 
 def title_roman(name: str) -> str:
-    """Title Case tinai/siru roman ids for bar, tooltip, and scene lines."""
+    """Title Case ASCII api ids (fallback). Prefer tinai_display / siru_display."""
     return name[:1].upper() + name[1:] if name else name
+
+
+def _title_iso(iso: str) -> str:
+    """Title-case an ISO 15919 lowercase form (first letter only)."""
+    return iso[:1].upper() + iso[1:] if iso else iso
+
+
+def tinai_display(tinai: Tinai, *, title: bool = True) -> str:
+    iso = TINAI_ISO[tinai]
+    return _title_iso(iso) if title else iso
+
+
+def siru_display(siru: Siru, *, title: bool = True) -> str:
+    iso = SIRU_ISO[siru]
+    return _title_iso(iso) if title else iso
+
+
+def perum_display(perum: Perum, *, title: bool = True) -> str:
+    iso = PERUM_ISO[perum]
+    return _title_iso(iso) if title else iso
 
 
 # Package identity = landscape (tinai). Siru live-renders luminance inside it.
@@ -123,22 +193,22 @@ TINAI_META: Dict[Tinai, Dict[str, str]] = {
     },
 }
 
-# Display names (Tamil + roman)
+# Display names (Tamil + ISO 15919)
 PERUM_LABEL: Dict[Perum, str] = {
-    "ila_venil": "இளவேனில் Ila Venil — Early/Light Summer",
-    "mudhu_venil": "முதுவேனில் Mudhu Venil — Late/Harsh Summer",
+    "ila_venil": "இளவேனில் Iḷavēṉil — Early/Light Summer",
+    "mudhu_venil": "முதுவேனில் Mutuvēṉil — Late/Harsh Summer",
     "kar": "கார் Kār — Rainy/Monsoon",
-    "kulir": "குளிர்/கூதிர் Kulir — Cool/Autumn",
-    "munpani": "முன்பனி Munpani — Early Dew/Winter",
-    "pinpani": "பின்பனி Pinpani — Late Dew/Late Winter",
+    "kulir": "குளிர்/கூதிர் Kuḷir — Cool/Autumn",
+    "munpani": "முன்பனி Muṉpaṉi — Early Dew/Winter",
+    "pinpani": "பின்பனி Piṉpaṉi — Late Dew/Late Winter",
 }
 SIRU_LABEL: Dict[Siru, str] = {
-    "vidiyal": "வைகறை/விடியல் Vidiyal — Dawn ~2–6",
-    "kaalai": "காலை Kaalai — Morning ~6–10",
-    "nanpagal": "நண்பகல் Nan Pagal — Midday ~10–14",
-    "erpaadu": "எற்பாடு Erpaadu — Afternoon→Dusk ~14–18",
-    "maalai": "மாலை Maalai — Evening ~18–22",
-    "yaamam": "யாமம் Yaamam — Night ~22–2",
+    "vidiyal": "வைகறை/விடியல் Vaikaṟai / Viṭiyal — Dawn ~2–6",
+    "kaalai": "காலை Kālai — Morning ~6–10",
+    "nanpagal": "நண்பகல் Naṇpakal — Midday ~10–14",
+    "erpaadu": "எற்பாடு Eṟpāṭu — Afternoon→Dusk ~14–18",
+    "maalai": "மாலை Mālai — Evening ~18–22",
+    "yaamam": "யாமம் Yāmam — Night ~22–2",
 }
 
 # Fixed Siru windows [start_hour, end_hour) — yaamam wraps midnight
@@ -374,7 +444,7 @@ def nazhigai_running_copy(index: int) -> str:
     if ordinal == 1:
         return (
             f"Running {title} 1 "
-            f"(first {NAZHIGAI_MINUTES} minutes of this Siru)"
+            f"(first {NAZHIGAI_MINUTES} minutes of this {SIRU_DISPLAY_TITLE})"
         )
     if ordinal == 2:
         return (
@@ -468,8 +538,9 @@ def jaamam_split_for_siru(siru: Siru) -> tuple[JaamamPart, ...]:
 
 
 def jaamam_label_for_parts(parts: Sequence[JaamamPart]) -> str:
+    unit = JAAMAM_DISPLAY
     bits = [
-        f"jaamam {p.index} ({_fmt_jaamam_nazhigai(p.nazhigai, full=p.full)})"
+        f"{unit} {p.index} ({_fmt_jaamam_nazhigai(p.nazhigai, full=p.full)})"
         for p in parts
     ]
     return " + ".join(bits)
@@ -593,8 +664,9 @@ def scene_line(
     nazh = nazhigai_running_copy(nazhigai)
     jam = jaamam or jaamam_detail_for(siru, nazhigai)
     return (
-        f"{meta['landscape'].title()} · {title_roman(tinai)} · "
-        f"{title_roman(siru)} · {jam.label} · {nazh} · {perum.replace('_', ' ')}"
+        f"{meta['landscape'].title()} · {tinai_display(tinai)} · "
+        f"{siru_display(siru)} · {jam.label} · {nazh} · "
+        f"{perum_display(perum, title=False)}"
     )
 
 

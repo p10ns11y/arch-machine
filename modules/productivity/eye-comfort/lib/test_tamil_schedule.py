@@ -78,7 +78,7 @@ def test_nazhigai_steps():
     assert nazhigai_ordinal(0) == 1
     assert nazhigai_ordinal(1) == 2
     assert nazhigai_ordinal(9) == 10
-    assert "Running Nāḻikai 1 (first 24 minutes" in nazhigai_running_copy(0)
+    assert "Running Nāḻikai 1 (first 24 minutes of this Ciṟu)" in nazhigai_running_copy(0)
     assert (
         nazhigai_running_copy(1)
         == "Running Nāḻikai 2 (after 24 minutes, first nāḻikai over)"
@@ -112,10 +112,34 @@ def test_jaamam_splits():
 
     d = jaamam_detail_for("vidiyal", 0)
     assert d.current == 1
-    assert d.label == "jaamam 1 (full) + jaamam 2 (2.5 nāḻikai)"
+    assert d.label == "jāmam 1 (full) + jāmam 2 (2.5 nāḻikai)"
     d2 = jaamam_detail_for("nanpagal", 5)
     assert d2.current == 4
-    assert "jaamam 3 (2.5 nāḻikai) + jaamam 4 (full)" == d2.label
+    assert "jāmam 3 (2.5 nāḻikai) + jāmam 4 (full)" == d2.label
+
+
+def test_iso_display_helpers():
+    from tamil_schedule import (
+        TINAI_ISO,
+        SIRU_ISO,
+        PERUM_ISO,
+        tinai_display,
+        siru_display,
+        perum_display,
+    )
+
+    assert TINAI_ISO["kurinji"] == "kuṟiñci"
+    assert TINAI_ISO["marutham"] == "marutam"
+    assert TINAI_ISO["neythal"] == "neytal"
+    assert TINAI_ISO["palai"] == "pālai"
+    assert SIRU_ISO["yaamam"] == "yāmam"
+    assert SIRU_ISO["erpaadu"] == "eṟpāṭu"
+    assert SIRU_ISO["nanpagal"] == "naṇpakal"
+    assert PERUM_ISO["ila_venil"] == "iḷavēṉil"
+    assert PERUM_ISO["munpani"] == "muṉpaṉi"
+    assert tinai_display("marutham") == "Marutam"
+    assert siru_display("yaamam") == "Yāmam"
+    assert perum_display("kar") == "Kār"
 
 
 def test_infer_tinai_geo():
@@ -147,22 +171,22 @@ def test_resolve_flags():
     assert 0 <= s.nazhigai <= 9
     assert "neythal-erpaadu" in s.wallpaper_hint
     assert s.jaamam.current == 5
-    assert "jaamam 5 (full) + jaamam 6 (2.5 nāḻikai)" in s.scene
+    assert "jāmam 5 (full) + jāmam 6 (2.5 nāḻikai)" in s.scene
 
     s2 = resolve_tamil(hour=23, minute=0, latitude=11.0, longitude=76.5)
     assert s2.siru == "yaamam"
     assert s2.tinai == "kurinji"
     assert s2.theme == TINAI_THEME["kurinji"]
-    assert "jaamam 7 (2.5 nāḻikai) + jaamam 8 (full)" in s2.scene
+    assert "jāmam 7 (2.5 nāḻikai) + jāmam 8 (full)" in s2.scene
 
     s3 = resolve_tamil(siru="maalai", nazhigai=3, tinai="mullai")
     assert s3.siru == "maalai" and s3.nazhigai == 3
     assert "Running Nāḻikai 4 (after 72 minutes, first 3 nāḻikai over)" in s3.scene
-    assert "jaamam 6 (5 nāḻikai) + jaamam 7 (5 nāḻikai)" in s3.scene
+    assert "jāmam 6 (5 nāḻikai) + jāmam 7 (5 nāḻikai)" in s3.scene
 
     s5 = resolve_tamil(siru="nanpagal", nazhigai=5, tinai="marutham")
     assert "Running Nāḻikai 6 (after 120 minutes, first 5 nāḻikai over)" in s5.scene
-    assert "jaamam 3 (2.5 nāḻikai) + jaamam 4 (full)" in s5.scene
+    assert "jāmam 3 (2.5 nāḻikai) + jāmam 4 (full)" in s5.scene
 
 
 def test_waybar_payload():
@@ -171,9 +195,9 @@ def test_waybar_payload():
         now=datetime(2026, 7, 14, 15, 0),
     )
     # erpaadu 14:00 → 15:00 = 60 min → index 2 → ordinal 3
-    assert p["text"] == "Neythal · Erpaadu · N3"
+    assert p["text"] == "Neytal · Eṟpāṭu · N3"
     tip = p["tooltip"]
-    assert "jaamam 5 (full)" in tip
+    assert "jāmam 5 (full)" in tip
     assert "Running Nāḻikai <b>3</b>" in tip
     assert "first 2 nāḻikai over" in tip
     assert "week 29" in tip  # ISO week; date line separate from tinai
@@ -185,13 +209,13 @@ def test_waybar_payload():
     assert date_ln.lstrip().startswith("<span")
     assert "<b>" in tip  # Pango hierarchy
     assert "Seashore" in tip
-    assert "Seashore  —  Neythal" in tip
+    assert "Seashore  —  Neytal" in tip
     assert "(apply)" not in tip
-    assert "water lily" not in tip  # no flower echo on Tinai line
-    assert "Tinai" in tip and "Pozhuthu" in tip
-    assert "Jaamam" in tip and "Nāḻikai" in tip
-    assert "Perum" in tip and "Siru" in tip  # grouped under Pozhuthu
-    assert tip.index("Pozhuthu") < tip.index("Jaamam") < tip.index("Nāḻikai")
+    assert "water lily" not in tip  # no flower echo on Tiṇai line
+    assert "Tiṇai" in tip and "Poḻutu" in tip
+    assert "Jāmam" in tip and "Nāḻikai" in tip
+    assert "Perum" in tip and "Ciṟu" in tip  # grouped under Poḻutu
+    assert tip.index("Poḻutu") < tip.index("Jāmam") < tip.index("Nāḻikai")
     # JSON-serializable for waybar
     json.dumps(p)
     p2 = waybar_payload(
@@ -206,13 +230,13 @@ def test_waybar_payload():
         state={"tinai": "marutham", "calendar": "tamil_nadu"},
         now=datetime(2026, 7, 14, 22, 24),
     )
-    assert p3["text"] == "Marutham · Yaamam · N2"
+    assert p3["text"] == "Marutam · Yāmam · N2"
     assert "Running Nāḻikai <b>2</b>" in p3["tooltip"]
     assert "first nāḻikai over" in p3["tooltip"]
     assert "Nāḻikai <b>1</b>" not in p3["tooltip"]
-    assert "Plains  —  Marutham" in p3["tooltip"]
+    assert "Plains  —  Marutam" in p3["tooltip"]
     assert "marutham · Marutham" not in p3["tooltip"]
-
+    assert "marutam · Marutam" not in p3["tooltip"]
 
 def test_parse_aliases():
     assert parse_tinai("neytal") == "neythal"
@@ -256,6 +280,7 @@ if __name__ == "__main__":
     test_siru_windows()
     test_nazhigai_steps()
     test_jaamam_splits()
+    test_iso_display_helpers()
     test_infer_tinai_geo()
     test_wallpaper_fallback_chain()
     test_resolve_flags()
