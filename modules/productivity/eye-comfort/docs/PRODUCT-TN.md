@@ -17,7 +17,7 @@ sessions; chrome must disappear into the task.
 - **Perum Pozhuthugal** (6 seasons) — seasonal context in state + wallpaper hints
 - **Siru Pozhuthugal** (6 daily ~4 h divisions) — luminance / package live-render
 - **Tinai** (5 landscapes) — Omarchy package identity + restrained hue lean
-- **Nazhigai** (~24 min) — soft micro-tint within Siru (optional 24-min timer)
+- **Nāḻikai** (~24 min; ISO 15919; API field `nazhigai`) — soft micro-tint within Siru (optional 24-min timer)
 
 Success = AA contrast and warm restraint first; Tamil calendar as meaningful
 structure, not costume spectacle.

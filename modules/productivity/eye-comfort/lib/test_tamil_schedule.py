@@ -74,18 +74,18 @@ def test_nazhigai_steps():
     assert nazhigai_of_day(0, 0) == 0
     assert nazhigai_of_day(0, 24) == 1
     assert nazhigai_of_day(23, 59) == 59
-    # UI ordinals are 1-based; index 1 ≈ 24 min → Running Nazhigai 2
+    # UI ordinals are 1-based; index 1 ≈ 24 min → Running Nāḻikai 2
     assert nazhigai_ordinal(0) == 1
     assert nazhigai_ordinal(1) == 2
     assert nazhigai_ordinal(9) == 10
-    assert "Running Nazhigai 1 (first 24 minutes" in nazhigai_running_copy(0)
+    assert "Running Nāḻikai 1 (first 24 minutes" in nazhigai_running_copy(0)
     assert (
         nazhigai_running_copy(1)
-        == "Running Nazhigai 2 (after 24 minutes, first nazhigai over)"
+        == "Running Nāḻikai 2 (after 24 minutes, first nāḻikai over)"
     )
     assert (
         nazhigai_running_copy(2)
-        == "Running Nazhigai 3 (after 48 minutes, first 2 nazhigai over)"
+        == "Running Nāḻikai 3 (after 48 minutes, first 2 nāḻikai over)"
     )
 
 
@@ -112,10 +112,10 @@ def test_jaamam_splits():
 
     d = jaamam_detail_for("vidiyal", 0)
     assert d.current == 1
-    assert d.label == "jaamam 1 (full) + jaamam 2 (2.5 nazhigai)"
+    assert d.label == "jaamam 1 (full) + jaamam 2 (2.5 nāḻikai)"
     d2 = jaamam_detail_for("nanpagal", 5)
     assert d2.current == 4
-    assert "jaamam 3 (2.5 nazhigai) + jaamam 4 (full)" == d2.label
+    assert "jaamam 3 (2.5 nāḻikai) + jaamam 4 (full)" == d2.label
 
 
 def test_infer_tinai_geo():
@@ -147,22 +147,22 @@ def test_resolve_flags():
     assert 0 <= s.nazhigai <= 9
     assert "neythal-erpaadu" in s.wallpaper_hint
     assert s.jaamam.current == 5
-    assert "jaamam 5 (full) + jaamam 6 (2.5 nazhigai)" in s.scene
+    assert "jaamam 5 (full) + jaamam 6 (2.5 nāḻikai)" in s.scene
 
     s2 = resolve_tamil(hour=23, minute=0, latitude=11.0, longitude=76.5)
     assert s2.siru == "yaamam"
     assert s2.tinai == "kurinji"
     assert s2.theme == TINAI_THEME["kurinji"]
-    assert "jaamam 7 (2.5 nazhigai) + jaamam 8 (full)" in s2.scene
+    assert "jaamam 7 (2.5 nāḻikai) + jaamam 8 (full)" in s2.scene
 
     s3 = resolve_tamil(siru="maalai", nazhigai=3, tinai="mullai")
     assert s3.siru == "maalai" and s3.nazhigai == 3
-    assert "Running Nazhigai 4 (after 72 minutes, first 3 nazhigai over)" in s3.scene
-    assert "jaamam 6 (5 nazhigai) + jaamam 7 (5 nazhigai)" in s3.scene
+    assert "Running Nāḻikai 4 (after 72 minutes, first 3 nāḻikai over)" in s3.scene
+    assert "jaamam 6 (5 nāḻikai) + jaamam 7 (5 nāḻikai)" in s3.scene
 
     s5 = resolve_tamil(siru="nanpagal", nazhigai=5, tinai="marutham")
-    assert "Running Nazhigai 6 (after 120 minutes, first 5 nazhigai over)" in s5.scene
-    assert "jaamam 3 (2.5 nazhigai) + jaamam 4 (full)" in s5.scene
+    assert "Running Nāḻikai 6 (after 120 minutes, first 5 nāḻikai over)" in s5.scene
+    assert "jaamam 3 (2.5 nāḻikai) + jaamam 4 (full)" in s5.scene
 
 
 def test_waybar_payload():
@@ -171,11 +171,11 @@ def test_waybar_payload():
         now=datetime(2026, 7, 14, 15, 0),
     )
     # erpaadu 14:00 → 15:00 = 60 min → index 2 → ordinal 3
-    assert p["text"] == "neythal · erpaadu · N3"
+    assert p["text"] == "Neythal · Erpaadu · N3"
     tip = p["tooltip"]
     assert "jaamam 5 (full)" in tip
-    assert "Running Nazhigai <b>3</b>" in tip
-    assert "first 2 nazhigai over" in tip
+    assert "Running Nāḻikai <b>3</b>" in tip
+    assert "first 2 nāḻikai over" in tip
     assert "week 29" in tip  # ISO week; date line separate from tinai
     assert "2026neythal" not in tip.replace(" ", "")
     assert "14 July" in tip
@@ -185,10 +185,13 @@ def test_waybar_payload():
     assert date_ln.lstrip().startswith("<span")
     assert "<b>" in tip  # Pango hierarchy
     assert "Seashore" in tip
+    assert "Seashore  —  Neythal" in tip
+    assert "(apply)" not in tip
+    assert "water lily" not in tip  # no flower echo on Tinai line
     assert "Tinai" in tip and "Pozhuthu" in tip
-    assert "Jaamam" in tip and "Nazhigai" in tip
+    assert "Jaamam" in tip and "Nāḻikai" in tip
     assert "Perum" in tip and "Siru" in tip  # grouped under Pozhuthu
-    assert tip.index("Pozhuthu") < tip.index("Jaamam") < tip.index("Nazhigai")
+    assert tip.index("Pozhuthu") < tip.index("Jaamam") < tip.index("Nāḻikai")
     # JSON-serializable for waybar
     json.dumps(p)
     p2 = waybar_payload(
@@ -198,15 +201,17 @@ def test_waybar_payload():
     assert " · " in p2["text"]
     assert p2["alt"] in ("tn", "error")
 
-    # Screenshot case: index 1 → bar N2, first nazhigai over
+    # Screenshot case: index 1 → bar N2, first nāḻikai over
     p3 = tn_waybar_payload(
         state={"tinai": "marutham", "calendar": "tamil_nadu"},
         now=datetime(2026, 7, 14, 22, 24),
     )
-    assert p3["text"].endswith(" · N2")
-    assert "Running Nazhigai <b>2</b>" in p3["tooltip"]
-    assert "first nazhigai over" in p3["tooltip"]
-    assert "Nazhigai <b>1</b>" not in p3["tooltip"]
+    assert p3["text"] == "Marutham · Yaamam · N2"
+    assert "Running Nāḻikai <b>2</b>" in p3["tooltip"]
+    assert "first nāḻikai over" in p3["tooltip"]
+    assert "Nāḻikai <b>1</b>" not in p3["tooltip"]
+    assert "Plains  —  Marutham" in p3["tooltip"]
+    assert "marutham · Marutham" not in p3["tooltip"]
 
 
 def test_parse_aliases():

@@ -87,9 +87,13 @@ Kār →Oct · Kulir →Dec · Munpani →Feb · Pinpani →Apr.
 
 **Jaamam / saamam (design grid):** 8 × 3 h watches from the vidiyal epoch (02:00),
 not live astronomy. Each Siru (4 h ≈ 10 Nazhigai) overlaps the 3 h grid as
-**7.5+2.5**, **5+5**, or **2.5+7.5** Nazhigai (1 Nazhigai ≈ 24 min). Scene lines
-use the term **jaamam** (synonym of saamam; distinct from Siru *yaamam*). Example:
-`vidiyal · jaamam 1 (full) + jaamam 2 (2.5 nazhigai) · nazhigai …`.
+**7.5+2.5**, **5+5**, or **2.5+7.5** Nāḻikai (1 Nāḻikai ≈ 24 min; ISO 15919 display —
+API field remains `nazhigai`). Scene lines use the term **jaamam** (synonym of
+saamam; distinct from Siru *Yaamam*). Example:
+`Vidiyal · jaamam 1 (full) + jaamam 2 (2.5 nāḻikai) · Running Nāḻikai …`.
+
+Bar / tooltip Title Case tinai and siru (`Marutham · Yaamam · N3`). Tinai line is
+landscape gloss + tinai once (`Plains — Marutham`), not a flower/id echo.
 
 **Tinai geo (v1 heuristic):**
 

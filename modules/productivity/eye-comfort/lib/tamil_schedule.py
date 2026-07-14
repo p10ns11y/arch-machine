@@ -52,6 +52,9 @@ SIRU: Sequence[Siru] = (
 # 1 Nazhigai ≈ 24 minutes; 60 Nazhigais per civil day; 10 per Siru (~4 h)
 NAZHIGAI_MINUTES = 24
 NAZHIGAIS_PER_SIRU = 10
+# ISO 15919 display for நாழிகை (API/field ids stay nazhigai).
+NAZHIGAI_DISPLAY = "nāḻikai"
+NAZHIGAI_DISPLAY_TITLE = "Nāḻikai"
 
 # Jaamam / saamam (design grid, not live astronomy): 8 × 3 h from vidiyal epoch.
 # Each Siru (4 h) covers one full jaamam + a partial of the next (or 5+5 mid-splits).
@@ -60,6 +63,12 @@ JAAMAM_HOURS = 3
 JAAMAMS_PER_DAY = 8
 JAAMAM_EPOCH_HOUR = 2  # aligns with vidiyal start
 NAZHIGAIS_PER_JAAMAM = JAAMAM_HOURS * 60 / NAZHIGAI_MINUTES  # 7.5
+
+
+def title_roman(name: str) -> str:
+    """Title Case tinai/siru roman ids for bar, tooltip, and scene lines."""
+    return name[:1].upper() + name[1:] if name else name
+
 
 # Package identity = landscape (tinai). Siru live-renders luminance inside it.
 TINAI_THEME: Dict[Tinai, str] = {
@@ -346,10 +355,10 @@ def nazhigai_of_day(hour: int, minute: int = 0) -> int:
 
 
 def nazhigai_ordinal(index: int) -> int:
-    """1-based Nazhigai ordinal for UI (storage index 0 → 1 … index 9 → 10).
+    """1-based Nāḻikai ordinal for UI (storage index 0 → 1 … index 9 → 10).
 
     API/storage stays 0-based; humans read ordinals. Index 1 at ≈24 min elapsed
-    means *Running Nazhigai 2*, not “first nazhigai”.
+    means *Running Nāḻikai 2*, not “first nāḻikai”.
     """
     if not isinstance(index, int) or not (0 <= index <= 9):
         raise ValueError(f"nazhigai must be int 0–9, got {index!r}")
@@ -357,22 +366,24 @@ def nazhigai_ordinal(index: int) -> int:
 
 
 def nazhigai_running_copy(index: int) -> str:
-    """Plain-language Running Nazhigai N (…) for tooltips and scene lines."""
+    """Plain-language Running Nāḻikai N (…) for tooltips and scene lines."""
     ordinal = nazhigai_ordinal(index)
     into_min = index * NAZHIGAI_MINUTES
+    unit = NAZHIGAI_DISPLAY
+    title = NAZHIGAI_DISPLAY_TITLE
     if ordinal == 1:
         return (
-            f"Running Nazhigai 1 "
+            f"Running {title} 1 "
             f"(first {NAZHIGAI_MINUTES} minutes of this Siru)"
         )
     if ordinal == 2:
         return (
-            f"Running Nazhigai 2 "
-            f"(after {into_min} minutes, first nazhigai over)"
+            f"Running {title} 2 "
+            f"(after {into_min} minutes, first {unit} over)"
         )
     return (
-        f"Running Nazhigai {ordinal} "
-        f"(after {into_min} minutes, first {ordinal - 1} nazhigai over)"
+        f"Running {title} {ordinal} "
+        f"(after {into_min} minutes, first {ordinal - 1} {unit} over)"
     )
 
 
@@ -428,9 +439,10 @@ def _minutes_at_siru_nazhigai(siru: Siru, nazhigai: int) -> int:
 def _fmt_jaamam_nazhigai(amount: float, *, full: bool) -> str:
     if full:
         return "full"
+    unit = NAZHIGAI_DISPLAY
     if abs(amount - round(amount)) < 1e-9:
-        return f"{int(round(amount))} nazhigai"
-    return f"{amount:g} nazhigai"
+        return f"{int(round(amount))} {unit}"
+    return f"{amount:g} {unit}"
 
 
 def jaamam_split_for_siru(siru: Siru) -> tuple[JaamamPart, ...]:
@@ -581,8 +593,8 @@ def scene_line(
     nazh = nazhigai_running_copy(nazhigai)
     jam = jaamam or jaamam_detail_for(siru, nazhigai)
     return (
-        f"{meta['landscape']} · {meta['flower']} · "
-        f"{siru} · {jam.label} · {nazh} · {perum.replace('_', ' ')}"
+        f"{meta['landscape'].title()} · {title_roman(tinai)} · "
+        f"{title_roman(siru)} · {jam.label} · {nazh} · {perum.replace('_', ' ')}"
     )
 
 

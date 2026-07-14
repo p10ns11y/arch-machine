@@ -15,6 +15,8 @@ from typing import Any, Dict, List, Optional
 
 from tamil_schedule import (
     JAAMAMS_PER_DAY,
+    NAZHIGAI_DISPLAY,
+    NAZHIGAI_DISPLAY_TITLE,
     NAZHIGAI_MINUTES,
     NAZHIGAIS_PER_SIRU,
     PERUM_LABEL,
@@ -22,6 +24,7 @@ from tamil_schedule import (
     TINAI_META,
     nazhigai_ordinal,
     resolve_tamil,
+    title_roman,
 )
 
 # Soft amber / muted ink from DESIGN.md dark tokens (readable on warm dark tooltips)
@@ -29,12 +32,6 @@ _PANGO_ACCENT = "#C9A66B"
 _PANGO_MUTED = "#8A8278"
 _PANGO_SOFT = "#A89F94"
 _STRIP_PANGO = re.compile(r"</?[^>]+>")
-
-_TINAI_SOURCE_LABEL = {
-    "flag": "apply",
-    "geo": "geo",
-    "default": "default",
-}
 
 
 def default_state_path() -> Path:
@@ -122,10 +119,6 @@ def _date_line(now: datetime) -> str:
     week = now.isocalendar()[1]
     return f"{now.day} {now.strftime('%B')}  ·  week {week}  ·  {now.year}"
 
-def _title_tinai(name: str) -> str:
-    """DESIGN-TN romanization: Tinai (not Thinai); Title Case display."""
-    return name[:1].upper() + name[1:] if name else name
-
 
 def _jaamam_part_sense(part: Any) -> str:
     if part.full:
@@ -136,7 +129,7 @@ def _jaamam_part_sense(part: Any) -> str:
         if abs(part.nazhigai - round(part.nazhigai)) < 1e-9
         else f"{part.nazhigai:g}"
     )
-    return f"{amount} nazhigai · ≈{mins} min in this Siru"
+    return f"{amount} {NAZHIGAI_DISPLAY} · ≈{mins} min in this Siru"
 
 
 def _jaamam_heart_lines(tn: Any) -> List[str]:
@@ -159,21 +152,22 @@ def _jaamam_heart_lines(tn: Any) -> List[str]:
 
 
 def _nazhigai_heart_lines(tn: Any) -> List[str]:
-    """Nazhigai as elapsed pulse inside the current Siru (1-based ordinal copy)."""
+    """Nāḻikai as elapsed pulse inside the current Siru (1-based ordinal copy)."""
     index = tn.nazhigai  # 0-based storage
     ordinal = nazhigai_ordinal(index)
     into_min = index * NAZHIGAI_MINUTES
-    siru_title = _pango_esc(_title_tinai(tn.siru))
+    siru_title = _pango_esc(title_roman(tn.siru))
+    unit = NAZHIGAI_DISPLAY
     if ordinal == 1:
         detail = f"first {NAZHIGAI_MINUTES} minutes of this Siru"
     elif ordinal == 2:
-        detail = f"after {into_min} minutes, first nazhigai over"
+        detail = f"after {into_min} minutes, first {unit} over"
     else:
-        detail = f"after {into_min} minutes, first {ordinal - 1} nazhigai over"
+        detail = f"after {into_min} minutes, first {ordinal - 1} {unit} over"
     return [
-        _accent_b("Nazhigai"),
+        _accent_b(NAZHIGAI_DISPLAY_TITLE),
         (
-            f"  Running Nazhigai <b>{ordinal}</b>"
+            f"  Running {NAZHIGAI_DISPLAY_TITLE} <b>{ordinal}</b>"
             f"  ·  {ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"
         ),
         _soft(f"  {_pango_esc(detail)}"),
@@ -181,15 +175,11 @@ def _nazhigai_heart_lines(tn: Any) -> List[str]:
 
 
 def tn_tooltip_markup(tn: Any, now: datetime) -> str:
-    """Pango tooltip: date → Tinai → Pozhuthu → Jaamam/Nazhigai heart → Theme."""
+    """Pango tooltip: date → Tinai → Pozhuthu → Jaamam/Nāḻikai heart → Theme."""
     meta = TINAI_META[tn.tinai]
     date = _pango_esc(_date_line(now))
     landscape = _pango_esc(meta["landscape"].title())
-    flower = _pango_esc(meta["flower"])
-    tinai_name = _pango_esc(_title_tinai(tn.tinai))
-    tinai_src = _pango_esc(
-        _TINAI_SOURCE_LABEL.get(tn.tinai_source, tn.tinai_source)
-    )
+    tinai_name = _pango_esc(title_roman(tn.tinai))
     perum_label = _pango_esc(PERUM_LABEL[tn.perum])
     siru_label = _pango_esc(SIRU_LABEL[tn.siru])
     theme = _pango_esc(tn.theme)
@@ -199,7 +189,8 @@ def tn_tooltip_markup(tn: Any, now: datetime) -> str:
         _accent_b(date),
         "",
         "<b>Tinai</b>",
-        f"  {landscape}  —  {flower}  ·  {tinai_name} ({tinai_src})",
+        # Landscape gloss + tinai once (no flower echo, no tinai_source leak).
+        f"  {landscape}  —  {tinai_name}",
         "",
         "<b>Pozhuthu</b>",
         f"  {_muted('Perum')}  {perum_label}",
@@ -241,8 +232,11 @@ def tn_waybar_payload(
             pass
 
     tn = resolve_tamil(**kwargs)
-    # Compact bar: N{ordinal} (1-based). Storage tn.nazhigai stays 0-based.
-    text = f"{tn.tinai} · {tn.siru} · N{nazhigai_ordinal(tn.nazhigai)}"
+    # Compact bar: Title Case tinai/siru · N{ordinal} (1-based). Storage stays 0-based.
+    text = (
+        f"{title_roman(tn.tinai)} · {title_roman(tn.siru)} · "
+        f"N{nazhigai_ordinal(tn.nazhigai)}"
+    )
     tooltip = tn_tooltip_markup(tn, now)
     return {
         "text": text,
