@@ -94,9 +94,11 @@ Kār →Oct · Kulir →Dec · Munpani →Feb · Pinpani →Apr.
 | dry interior + Mudhu Venil | palai |
 | else / missing coords | marutham |
 
-**Timers:** hourly circadian unchanged. Optional `--with-tn-timer` installs
-`eye-comfort-tn.timer` (`OnCalendar=*:0/24`) calling `eye-comfort-theme tn`.
-Switcher keeps OMARCHY_PATH + waybar restore (same harden as PR live-reload).
+**Timers:** optional `--with-tn-timer` installs `eye-comfort-tn.timer`
+(`OnCalendar=*:0/24`) calling `eye-comfort-theme tn`. Mutually exclusive with
+the hourly circadian timer — `install.sh` disables the other on enable so they
+cannot race `omarchy-theme-set`’s `current/theme` swap. Switcher keeps
+OMARCHY_PATH + waybar restore (same harden as PR live-reload).
 
 **Edge cases:** invalid tinai/siru/nazhigai → exit 2; missing theme dir → exit 1;
 missing wallpaper hint → warn skip (no crash); extreme ambient softens via base

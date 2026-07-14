@@ -16,6 +16,8 @@ cd modules/productivity/eye-comfort
 ./install.sh --with-tn-timer     # optional ~24 min Nazhigai refresh (waybar-safe)
 ```
 
+Run as your user (**not sudo**) so `~/.config` / `~/.local` stay user-owned. Install is idempotent (rsync/cp); `--with-timer` and `--with-tn-timer` are mutually exclusive (enabling one disables the other).
+
 All `--set` modes route through `eye-comfort-theme` (not a bare `omarchy-theme-set`), so applied packages get live role render and `~/.config/eye-comfort/state.json`.
 
 Requires: `omarchy-theme-set` on PATH for apply; Python 3 for schedule + OKLCH helpers.

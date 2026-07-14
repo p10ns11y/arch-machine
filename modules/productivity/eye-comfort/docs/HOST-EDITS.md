@@ -4,6 +4,8 @@ What eye-comfort (install + switcher + live-reload fix) writes on the machine, a
 
 Omarchy rule of thumb: **never edit `~/.local/share/omarchy/`** (upstream git tree). User-safe surfaces are `~/.config/omarchy/`, `~/.config/nvim/`, and eye-comfort’s own paths under `~/.local/{bin,lib}` / `~/.config/eye-comfort/`.
 
+**Install as your user, not with sudo.** Paths under `~/.config` / `~/.local` must stay user-owned. A prior elevated install or apply can leave root-owned theme/background/lock files; the switcher then warns (e.g. wallpaper symlink) — fix with `chown -R "$USER:"` on the affected paths, then re-run `./install.sh` (idempotent rsync/cp) and `eye-comfort-theme …`.
+
 ## Directly edited or installed (this fix / install)
 
 | Path | How | Why |
