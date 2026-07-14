@@ -179,6 +179,10 @@ def test_waybar_payload():
     assert "week 29" in tip  # ISO week; date line separate from tinai
     assert "2026neythal" not in tip.replace(" ", "")
     assert "14 July" in tip
+    # Date line optically centered vs longest body line (leading spaces before Pango)
+    date_ln = next(ln for ln in tip.splitlines() if "14 July" in ln)
+    assert date_ln.startswith(" ")
+    assert date_ln.lstrip().startswith("<span")
     assert "<b>" in tip  # Pango hierarchy
     assert "Seashore" in tip
     assert "Tinai" in tip and "Pozhuthu" in tip

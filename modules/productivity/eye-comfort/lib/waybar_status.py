@@ -78,6 +78,33 @@ def _plain_from_pango(markup: str) -> str:
     )
 
 
+def _visible_width(markup: str) -> int:
+    """Plain-text length of one Pango line (for optical layout)."""
+    return len(_plain_from_pango(markup))
+
+
+def _center_first_content_line(lines: List[str]) -> List[str]:
+    """Pad the first non-empty line so it sits under the widest body line.
+
+    Waybar GTK tooltips are one Label (no per-line CSS). Do not use
+    text-align / line-height in tooltip CSS — GTK rejects some props and
+    aborts Waybar. Leading spaces only center the date; body stays left.
+    """
+    widths = [_visible_width(ln) for ln in lines if ln.strip()]
+    if not widths:
+        return lines
+    target = max(widths)
+    out = list(lines)
+    for i, ln in enumerate(out):
+        if not ln.strip():
+            continue
+        pad = max(0, (target - _visible_width(ln)) // 2)
+        if pad:
+            out[i] = (" " * pad) + ln
+        break
+    return out
+
+
 def _muted(text: str) -> str:
     return f'<span foreground="{_PANGO_MUTED}">{text}</span>'
 
@@ -94,7 +121,6 @@ def _date_line(now: datetime) -> str:
     """Civil date + ISO week — never glued to tinai/siru."""
     week = now.isocalendar()[1]
     return f"{now.day} {now.strftime('%B')}  ·  week {week}  ·  {now.year}"
-
 
 def _title_tinai(name: str) -> str:
     """DESIGN-TN romanization: Tinai (not Thinai); Title Case display."""
@@ -191,7 +217,7 @@ def tn_tooltip_markup(tn: Any, now: datetime) -> str:
             "",
         ]
     )
-    return "\n".join(lines)
+    return "\n".join(_center_first_content_line(lines))
 
 
 def tn_waybar_payload(
@@ -261,7 +287,7 @@ def circadian_waybar_payload(
     )
     return {
         "text": text,
-        "tooltip": "\n".join(lines),
+        "tooltip": "\n".join(_center_first_content_line(lines)),
         "class": f"eye-comfort eye-comfort-{phase}",
         "alt": "circadian",
     }
@@ -290,9 +316,10 @@ def waybar_payload(
 def status_text(*, state_path: Optional[Path] = None, now: Optional[datetime] = None) -> str:
     """Human one-liner + scene for `eye-comfort-theme status` (plain text)."""
     payload = waybar_payload(state_path=state_path, now=now)
-    return f"{payload['text']}\n{_plain_from_pango(payload['tooltip'])}"
+    # lstrip drops optical date pad + leading blank lines from the tooltip.
+    return f"{payload['text']}\n{_plain_from_pango(payload['tooltip']).lstrip()}"
 
 
 def notify_body(*, state_path: Optional[Path] = None, now: Optional[datetime] = None) -> str:
     """Body for notify-send (plain; click action / second widget surface)."""
-    return _plain_from_pango(waybar_payload(state_path=state_path, now=now)["tooltip"])
+    return _plain_from_pango(waybar_payload(state_path=state_path, now=now)["tooltip"]).lstrip()
