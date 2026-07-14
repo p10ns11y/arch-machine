@@ -35,6 +35,6 @@ tooltip {
 }
 
 tooltip label {
+  /* no line-height — GTK CSS (Waybar) rejects it and aborts */
   padding: 4px 6px;
-  line-height: 1.35;
 }
