@@ -285,6 +285,89 @@ def _uwsm_pipes_ok() -> bool:
     ).is_fifo()
 
 
+def _waybar_running() -> bool:
+    return (
+        subprocess.call(
+            ["pgrep", "-x", "waybar"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        == 0
+    )
+
+
+def _import_session_env(env: dict) -> dict:
+    """Pull Hyprland/Wayland vars from systemd --user when missing (timers / non-login shells)."""
+    need = (
+        "HYPRLAND_INSTANCE_SIGNATURE",
+        "WAYLAND_DISPLAY",
+        "DISPLAY",
+        "DBUS_SESSION_BUS_ADDRESS",
+        "XDG_RUNTIME_DIR",
+    )
+    if all(env.get(k) for k in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY")):
+        return env
+    try:
+        out = subprocess.check_output(
+            ["systemctl", "--user", "show-environment"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+            env=env,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return env
+    for line in out.splitlines():
+        if "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        if key in need and val and not env.get(key):
+            env[key] = val.strip().strip('"')
+    return env
+
+
+def _ensure_waybar(env: dict) -> None:
+    """Always make sure waybar is alive after omarchy-theme-set (it pkill's the bar)."""
+    env = _import_session_env(env)
+    if _waybar_running():
+        return
+
+    time.sleep(0.2)
+    restart_wb = shutil.which("omarchy-restart-waybar", path=env["PATH"])
+    if restart_wb:
+        subprocess.call([restart_wb], env=env)
+
+    for _ in range(8):
+        if _waybar_running():
+            print("waybar: restored after theme-set")
+            return
+        time.sleep(0.25)
+
+    # Direct last resorts (do not depend on which() finding our wrapper).
+    hyprctl = shutil.which("hyprctl", path=env["PATH"]) or shutil.which("hyprctl")
+    if hyprctl and env.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        subprocess.call([hyprctl, "dispatch", "exec", "waybar"], env=env)
+        time.sleep(0.5)
+    if not _waybar_running() and env.get("WAYLAND_DISPLAY"):
+        waybar_bin = shutil.which("waybar", path=env["PATH"]) or shutil.which("waybar")
+        if waybar_bin:
+            subprocess.Popen(
+                [waybar_bin],
+                env=env,
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.5)
+
+    if _waybar_running():
+        print("waybar: restored after theme-set")
+    else:
+        print(
+            "warn: waybar not running after theme-set. "
+            "Restore with: omarchy restart waybar",
+            file=sys.stderr,
+        )
+
+
 def _apply_theme_locked(
     theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_render: bool
 ) -> None:
@@ -311,6 +394,7 @@ def _apply_theme_locked(
     omarchy_home = Path(os.environ.get("OMARCHY_PATH") or (Path.home() / ".local/share/omarchy"))
     env = os.environ.copy()
     env["OMARCHY_PATH"] = str(omarchy_home)
+    env = _import_session_env(env)
     omarchy_bin_dir = omarchy_home / "bin"
     # Wrappers first: bypass wedged uwsm-app (App failure notifications) without
     # editing ~/.local/share/omarchy.
@@ -376,38 +460,8 @@ def _apply_theme_locked(
             if hook:
                 subprocess.call([hook, "theme-set", theme], env=env)
 
-    def _waybar_running() -> bool:
-        return (
-            subprocess.call(
-                ["pgrep", "-x", "waybar"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            == 0
-        )
-
-    # When UWSM is wedged, stock restart may leave a stale waybar or none —
-    # always ensure a live bar via our wrapper / hyprctl.
-    if not _waybar_running() or not _uwsm_pipes_ok():
-        time.sleep(0.2)
-        restart_wb = shutil.which("omarchy-restart-waybar", path=env["PATH"])
-        if restart_wb:
-            subprocess.call([restart_wb], env=env)
-            time.sleep(0.45)
-        if not _waybar_running():
-            hyprctl = shutil.which("hyprctl", path=env["PATH"]) or shutil.which("hyprctl")
-            if hyprctl:
-                subprocess.call([hyprctl, "dispatch", "exec", "waybar"], env=env)
-                time.sleep(0.45)
-        if _waybar_running():
-            if not _uwsm_pipes_ok():
-                print("waybar: restored via hyprctl (UWSM bypass)")
-            else:
-                print("waybar: restored after theme-set")
-        else:
-            print(
-                "warn: waybar not running after theme-set. "
-                "Restore with: omarchy restart waybar",
-                file=sys.stderr,
-            )
+    # Stock omarchy-theme-set always pkill's waybar; never assume it came back.
+    _ensure_waybar(env)
 
     hypr_conf = cur_theme / "hyprland.conf"
     if not hypr_conf.is_file():
