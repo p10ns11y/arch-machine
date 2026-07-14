@@ -15,6 +15,8 @@ With `--lat`, boundaries track approximate sunrise/sunset. Override: `eye-comfor
 
 **Tokens:** OKLCH CSS mirrors in `tokens/phases.css`; live resolve via `eye-comfort-theme --css`.
 
+**Tamil Nadu overlay:** five tinai packages (`eye-comfort-tn-*`) reuse this OKLCH family with landscape hue leans + Siru luminance + Nazhigai micro-tint. Details: [DESIGN-TN.md](./DESIGN-TN.md). Tests: `lib/test_tamil_schedule.py`.
+
 ---
 
 ## Packages ↔ phases
@@ -96,10 +98,13 @@ Residual-gold transitional dark — lighter L than night umber (~0.275), warmer 
 | Selection | `selection_background` / `selection_foreground` |
 | Comment | `color8` |
 | Accent sage | `accent`, `color2` |
-| Accent amber | `cursor` (dark packages), `color3` |
+| Accent amber | `cursor` (all packages — attention focal), `color3` |
+| Success-adjacent | `accent_sage`, `color2`, `color10` |
 | Accent clay | `color5` |
 | Error | `color1` |
 | Warning | `color11` |
+| Warm slate (not cyber blue) | `color4`, `color12` |
+| Soft teal | `color6`, `color14` |
 
 ---
 

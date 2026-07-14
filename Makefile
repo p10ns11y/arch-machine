@@ -15,6 +15,7 @@ evidence-smoke:
 # SN-EC-2 / Fusion Surplus — eye-comfort pure Python gates (hard fail)
 eye-comfort-test:
 	@cd modules/productivity/eye-comfort && PYTHONPATH=lib python3 lib/test_schedule.py
+	@cd modules/productivity/eye-comfort && PYTHONPATH=lib python3 lib/test_tamil_schedule.py
 
 eye-comfort-generate-check:
 	@cd modules/productivity/eye-comfort && PYTHONPATH=lib python3 lib/generate_packages.py --check

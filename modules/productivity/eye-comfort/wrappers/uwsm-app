@@ -1,0 +1,48 @@
+#!/bin/bash
+# Eye-comfort PATH override for uwsm-app.
+# Never call the real client for app launches: even when FIFOs exist, a wedged
+# daemon times out (~10s) and notify-send "App failure". Prefer hyprctl, then
+# setsid. ping/stop still use real client. Never edits ~/.local/share/omarchy.
+set -u
+
+REAL="${EC_UWSM_APP_REAL:-/usr/bin/uwsm-app}"
+
+case "${1:-}" in
+  ping | stop)
+    if [[ -x "$REAL" ]]; then
+      exec "$REAL" "$@"
+    fi
+    exit 1
+    ;;
+esac
+
+# Optional: force stock client (debug only).
+if [[ "${EC_UWSM_FORCE_REAL:-0}" == "1" && -x "$REAL" ]]; then
+  exec "$REAL" "$@"
+fi
+
+args=()
+seen_sep=0
+for a in "$@"; do
+  if ((seen_sep)); then
+    args+=("$a")
+  elif [[ "$a" == "--" ]]; then
+    seen_sep=1
+  fi
+done
+if ((${#args[@]} == 0)); then
+  args=("$@")
+fi
+((${#args[@]} > 0)) || exit 1
+
+# Build a single exec string for hyprctl (needs one shell-ish command).
+cmd=$(printf '%q ' "${args[@]}")
+cmd=${cmd%% }
+
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1; then
+  hyprctl dispatch exec "$cmd" >/dev/null 2>&1 && exit 0
+fi
+
+# Fallback: launch directly in a new session (needs Wayland env for most apps).
+setsid "${args[@]}" >/dev/null 2>&1 &
+exit 0

@@ -10,7 +10,7 @@ Single operator on a Linux laptop (Omarchy/Hyprland): long coding and reading se
 
 ## Product Purpose
 
-**Eye-comfort** is a circadian, vision-science theme system for the whole desktop: dawn / day / dusk / night Omarchy packages applied on a seven-phase schedule, with matching wallpapers, terminal, nvim, and Yazi. Success = less eye strain, warm low-blue nights, soft day cream without pure white glare, transitional dawn/dusk that feel like real light, and one SoT palette (`PALETTE.md` + OKLCH phases) that never fights itself across hosts.
+**Eye-comfort** is a circadian, vision-science theme system for the whole desktop: dawn / day / dusk / night Omarchy packages applied on a seven-phase schedule, with matching wallpapers, terminal, and nvim; Yazi gets install-time dark/light flavors (reopen after light↔dark). Success = less eye strain, warm low-blue nights, soft day cream without pure white glare, transitional dawn/dusk that feel like real light, and one SoT palette (`PALETTE.md` + OKLCH phases) that never fights itself across hosts.
 
 ## Brand Personality
 

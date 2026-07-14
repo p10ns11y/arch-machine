@@ -50,4 +50,5 @@ __pycache__/
 .ruff_cache/
 shellcheck.log
 yamllint.log
+nvim.log
 

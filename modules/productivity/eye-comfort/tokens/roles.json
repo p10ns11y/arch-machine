@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "semantic": {
+    "background": "surface paper / umber",
+    "foreground": "body ink",
+    "selection": "elevated surface",
+    "comment": "secondary ink",
+    "accent_sage": "structure / success-adjacent",
+    "accent_amber": "attention / cursor",
+    "accent_clay": "tertiary harmony",
+    "error": "critical",
+    "warning": "caution",
+    "color10": "success lift (ANSI)"
+  },
+  "locks": {
+    "midday": {
+      "background": "#F5F0E8",
+      "foreground": "#2A2622",
+      "selection": "#E0D9CE",
+      "comment": "#6E665C",
+      "accent_sage": "#4A6B5C",
+      "accent_amber": "#8A6030",
+      "accent_clay": "#8B6B4E",
+      "error": "#B54A40",
+      "warning": "#8B6020"
+    },
+    "night": {
+      "background": "#181614",
+      "foreground": "#E6DFD3",
+      "selection": "#2F2924",
+      "comment": "#8A8278",
+      "accent_sage": "#7D9A8C",
+      "accent_amber": "#C9A66B",
+      "accent_clay": "#A88B6E",
+      "error": "#C47064",
+      "warning": "#D4A05A"
+    }
+  },
+  "scenes": {
+    "dawn": "peach linen \u00b7 first light",
+    "morning": "soft cream \u00b7 clear desk",
+    "midday": "day paper \u00b7 long focus",
+    "afternoon": "warm paper \u00b7 amber lean",
+    "dusk": "residual gold \u00b7 lamp just on",
+    "evening": "journals & tea \u00b7 evening lamp",
+    "night": "lantern umber \u00b7 deep night"
+  },
+  "wallpapers": {
+    "dawn": "1-parchment-dunes.jpg",
+    "morning": "1-parchment-dunes.jpg",
+    "midday": "2-cream-botanical.jpg",
+    "afternoon": "2-cream-botanical.jpg",
+    "dusk": "2-sage-amber-ribbons.jpg",
+    "evening": "1-journals-tea.jpg",
+    "night": "0-signature-lantern.jpg"
+  },
+  "typography": {
+    "terminal": {
+      "fontFamily": "JetBrainsMono Nerd Font",
+      "fontSize": 10,
+      "ligatures": true,
+      "adjustCellHeight": 3
+    },
+    "system": {
+      "fontFamily": "CaskaydiaMono Nerd Font"
+    }
+  }
+}

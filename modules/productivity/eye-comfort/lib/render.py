@@ -8,10 +8,14 @@ from palette import is_dark_phase, Phase
 
 
 def ansi_from_roles(roles: Dict[str, str]) -> Dict[str, str]:
-    """Map roles → colors.toml / ghostty ANSI slots."""
+    """Map roles → colors.toml / ghostty ANSI slots.
+
+    Cursor is always accent amber (product *bolder* / *colorize*): one sharp
+    attention point on both light and dark paper — not ink-colored on day mode.
+    """
     return {
         "accent": roles["accent_sage"],
-        "cursor": roles["accent_amber"] if is_dark_phase_roles(roles) else roles["foreground"],
+        "cursor": roles["accent_amber"],
         "foreground": roles["foreground"],
         "background": roles["background"],
         "selection_foreground": roles["foreground"],
@@ -26,7 +30,7 @@ def ansi_from_roles(roles: Dict[str, str]) -> Dict[str, str]:
         "color7": roles["color7"],
         "color8": roles["comment"],
         "color9": roles["color9"],
-        "color10": roles["color10"],
+        "color10": roles["color10"],  # success-adjacent sage lift
         "color11": roles["warning"],
         "color12": roles["color12"],
         "color13": roles["color13"],
@@ -75,41 +79,32 @@ def render_ghostty(roles: Dict[str, str]) -> str:
 
 
 def render_neovim(roles: Dict[str, str], *, dark: bool) -> str:
+    """Render LazyVim theme plugin spec.
+
+    gruvbox.nvim with contrast=\"soft\" reads dark0_soft / light0_soft for Normal
+    bg — overriding only dark0/light0 leaves stock soft greys and looks like a
+    half-applied theme after light↔dark switches.
+    """
     bg = roles["background"]
     surface = roles["selection"]
     fg = roles["foreground"]
     if dark:
-        return f"""return {{
-  {{ "ellisonleao/gruvbox.nvim" }},
-  {{
-    "ellisonleao/gruvbox.nvim",
-    opts = {{
-      contrast = "soft",
-      palette_overrides = {{
-        dark0 = "{bg}",
+        overrides = f"""        dark0 = "{bg}",
+        dark0_soft = "{bg}",
         dark1 = "{surface}",
-        light1 = "{fg}",
-      }},
-    }},
-  }},
-  {{
-    "LazyVim/LazyVim",
-    opts = {{
-      colorscheme = "gruvbox",
-    }},
-  }},
-}}
-"""
+        light1 = "{fg}","""
+    else:
+        overrides = f"""        light0 = "{bg}",
+        light0_soft = "{bg}",
+        light1 = "{surface}",
+        dark1 = "{fg}","""
     return f"""return {{
-  {{ "ellisonleao/gruvbox.nvim" }},
   {{
     "ellisonleao/gruvbox.nvim",
     opts = {{
       contrast = "soft",
       palette_overrides = {{
-        light0 = "{bg}",
-        light1 = "{surface}",
-        dark1 = "{fg}",
+{overrides}
       }},
     }},
   }},
@@ -133,7 +128,7 @@ def write_theme_package(
 ) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     dark = is_dark_phase(phase)
-    note = f"circadian {phase} (OKLCH SoT → hex)"
+    note = f"{phase} (OKLCH SoT → hex)"
     (dest / "colors.toml").write_text(
         render_colors_toml(roles, name=name, note=note), encoding="utf-8"
     )

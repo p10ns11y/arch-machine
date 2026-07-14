@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Install eye-comfort Omarchy themes + circadian switcher onto this machine.
-# Usage: ./install.sh [--set dark|light|dawn|dusk|auto] [--with-timer] [--dry-run]
+# Install eye-comfort Omarchy themes + circadian/Tamil switcher onto this machine.
+# Usage: ./install.sh [--set dark|light|dawn|dusk|auto|tn] [--with-timer] [--with-tn-timer] [--dry-run]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,6 +18,7 @@ SYSTEMD_USER="$HOME/.config/systemd/user"
 
 SET_MODE=""
 WITH_TIMER=0
+WITH_TN_TIMER=0
 DRY=0
 
 while [[ $# -gt 0 ]]; do
@@ -34,11 +35,15 @@ while [[ $# -gt 0 ]]; do
       WITH_TIMER=1
       shift
       ;;
+    --with-tn-timer)
+      WITH_TN_TIMER=1
+      shift
+      ;;
     --dry-run)
       DRY=1
       shift
       ;;
-    dark|light|dawn|dusk|auto)
+    dark|light|dawn|dusk|auto|tn)
       SET_MODE="$1"
       shift
       ;;
@@ -82,7 +87,7 @@ link_backgrounds() {
 echo "eye-comfort install → $OMARCHY_THEMES"
 run mkdir -p "$OMARCHY_THEMES" "$LOCAL_BIN" "$LOCAL_LIB"
 
-for f in PALETTE.md PRODUCT.md DESIGN.md; do
+for f in PALETTE.md PRODUCT.md DESIGN.md DESIGN-TN.md PRODUCT-TN.md; do
   if [[ -f "$DOCS_SRC/$f" ]]; then
     run cp -a "$DOCS_SRC/$f" "$OMARCHY_THEMES/$f"
   fi
@@ -97,7 +102,9 @@ if [[ -d "$TOKENS_SRC" ]]; then
   fi
 fi
 
-for t in eye-comfort-dark eye-comfort-light eye-comfort-dawn eye-comfort-dusk; do
+for t in eye-comfort-dark eye-comfort-light eye-comfort-dawn eye-comfort-dusk \
+         eye-comfort-tn-kurinji eye-comfort-tn-mullai eye-comfort-tn-marutham \
+         eye-comfort-tn-neythal eye-comfort-tn-palai; do
   if [[ -d "$THEMES_SRC/$t" ]]; then
     run mkdir -p "$OMARCHY_THEMES/$t"
     if (( DRY )); then
@@ -118,19 +125,85 @@ if [[ -d "$OMARCHY_THEMES/eye-comfort-light" ]]; then
     rsync -a "$THEMES_SRC/eye-comfort-dark/backgrounds/" "$OMARCHY_THEMES/eye-comfort-dark/backgrounds/"
   fi
 fi
+# TN wallpaper READMEs (and any future JPGs)
+for t in eye-comfort-tn-kurinji eye-comfort-tn-mullai eye-comfort-tn-marutham \
+         eye-comfort-tn-neythal eye-comfort-tn-palai; do
+  if [[ -d "$THEMES_SRC/$t/backgrounds" ]]; then
+    if (( DRY )); then
+      echo "DRY: rsync $t backgrounds"
+    else
+      mkdir -p "$OMARCHY_THEMES/$t/backgrounds"
+      rsync -a "$THEMES_SRC/$t/backgrounds/" "$OMARCHY_THEMES/$t/backgrounds/"
+    fi
+  fi
+done
 link_backgrounds "$OMARCHY_THEMES/eye-comfort-dawn" "$OMARCHY_THEMES/eye-comfort-light"
 link_backgrounds "$OMARCHY_THEMES/eye-comfort-dusk" "$OMARCHY_THEMES/eye-comfort-dark"
 
 run cp -a "$BIN_SRC" "$LOCAL_BIN/eye-comfort-theme"
 run chmod +x "$LOCAL_BIN/eye-comfort-theme"
+# Typeset fragment (optional merge into Ghostty user config)
+GHOSTTY_FRAG="$SCRIPT_DIR/snippets/ghostty.fragment.conf"
+if [[ -f "$GHOSTTY_FRAG" ]]; then
+  run mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/eye-comfort"
+  run cp -a "$GHOSTTY_FRAG" "${XDG_CONFIG_HOME:-$HOME/.config}/eye-comfort/ghostty.fragment.conf"
+  echo "  ghostty fragment: ~/.config/eye-comfort/ghostty.fragment.conf"
+fi
 if (( DRY )); then
   echo "DRY: rsync lib"
 else
   rsync -a "$LIB_SRC/" "$LOCAL_LIB/"
   chmod +x "$LOCAL_LIB/test_schedule.py" 2>/dev/null || true
+  chmod +x "$LOCAL_LIB/test_tamil_schedule.py" 2>/dev/null || true
+fi
+WRAP_SRC="$SCRIPT_DIR/wrappers"
+if [[ -d "$WRAP_SRC" ]]; then
+  if (( DRY )); then
+    echo "DRY: install uwsm/waybar wrappers → $LOCAL_LIB/wrappers"
+  else
+    mkdir -p "$LOCAL_LIB/wrappers"
+    rsync -a "$WRAP_SRC/" "$LOCAL_LIB/wrappers/"
+    chmod +x "$LOCAL_LIB/wrappers"/uwsm-app "$LOCAL_LIB/wrappers"/omarchy-restart-waybar
+  fi
+  echo "  wrappers: $LOCAL_LIB/wrappers (UWSM bypass for theme-set restart)"
+fi
+WAYBAR_SRC="$SCRIPT_DIR/waybar"
+if [[ -d "$WAYBAR_SRC" ]]; then
+  if (( DRY )); then
+    echo "DRY: install waybar TN status → $LOCAL_LIB/waybar"
+  else
+    mkdir -p "$LOCAL_LIB/waybar"
+    rsync -a "$WAYBAR_SRC/" "$LOCAL_LIB/waybar/"
+    chmod +x "$LOCAL_LIB/waybar/tn-status.sh" 2>/dev/null || true
+  fi
+  echo "  waybar: $LOCAL_LIB/waybar/tn-status.sh (see waybar/module.jsonc — enable in ~/.config/waybar)"
+  echo "  waybar CSS: $LOCAL_LIB/waybar/eye-comfort.css — @import into ~/.config/waybar/style.css"
 fi
 echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
 echo "  lib: $LOCAL_LIB"
+
+# Neovim hotreload (fix stock omarchy forcing background=dark on LazyReload)
+NVIM_HOTRELOAD_SRC="$SCRIPT_DIR/nvim/omarchy-theme-hotreload.lua"
+NVIM_PLUGINS="${XDG_CONFIG_HOME:-$HOME/.config}/nvim/lua/plugins"
+if [[ -f "$NVIM_HOTRELOAD_SRC" ]]; then
+  run mkdir -p "$NVIM_PLUGINS"
+  run cp -a "$NVIM_HOTRELOAD_SRC" "$NVIM_PLUGINS/omarchy-theme-hotreload.lua"
+  echo "  nvim: $NVIM_PLUGINS/omarchy-theme-hotreload.lua"
+fi
+
+# Omarchy theme-set.d hooks → reload open nvim/tmux (Yazi uses static dual-flavor theme.toml)
+HOOK_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
+hook_src="$SCRIPT_DIR/hooks/theme-set.d/90-reload-nvim-tmux.sh"
+if [[ -f "$hook_src" ]]; then
+  run mkdir -p "$HOOK_DIR"
+  run cp -a "$hook_src" "$HOOK_DIR/90-reload-nvim-tmux.sh"
+  if (( ! DRY )); then
+    chmod +x "$HOOK_DIR/90-reload-nvim-tmux.sh"
+    # Drop pre-TN yazi rematch hook if still on host
+    rm -f "$HOOK_DIR/91-reload-yazi.sh"
+  fi
+  echo "  hook: $HOOK_DIR/90-reload-nvim-tmux.sh"
+fi
 
 # Yazi flavors (optional)
 YAZI_SRC="$SCRIPT_DIR/yazi"
@@ -155,14 +228,30 @@ fi
 if [[ -f "$LOCAL_LIB/test_schedule.py" ]] && (( ! DRY )); then
   PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_schedule.py"
 fi
+if [[ -f "$LOCAL_LIB/test_tamil_schedule.py" ]] && (( ! DRY )); then
+  PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_tamil_schedule.py"
+fi
 
 if (( WITH_TIMER )); then
   run mkdir -p "$SYSTEMD_USER"
   run cp -a "$SYSTEMD_SRC/eye-comfort-theme.service" "$SYSTEMD_SRC/eye-comfort-theme.timer" "$SYSTEMD_USER/"
   if (( ! DRY )); then
     systemctl --user daemon-reload
+    # Mutually exclusive with TN timer: concurrent omarchy-theme-set races wipe current/theme.
+    systemctl --user disable --now eye-comfort-tn.timer 2>/dev/null || true
     systemctl --user enable --now eye-comfort-theme.timer
-    echo "  timer enabled"
+    echo "  circadian timer enabled (TN timer disabled — they race on current/theme)"
+  fi
+fi
+
+if (( WITH_TN_TIMER )); then
+  run mkdir -p "$SYSTEMD_USER"
+  run cp -a "$SYSTEMD_SRC/eye-comfort-tn.service" "$SYSTEMD_SRC/eye-comfort-tn.timer" "$SYSTEMD_USER/"
+  if (( ! DRY )); then
+    systemctl --user daemon-reload
+    systemctl --user disable --now eye-comfort-theme.timer 2>/dev/null || true
+    systemctl --user enable --now eye-comfort-tn.timer
+    echo "  tn timer enabled (Nazhigai ≈24 min; circadian hourly disabled — mutual exclusion)"
   fi
 fi
 
@@ -172,18 +261,19 @@ if [[ -n "$SET_MODE" ]]; then
   elif (( DRY )); then
     echo "DRY: would set mode $SET_MODE"
   else
-    # All --set modes go through the switcher (live render + state.json),
-    # not a bare omarchy-theme-set (SN-EC-3).
     case "$SET_MODE" in
-      dark|light|dawn|dusk|auto)
+      dark|light|dawn|dusk|auto|tn)
         "$LOCAL_BIN/eye-comfort-theme" "$SET_MODE"
         ;;
-      *) echo "unknown --set $SET_MODE (use dark|light|dawn|dusk|auto)" >&2; exit 1 ;;
+      *) echo "unknown --set $SET_MODE (use dark|light|dawn|dusk|auto|tn)" >&2; exit 1 ;;
     esac
   fi
 fi
 
 echo "done."
-echo "  Apply: omarchy-theme-set eye-comfort-{dawn,light,dusk,dark}"
+echo "  Prefer: eye-comfort-theme [auto|dawn|light|dusk|dark|tn]  (live render + state.json)"
 echo "  Circadian: eye-comfort-theme [--help]"
+echo "  Tamil calendrical: eye-comfort-theme tn [--tinai …] [--help]"
+echo "  Bare Omarchy (no live render): omarchy-theme-set eye-comfort-{dawn,light,dusk,dark}"
+echo "  Bare Omarchy TN: omarchy-theme-set eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}"
 echo "  Cycle wallpaper: omarchy theme bg next"

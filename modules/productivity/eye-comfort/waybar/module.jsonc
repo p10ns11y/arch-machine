@@ -1,0 +1,14 @@
+// Paste into ~/.config/waybar/config.jsonc (Omarchy user config — not ~/.local/share/omarchy).
+// 1) Add "custom/eye-comfort" to modules-center (or modules-right), ideally after "clock".
+// 2) Merge the block below.
+// 3) Import waybar/eye-comfort.css into ~/.config/waybar/style.css (chip gap + tooltip padding).
+// Bar: tinai · siru · nN   Tooltip: date + scene + fields (Pango)   Click: notify
+
+"custom/eye-comfort": {
+  "exec": "$HOME/.local/lib/eye-comfort/waybar/tn-status.sh",
+  "return-type": "json",
+  "interval": 60,
+  "tooltip": true,
+  "on-click": "$HOME/.local/lib/eye-comfort/waybar/tn-status.sh notify",
+  "on-click-right": "omarchy-launch-floating-terminal-with-presentation eye-comfort-theme status"
+}

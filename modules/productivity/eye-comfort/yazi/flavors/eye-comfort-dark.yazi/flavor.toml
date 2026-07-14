@@ -7,13 +7,13 @@
 cwd = { fg = "#7D9A8C" }
 
 # Find
-find_keyword  = { fg = "#C9A66B", bold = true, italic = true, underline = true }
-find_position = { fg = "#A88B6E", bg = "reset", bold = true, italic = true }
+find_keyword  = { fg = "#C9A66B", bold = true }
+find_position = { fg = "#A88B6E", bg = "reset", bold = true }
 
 # Marker
 marker_copied   = { fg = "#7D9A8C", bg = "#7D9A8C" }
 marker_cut      = { fg = "#C47064", bg = "#C47064" }
-marker_marked   = { fg = "#7A8F98", bg = "#7A8F98" }
+marker_marked   = { fg = "#708C8F", bg = "#708C8F" }
 marker_selected = { fg = "#C9A66B", bg = "#C9A66B" }
 
 # Count
@@ -44,8 +44,8 @@ inactive = { fg = "#7D9A8C", bg = "#2F2924" }
 normal_main = { fg = "#181614", bg = "#7D9A8C", bold = true }
 normal_alt  = { fg = "#7D9A8C", bg = "#2F2924" }
 
-select_main = { fg = "#181614", bg = "#7A8F98", bold = true }
-select_alt  = { fg = "#7A8F98", bg = "#2F2924" }
+select_main = { fg = "#181614", bg = "#708C8F", bold = true }
+select_alt  = { fg = "#708C8F", bg = "#2F2924" }
 
 unset_main = { fg = "#181614", bg = "#A88B6E", bold = true }
 unset_alt  = { fg = "#A88B6E", bg = "#2F2924" }
@@ -57,7 +57,7 @@ unset_alt  = { fg = "#A88B6E", bg = "#2F2924" }
 
 [status]
 perm_sep   = { fg = "#8A8278" }
-perm_type  = { fg = "#7A8F98" }
+perm_type  = { fg = "#708C8F" }
 perm_read  = { fg = "#C9A66B" }
 perm_write = { fg = "#C47064" }
 perm_exec  = { fg = "#7D9A8C" }
@@ -137,7 +137,7 @@ footer  = { fg = "#2F2924", bg = "#E6DFD3" }
 [spot]
 border   = { fg = "#7D9A8C" }
 title    = { fg = "#7D9A8C" }
-tbl_col  = { fg = "#7A8F98" }
+tbl_col  = { fg = "#708C8F" }
 tbl_cell = { fg = "#A88B6E", bg = "#2F2924" }
 
 # : }}}
@@ -158,7 +158,7 @@ title_error = { fg = "#C47064" }
 [filetype]
 
 rules = [
-{ mime = "image/*", fg = "#7A8F98" },
+{ mime = "image/*", fg = "#708C8F" },
 { mime = "{audio,video}/*", fg = "#C9A66B" },
 { mime = "application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,cpio,arj,xar,ms-cab*}", fg = "#A88B6E" },
 { mime = "application/{pdf,doc,rtf}", fg = "#7D9A8C" },

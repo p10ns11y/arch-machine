@@ -1,5 +1,5 @@
 /* Eye-comfort circadian tokens — OKLCH SoT mirrors (balanced indoor). */
-/* Generate: PYTHONPATH=lib python3 -c "from palette import ..." */
+/* Generate: PYTHONPATH=lib python3 lib/generate_packages.py */
 
 [data-ec-phase="dawn"] {
   /* eye-comfort phase: dawn */
@@ -21,8 +21,8 @@
   --ec-error-hex: #A34A40;
   --ec-warning: oklch(0.541 0.110 70.3);
   --ec-warning-hex: #976213;
-  --ec-color4: oklch(0.481 0.036 229.0);
-  --ec-color4-hex: #49626E;
+  --ec-color4: oklch(0.479 0.028 206.1);
+  --ec-color4-hex: #4B6265;
   --ec-color6: oklch(0.501 0.050 175.4);
   --ec-color6-hex: #446D62;
   --ec-color7: oklch(0.451 0.012 58.0);
@@ -31,8 +31,8 @@
   --ec-color9-hex: #B2544A;
   --ec-color10: oklch(0.541 0.051 155.2);
   --ec-color10-hex: #577862;
-  --ec-color12: oklch(0.521 0.040 229.2);
-  --ec-color12-hex: #516E7C;
+  --ec-color12: oklch(0.521 0.033 204.4);
+  --ec-color12-hex: #536F72;
   --ec-color13: oklch(0.580 0.061 54.5);
   --ec-color13-hex: #977158;
   --ec-color14: oklch(0.560 0.054 176.0);
@@ -61,8 +61,8 @@
   --ec-error-hex: #A1453C;
   --ec-warning: oklch(0.501 0.110 67.5);
   --ec-warning-hex: #8C5500;
-  --ec-color4: oklch(0.461 0.039 228.4);
-  --ec-color4-hex: #415D6A;
+  --ec-color4: oklch(0.459 0.032 207.9);
+  --ec-color4-hex: #435D61;
   --ec-color6: oklch(0.500 0.056 174.3);
   --ec-color6-hex: #3F6E61;
   --ec-color7: oklch(0.479 0.011 62.4);
@@ -71,8 +71,8 @@
   --ec-color9-hex: #B45248;
   --ec-color10: oklch(0.541 0.051 155.2);
   --ec-color10-hex: #577862;
-  --ec-color12: oklch(0.521 0.040 229.2);
-  --ec-color12-hex: #516E7C;
+  --ec-color12: oklch(0.521 0.033 204.4);
+  --ec-color12-hex: #536F72;
   --ec-color13: oklch(0.580 0.060 59.9);
   --ec-color13-hex: #957256;
   --ec-color14: oklch(0.549 0.060 174.5);
@@ -101,8 +101,8 @@
   --ec-error-hex: #B54A40;
   --ec-warning: oklch(0.523 0.096 73.0);
   --ec-warning-hex: #8B6020;
-  --ec-color4: oklch(0.451 0.040 228.5);
-  --ec-color4-hex: #3E5A67;
+  --ec-color4: oklch(0.451 0.033 204.7);
+  --ec-color4-hex: #405B5E;
   --ec-color6: oklch(0.494 0.055 175.4);
   --ec-color6-hex: #3E6C60;
   --ec-color7: oklch(0.471 0.012 67.5);
@@ -111,8 +111,8 @@
   --ec-color9-hex: #B25046;
   --ec-color10: oklch(0.535 0.049 155.6);
   --ec-color10-hex: #567661;
-  --ec-color12: oklch(0.510 0.040 229.3);
-  --ec-color12-hex: #4E6B79;
+  --ec-color12: oklch(0.511 0.032 204.7);
+  --ec-color12-hex: #516C6F;
   --ec-color13: oklch(0.576 0.060 59.9);
   --ec-color13-hex: #947155;
   --ec-color14: oklch(0.545 0.060 174.8);
@@ -141,8 +141,8 @@
   --ec-error-hex: #A1453C;
   --ec-warning: oklch(0.506 0.113 65.3);
   --ec-warning-hex: #905500;
-  --ec-color4: oklch(0.454 0.039 226.5);
-  --ec-color4-hex: #3F5B67;
+  --ec-color4: oklch(0.455 0.030 199.2);
+  --ec-color4-hex: #435C5D;
   --ec-color6: oklch(0.500 0.052 172.5);
   --ec-color6-hex: #436D60;
   --ec-color7: oklch(0.476 0.014 67.5);
@@ -151,8 +151,8 @@
   --ec-color9-hex: #B45248;
   --ec-color10: oklch(0.541 0.051 155.2);
   --ec-color10-hex: #577862;
-  --ec-color12: oklch(0.514 0.038 226.2);
-  --ec-color12-hex: #506C78;
+  --ec-color12: oklch(0.515 0.029 199.3);
+  --ec-color12-hex: #546D6E;
   --ec-color13: oklch(0.584 0.065 57.7);
   --ec-color13-hex: #997255;
   --ec-color14: oklch(0.551 0.058 172.3);
@@ -181,8 +181,8 @@
   --ec-error-hex: #D17469;
   --ec-warning: oklch(0.760 0.112 72.0);
   --ec-warning-hex: #DDA55C;
-  --ec-color4: oklch(0.641 0.035 229.6);
-  --ec-color4-hex: #77919E;
+  --ec-color4: oklch(0.639 0.028 205.7);
+  --ec-color4-hex: #799194;
   --ec-color6: oklch(0.700 0.046 172.0);
   --ec-color6-hex: #82A89B;
   --ec-color7: oklch(0.905 0.022 76.5);
@@ -191,14 +191,14 @@
   --ec-color9-hex: #E07F73;
   --ec-color10: oklch(0.720 0.048 155.8);
   --ec-color10-hex: #8DAE98;
-  --ec-color12: oklch(0.680 0.038 231.4);
-  --ec-color12-hex: #819DAC;
+  --ec-color12: oklch(0.680 0.030 204.7);
+  --ec-color12-hex: #839EA1;
   --ec-color13: oklch(0.720 0.065 58.6);
   --ec-color13-hex: #C49B7C;
   --ec-color14: oklch(0.729 0.050 172.4);
   --ec-color14-hex: #88B2A4;
-  --ec-color15: oklch(0.940 0.019 80.1);
-  --ec-color15-hex: #F2EADD;
+  --ec-color15: oklch(0.915 0.018 81.3);
+  --ec-color15-hex: #E9E2D6;
 }
 
 [data-ec-phase="evening"] {
@@ -221,8 +221,8 @@
   --ec-error-hex: #C67165;
   --ec-warning: oklch(0.740 0.107 73.0);
   --ec-warning-hex: #D4A05A;
-  --ec-color4: oklch(0.630 0.032 230.6);
-  --ec-color4-hex: #768D99;
+  --ec-color4: oklch(0.630 0.032 204.4);
+  --ec-color4-hex: #738F92;
   --ec-color6: oklch(0.690 0.041 171.5);
   --ec-color6-hex: #82A498;
   --ec-color7: oklch(0.909 0.018 81.3);
@@ -231,14 +231,14 @@
   --ec-color9-hex: #D67B6F;
   --ec-color10: oklch(0.700 0.045 154.6);
   --ec-color10-hex: #89A792;
-  --ec-color12: oklch(0.671 0.035 229.6);
-  --ec-color12-hex: #809AA7;
+  --ec-color12: oklch(0.671 0.028 202.4);
+  --ec-color12-hex: #829B9D;
   --ec-color13: oklch(0.709 0.060 64.9);
   --ec-color13-hex: #BC9A7A;
   --ec-color14: oklch(0.720 0.049 171.9);
   --ec-color14-hex: #86AFA1;
-  --ec-color15: oklch(0.945 0.018 81.3);
-  --ec-color15-hex: #F3ECE0;
+  --ec-color15: oklch(0.921 0.016 82.8);
+  --ec-color15-hex: #EAE4D9;
 }
 
 [data-ec-phase="night"] {
@@ -261,8 +261,8 @@
   --ec-error-hex: #C47064;
   --ec-warning: oklch(0.740 0.107 73.0);
   --ec-warning-hex: #D4A05A;
-  --ec-color4: oklch(0.620 0.032 230.7);
-  --ec-color4-hex: #738A96;
+  --ec-color4: oklch(0.620 0.032 204.4);
+  --ec-color4-hex: #708C8F;
   --ec-color6: oklch(0.680 0.041 171.5);
   --ec-color6-hex: #7FA195;
   --ec-color7: oklch(0.909 0.018 81.3);
@@ -271,12 +271,13 @@
   --ec-color9-hex: #D67B6F;
   --ec-color10: oklch(0.700 0.045 154.6);
   --ec-color10-hex: #89A792;
-  --ec-color12: oklch(0.661 0.035 229.6);
-  --ec-color12-hex: #7D97A4;
+  --ec-color12: oklch(0.661 0.028 202.4);
+  --ec-color12-hex: #7F989A;
   --ec-color13: oklch(0.700 0.060 64.9);
   --ec-color13-hex: #B99777;
   --ec-color14: oklch(0.710 0.049 171.9);
   --ec-color14-hex: #83AC9E;
-  --ec-color15: oklch(0.945 0.018 81.3);
-  --ec-color15-hex: #F3ECE0;
+  --ec-color15: oklch(0.921 0.016 82.8);
+  --ec-color15-hex: #EAE4D9;
 }
+

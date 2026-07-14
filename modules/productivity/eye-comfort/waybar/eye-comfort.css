@@ -1,0 +1,40 @@
+/* Eye-comfort TN Waybar chip + tooltip breathing room.
+ * Install copies this next to tn-status.sh. Host apply: either
+ *   @import url("file:///home/USER/.local/lib/eye-comfort/waybar/eye-comfort.css");
+ * into ~/.config/waybar/style.css, or paste the rules below.
+ * Never edit ~/.local/share/omarchy/.
+ */
+
+#custom-eye-comfort {
+  /* Keep clock alt-year ("… 2026") from gluing onto tinai ("marutham") */
+  margin-left: 12px;
+  margin-right: 8px;
+  padding: 0 6px;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+
+#custom-eye-comfort.eye-comfort-maalai,
+#custom-eye-comfort.eye-comfort-yaamam,
+#custom-eye-comfort.eye-comfort-vidiyal {
+  /* Soft amber lean at dusk/night/dawn — calm, not neon */
+  color: #c9a66b;
+}
+
+#custom-eye-comfort.eye-comfort-kaalai,
+#custom-eye-comfort.eye-comfort-nanpagal,
+#custom-eye-comfort.eye-comfort-erpaadu {
+  color: #a88b6e;
+}
+
+/* Global tooltip was padding: 2px — text hugged the left edge.
+ * TN tooltip is multi-section (Tinai / Pozhuthu / Jaamam+Nazhigai heart). */
+tooltip {
+  padding: 14px 18px;
+  border-radius: 6px;
+}
+
+tooltip label {
+  /* no line-height — GTK CSS (Waybar) rejects it and aborts */
+  padding: 4px 6px;
+}

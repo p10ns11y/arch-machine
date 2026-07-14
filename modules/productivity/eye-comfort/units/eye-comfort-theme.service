@@ -1,7 +1,14 @@
 [Unit]
 Description=Apply eye-comfort Omarchy theme for current local hour
 After=graphical-session.target
+Wants=graphical-session.target
 
 [Service]
 Type=oneshot
+# Templates (hyprland.conf etc.) require OMARCHY_PATH; timer runs without login env.
+Environment=OMARCHY_PATH=%h/.local/share/omarchy
+Environment=PATH=%h/.local/lib/eye-comfort/wrappers:%h/.local/share/omarchy/bin:%h/.local/bin:/usr/local/bin:/usr/bin
+# Import compositor session vars so omarchy-theme-set can restart waybar via uwsm/hyprctl
+ExecStartPre=-/bin/sh -c 'systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE DISPLAY DBUS_SESSION_BUS_ADDRESS 2>/dev/null || true'
+# Harden: surface failures in journalctl instead of silent skip
 ExecStart=%h/.local/bin/eye-comfort-theme auto

@@ -1,3 +1,5 @@
+# Static dual-flavor map (installed by eye-comfort install.sh).
+# Yazi picks dark/light from terminal luminance; no apply-time sync or quit.
 [flavor]
 dark = "eye-comfort-dark"
 light = "eye-comfort-light"

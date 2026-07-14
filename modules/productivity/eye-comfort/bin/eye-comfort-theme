@@ -1,50 +1,71 @@
 #!/usr/bin/env bash
-# Circadian / manual switcher for eye-comfort Omarchy themes.
+# Circadian / Tamil Nadu switcher for eye-comfort Omarchy themes.
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Circadian / manual switcher for eye-comfort Omarchy themes.
+Circadian / Tamil Nadu switcher for eye-comfort Omarchy themes.
 
 Usage:
   eye-comfort-theme [MODE] [flags]
+  eye-comfort-theme tn [flags]
+  eye-comfort-theme status|waybar
 
-MODE (positional, default auto):
+MODE (positional, default auto) — circadian:
   auto                              Resolve phase from clock (+ optional --lat)
   dawn|morning|midday|afternoon|dusk|evening|night
   day|light                         Alias → midday
   dark                              Alias → night
+  status                            Human scene (reads state + live clock)
+  waybar                            Waybar JSON {text,tooltip,class} (no apply)
 
-Flags:
-  --phase NAME                      Same as MODE (overrides positional)
+Tamil Nadu (cultural overlay; eye comfort still primary):
+  tn                                Resolve Perum × Siru × Tinai × Nazhigai × Jaamam
+  --tinai NAME                      kurinji|mullai|marutham|neythal|palai
+  --lon DEG | --longitude DEG       With --lat: infer tinai (TN coastal/hills/plains)
+  --perum NAME                      Force season (ila_venil|mudhu_venil|kar|kulir|munpani|pinpani)
+  --siru NAME                       Force daily division (vidiyal|kaalai|nanpagal|erpaadu|maalai|yaamam)
+  --nazhigai N                      Force micro-tint step 0–9 within Siru (~24 min each)
+
+Flags (shared):
+  --phase NAME                      Circadian only (overrides positional MODE)
   --hour N                          Local hour 0–23 (also: HOUR=N)
   --minute N                        Local minute 0–59
-  --lat DEG | --latitude DEG        Approximate solar phases (-90..90)
+  --lat DEG | --latitude DEG        Circadian solar / TN tinai geo (-90..90)
   --indoor | --outdoor              Ambient lighting context
   --ambient auto|indoor|outdoor     Ambient (default: auto)
   --intensity soft|balanced|crisp   Comfort intensity (default: balanced)
   --comfort soft|balanced|crisp     Alias for --intensity
   --high-contrast                   Push ink contrast (outdoor glare / a11y)
   --reduced-motion                  Record motion preference in state file
-  --no-dynamic                      Collapse to light/dark packages only
+  --no-dynamic                      Circadian: collapse to light/dark only
   --dry-run                         Print plan; do not apply
   --preview | --print-only          Print theme name only
-  --json                            Machine-readable CircadianState (no apply)
+  --json                            Machine-readable state (no apply)
   --css                             Emit OKLCH CSS custom properties to stdout
   --no-render                       Skip writing resolved roles into theme dir
   --state-dir DIR                   State file dir (default ~/.config/eye-comfort)
   -h | --help                       Show this help
 
-Schedule (fixed windows when --lat unset):
+Circadian schedule (fixed windows when --lat unset):
   dawn 05–07 · morning 07–10 · midday 10–14 · afternoon 14–17
   dusk 17–19 · evening 19–22 · night 22–05
 
-With --lat, sunrise/sunset shift those boundaries (e.g. summer 18:00 can stay afternoon).
+Tamil Siru (≈4 h) / Nazhigai (≈24 min) / Jaamam (≈3 h, 8/day from vidiyal):
+  vidiyal 02–06 · kaalai 06–10 · nanpagal 10–14 · erpaadu 14–18
+  maalai 18–22 · yaamam 22–02
+  Packages: eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}
+  Timer: install.sh --with-tn-timer → every 24 min (reuses waybar restore)
+  Waybar: see waybar/module.jsonc (custom/eye-comfort + tooltip / notify)
 
 Examples:
   eye-comfort-theme
   eye-comfort-theme --phase dusk --indoor --intensity soft
-  eye-comfort-theme auto --lat 28.6 --outdoor --json
+  eye-comfort-theme tn --tinai neythal
+  eye-comfort-theme tn --lat 13.08 --lon 80.27 --json
+  eye-comfort-theme tn --siru yaamam --nazhigai 3 --dry-run
+  eye-comfort-theme status
+  eye-comfort-theme waybar
   HOUR=22 eye-comfort-theme --dry-run
 EOF
 }
@@ -61,8 +82,15 @@ _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -d "${_SCRIPT_DIR}/../lib" ]]; then
   export PYTHONPATH="${_SCRIPT_DIR}/../lib:${PYTHONPATH}"
 fi
+# PATH wrappers (uwsm-app / waybar) — install target or checkout
+if [[ -d "${HOME}/.local/lib/eye-comfort/wrappers" ]]; then
+  export EC_WRAPPERS_DIR="${HOME}/.local/lib/eye-comfort/wrappers"
+elif [[ -d "${_SCRIPT_DIR}/../wrappers" ]]; then
+  export EC_WRAPPERS_DIR="${_SCRIPT_DIR}/../wrappers"
+fi
 
 MODE="auto"
+TN_MODE=0
 DRY=0
 PRINT_ONLY=0
 JSON=0
@@ -71,6 +99,11 @@ NO_RENDER=0
 HOUR_OVERRIDE=""
 MINUTE_OVERRIDE=""
 LAT=""
+LON=""
+TINAI=""
+PERUM=""
+SIRU=""
+NAZHIGAI=""
 AMBIENT="auto"
 INTENSITY="balanced"
 HIGH_CONTRAST=0
@@ -104,6 +137,22 @@ while [[ $# -gt 0 ]]; do
       PHASE_FLAG="${2:-}"; shift 2 ;;
     --phase=*)
       PHASE_FLAG="${1#--phase=}"; shift ;;
+    --tinai)
+      TINAI="${2:-}"; shift 2 ;;
+    --tinai=*)
+      TINAI="${1#--tinai=}"; shift ;;
+    --perum)
+      PERUM="${2:-}"; shift 2 ;;
+    --perum=*)
+      PERUM="${1#--perum=}"; shift ;;
+    --siru)
+      SIRU="${2:-}"; shift 2 ;;
+    --siru=*)
+      SIRU="${1#--siru=}"; shift ;;
+    --nazhigai)
+      NAZHIGAI="${2:-}"; shift 2 ;;
+    --nazhigai=*)
+      NAZHIGAI="${1#--nazhigai=}"; shift ;;
     --hour)
       HOUR_OVERRIDE="${2:-}"; shift 2 ;;
     --hour=*)
@@ -116,6 +165,10 @@ while [[ $# -gt 0 ]]; do
       LAT="${2:-}"; shift 2 ;;
     --lat=*|--latitude=*)
       LAT="${1#*=}"; shift ;;
+    --lon|--longitude)
+      LON="${2:-}"; shift 2 ;;
+    --lon=*|--longitude=*)
+      LON="${1#*=}"; shift ;;
     --state-dir)
       STATE_DIR="${2:-}"; shift 2 ;;
     --state-dir=*)
@@ -146,12 +199,24 @@ elif ((${#ARGS[@]} > 0)); then
   MODE="${ARGS[0]}"
 fi
 
+if [[ "$MODE" == "tn" || "$MODE" == "tamil" || "$MODE" == "tamil-nadu" ]]; then
+  TN_MODE=1
+  MODE="tn"
+fi
+
+STATUS_MODE=0
+if [[ "$MODE" == "status" || "$MODE" == "waybar" ]]; then
+  STATUS_MODE=1
+fi
+
 # Env HOUR still supported for tests
 if [[ -z "$HOUR_OVERRIDE" && -n "${HOUR:-}" ]]; then
   HOUR_OVERRIDE="$HOUR"
 fi
 
 export EC_MODE="$MODE"
+export EC_STATUS="$STATUS_MODE"
+export EC_TN="$TN_MODE"
 export EC_DRY="$DRY"
 export EC_PRINT_ONLY="$PRINT_ONLY"
 export EC_JSON="$JSON"
@@ -160,6 +225,11 @@ export EC_NO_RENDER="$NO_RENDER"
 export EC_HOUR="${HOUR_OVERRIDE}"
 export EC_MINUTE="${MINUTE_OVERRIDE}"
 export EC_LAT="$LAT"
+export EC_LON="$LON"
+export EC_TINAI="$TINAI"
+export EC_PERUM="$PERUM"
+export EC_SIRU="$SIRU"
+export EC_NAZHIGAI="$NAZHIGAI"
 export EC_AMBIENT="$AMBIENT"
 export EC_INTENSITY="$INTENSITY"
 export EC_HIGH_CONTRAST="$HIGH_CONTRAST"
@@ -170,23 +240,496 @@ export EC_STATE_DIR="$STATE_DIR"
 python3 - <<'PY'
 import json
 import os
+import shutil
+import subprocess
 import sys
+import time
 from pathlib import Path
 
-from schedule import resolve, state_to_dict
 from palette import css_custom_properties
 from render import write_theme_package
+
 
 def env_bool(name: str) -> bool:
     return os.environ.get(name, "0") in ("1", "true", "True", "yes")
 
-mode = os.environ.get("EC_MODE", "auto")
+
+# Readonly status / waybar JSON (no theme apply)
+if env_bool("EC_STATUS"):
+    from waybar_status import status_text, waybar_payload
+
+    mode = os.environ.get("EC_MODE", "status")
+    state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
+    sp = (state_dir / "state.json") if state_dir.as_posix() else None
+    if mode == "waybar":
+        print(json.dumps(waybar_payload(state_path=sp), ensure_ascii=False))
+    else:
+        print(status_text(state_path=sp))
+    sys.exit(0)
+
+
+def apply_theme(theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_render: bool) -> None:
+    import fcntl
+
+    # Serialize applies: hourly + TN timers can both fire on the same second and
+    # race omarchy-theme-set's `rm -rf current/theme; mv next current` → empty
+    # current/theme (broken nvim symlink + Hyprland source=).
+    # Prefer XDG_RUNTIME_DIR so a prior root/sandbox run cannot leave an unwritable
+    # lock under ~/.config/eye-comfort/.
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
+    lock_candidates = [
+        runtime / "eye-comfort-apply.lock",
+        Path(os.environ.get("EC_STATE_DIR") or (Path.home() / ".config" / "eye-comfort"))
+        / "apply.lock",
+    ]
+    lock_f = None
+    lock_path = lock_candidates[0]
+    for cand in lock_candidates:
+        try:
+            cand.parent.mkdir(parents=True, exist_ok=True)
+            lock_f = cand.open("w", encoding="utf-8")
+            lock_path = cand
+            break
+        except OSError:
+            continue
+    if lock_f is None:
+        print(
+            "error: cannot create apply lock "
+            f"(tried {[str(c) for c in lock_candidates]})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    with lock_f:
+        fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
+        _apply_theme_locked(theme, roles, phase, wallpaper_hint, no_render=no_render)
+
+
+def _uwsm_pipes_ok() -> bool:
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
+    return (runtime / "uwsm-app-daemon-in").is_fifo() and (
+        runtime / "uwsm-app-daemon-out"
+    ).is_fifo()
+
+
+def _waybar_running() -> bool:
+    return (
+        subprocess.call(
+            ["pgrep", "-x", "waybar"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        == 0
+    )
+
+
+def _import_session_env(env: dict) -> dict:
+    """Pull Hyprland/Wayland vars from systemd --user when missing (timers / non-login shells)."""
+    need = (
+        "HYPRLAND_INSTANCE_SIGNATURE",
+        "WAYLAND_DISPLAY",
+        "DISPLAY",
+        "DBUS_SESSION_BUS_ADDRESS",
+        "XDG_RUNTIME_DIR",
+    )
+    if all(env.get(k) for k in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY")):
+        return env
+    try:
+        out = subprocess.check_output(
+            ["systemctl", "--user", "show-environment"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+            env=env,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return env
+    for line in out.splitlines():
+        if "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        if key in need and val and not env.get(key):
+            env[key] = val.strip().strip('"')
+    return env
+
+
+def _ensure_waybar(env: dict) -> None:
+    """Always make sure waybar is alive after omarchy-theme-set (it pkill's the bar)."""
+    env = _import_session_env(env)
+    if _waybar_running():
+        return
+
+    time.sleep(0.2)
+    restart_wb = shutil.which("omarchy-restart-waybar", path=env["PATH"])
+    if restart_wb:
+        subprocess.call([restart_wb], env=env)
+
+    for _ in range(8):
+        if _waybar_running():
+            print("waybar: restored after theme-set")
+            return
+        time.sleep(0.25)
+
+    # Direct last resorts (do not depend on which() finding our wrapper).
+    hyprctl = shutil.which("hyprctl", path=env["PATH"]) or shutil.which("hyprctl")
+    if hyprctl and env.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        subprocess.call([hyprctl, "dispatch", "exec", "waybar"], env=env)
+        time.sleep(0.5)
+    if not _waybar_running() and env.get("WAYLAND_DISPLAY"):
+        waybar_bin = shutil.which("waybar", path=env["PATH"]) or shutil.which("waybar")
+        if waybar_bin:
+            subprocess.Popen(
+                [waybar_bin],
+                env=env,
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.5)
+
+    if _waybar_running():
+        print("waybar: restored after theme-set")
+    else:
+        print(
+            "warn: waybar not running after theme-set. "
+            "Restore with: omarchy restart waybar",
+            file=sys.stderr,
+        )
+
+
+def _swaybg_running() -> bool:
+    return (
+        subprocess.call(
+            ["pgrep", "-x", "swaybg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        == 0
+    )
+
+
+def _ensure_swaybg(env: dict, image: Path) -> bool:
+    """Relaunch swaybg without stock uwsm-app (toasts + missed wallpaper)."""
+    import shlex
+
+    env = _import_session_env(env)
+    subprocess.call(
+        ["pkill", "-x", "swaybg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    time.sleep(0.15)
+    img = str(image.resolve() if image.exists() else image)
+    cmd = f"swaybg -i {shlex.quote(img)} -m fill"
+    hyprctl = shutil.which("hyprctl", path=env["PATH"]) or shutil.which("hyprctl")
+    if hyprctl and env.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        subprocess.call([hyprctl, "dispatch", "exec", cmd], env=env)
+    else:
+        swaybg = shutil.which("swaybg", path=env["PATH"]) or shutil.which("swaybg")
+        if swaybg and env.get("WAYLAND_DISPLAY"):
+            subprocess.Popen(
+                [swaybg, "-i", img, "-m", "fill"],
+                env=env,
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+    for _ in range(10):
+        if _swaybg_running():
+            return True
+        time.sleep(0.2)
+    return False
+
+
+def _apply_wallpaper(env: dict, wallpaper: Path, *, display_name: str) -> None:
+    """Symlink current/background and ensure swaybg actually runs."""
+    env = _import_session_env(env)
+    link = Path.home() / ".config" / "omarchy" / "current" / "background"
+    try:
+        resolved = wallpaper.resolve(strict=True)
+    except OSError:
+        print(f"warn: wallpaper missing ({wallpaper}); skip bg set", file=sys.stderr)
+        return
+    try:
+        link.parent.mkdir(parents=True, exist_ok=True)
+        if link.exists() or link.is_symlink():
+            link.unlink()
+        link.symlink_to(resolved)
+    except OSError as e:
+        print(
+            f"warn: cannot update {link} ({e}); "
+            "fix ownership if root-owned from a prior elevated apply",
+            file=sys.stderr,
+        )
+        return
+
+    if _ensure_swaybg(env, resolved):
+        target_name = resolved.name
+        if display_name != target_name:
+            print(f"wallpaper: {display_name} → {target_name}")
+        else:
+            print(f"wallpaper: {display_name}")
+    else:
+        print(
+            f"warn: wallpaper symlink set ({display_name}) but swaybg did not start; "
+            "try: pkill swaybg; hyprctl dispatch exec \"swaybg -i ~/.config/omarchy/current/background -m fill\"",
+            file=sys.stderr,
+        )
+
+
+def _apply_theme_locked(
+    theme: str, roles: dict, phase: str, wallpaper_hint: str, *, no_render: bool
+) -> None:
+    themes_root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "omarchy" / "themes"
+    dest = themes_root / theme
+    if not no_render:
+        if dest.is_dir():
+            icons = dest / "icons.theme"
+            write_theme_package(
+                dest,
+                roles,
+                name=theme,
+                phase=phase,  # type: ignore[arg-type]
+                icons_src=icons if icons.is_file() else None,
+            )
+        else:
+            print(
+                f"error: theme dir missing ({dest}). "
+                f"Run: ./modules/productivity/eye-comfort/install.sh",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    omarchy_home = Path(os.environ.get("OMARCHY_PATH") or (Path.home() / ".local/share/omarchy"))
+    env = os.environ.copy()
+    env["OMARCHY_PATH"] = str(omarchy_home)
+    env = _import_session_env(env)
+    omarchy_bin_dir = omarchy_home / "bin"
+    # Wrappers first: bypass wedged uwsm-app (App failure notifications) without
+    # editing ~/.local/share/omarchy.
+    wrap_dirs: list[Path] = []
+    if os.environ.get("EC_WRAPPERS_DIR"):
+        wrap_dirs.append(Path(os.environ["EC_WRAPPERS_DIR"]))
+    wrap_dirs.append(Path.home() / ".local" / "lib" / "eye-comfort" / "wrappers")
+    wrap_paths = [str(d) for d in wrap_dirs if d.is_dir()]
+    path_parts = [
+        *wrap_paths,
+        str(omarchy_bin_dir),
+        str(Path.home() / ".local/bin"),
+        env.get("PATH", ""),
+    ]
+    env["PATH"] = os.pathsep.join(p for p in path_parts if p)
+    env.setdefault("EC_UWSM_APP_REAL", "/usr/bin/uwsm-app")
+    # Stock theme-set calls omarchy-theme-bg-next → uwsm-app swaybg (toasts / no paint).
+    # We apply the hint wallpaper ourselves after swap.
+    env["OMARCHY_THEME_SKIP_BACKGROUND"] = "1"
+
+    theme_set = shutil.which("omarchy-theme-set", path=env["PATH"])
+    if theme_set is None and (omarchy_bin_dir / "omarchy-theme-set").is_file():
+        theme_set = str(omarchy_bin_dir / "omarchy-theme-set")
+    if theme_set is None:
+        print(
+            "error: omarchy-theme-set not found. "
+            "Install Omarchy or put ~/.local/share/omarchy/bin on PATH.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if not _uwsm_pipes_ok():
+        print(
+            "warn: UWSM app-daemon pipes missing; eye-comfort uwsm-app wrapper "
+            "uses hyprctl/setsid (no App failure toasts)",
+            file=sys.stderr,
+        )
+
+    cur_theme = Path.home() / ".config" / "omarchy" / "current" / "theme"
+
+    try:
+        subprocess.check_call([theme_set, theme], env=env)
+    except subprocess.CalledProcessError as e:
+        print(f"error: omarchy-theme-set failed (exit {e.returncode})", file=sys.stderr)
+        sys.exit(e.returncode or 1)
+
+    required = ("neovim.lua", "hyprland.conf")
+    missing = [name for name in required if not (cur_theme / name).is_file()]
+    if missing:
+        print(
+            f"warn: current/theme incomplete after theme-set (missing {', '.join(missing)}); "
+            "recovering from package (likely concurrent timer race)",
+            file=sys.stderr,
+        )
+        src = themes_root / theme
+        if src.is_dir():
+            if cur_theme.exists():
+                shutil.rmtree(cur_theme)
+            shutil.copytree(src, cur_theme)
+            templates = shutil.which("omarchy-theme-set-templates", path=env["PATH"])
+            if templates:
+                subprocess.call([templates], env=env)
+            name_file = Path.home() / ".config" / "omarchy" / "current" / "theme.name"
+            name_file.write_text(f"{theme}\n", encoding="utf-8")
+            # Push nvim reload even if stock hook never ran.
+            hook = shutil.which("omarchy-hook", path=env["PATH"])
+            if hook:
+                subprocess.call([hook, "theme-set", theme], env=env)
+
+    # Stock omarchy-theme-set always pkill's waybar; never assume it came back.
+    _ensure_waybar(env)
+
+    hypr_conf = cur_theme / "hyprland.conf"
+    if not hypr_conf.is_file():
+        print(
+            f"warn: missing {hypr_conf} after theme-set "
+            f"(OMARCHY_PATH={env['OMARCHY_PATH']}); Hyprland source= will fail. "
+            f"Check Omarchy install under {omarchy_home}.",
+            file=sys.stderr,
+        )
+
+    hint = wallpaper_hint
+    if hint:
+        bg_roots = [
+            Path.home() / ".config" / "omarchy" / "current" / "theme" / "backgrounds",
+            Path.home() / ".config" / "omarchy" / "themes" / theme / "backgrounds",
+        ]
+        # TN: exact → -b→-a → tinai signature; classic phase hints stay single-name
+        try:
+            from tamil_schedule import wallpaper_fallback_names
+
+            name_order = wallpaper_fallback_names(hint)
+        except ImportError:
+            name_order = [hint]
+        wallpaper = None
+        resolved_name = hint
+        for name in name_order:
+            hit = next((root / name for root in bg_roots if (root / name).is_file()), None)
+            if hit is not None:
+                wallpaper = hit
+                resolved_name = name
+                break
+        if wallpaper is None and hint.startswith(
+            ("kurinji-", "mullai-", "marutham-", "neythal-", "palai-")
+        ):
+            # Last resort: any tinai-*-a.jpg already installed
+            tinai_prefix = hint.split("-", 1)[0] + "-"
+            for root in bg_roots:
+                if not root.is_dir():
+                    continue
+                alts = sorted(root.glob(f"{tinai_prefix}*-a.jpg"))
+                if alts:
+                    wallpaper = alts[0]
+                    resolved_name = wallpaper.name
+                    break
+        if wallpaper is not None:
+            label = resolved_name if resolved_name == hint else f"{resolved_name} (fallback from {hint})"
+            _apply_wallpaper(env, wallpaper, display_name=label)
+        else:
+            print(f"warn: wallpaper hint missing ({hint}); skip bg set", file=sys.stderr)
+
+    active = Path.home() / ".config" / "omarchy" / "current" / "theme.name"
+    print(f"active: {active.read_text(encoding='utf-8').strip() if active.is_file() else 'unknown'}")
+
+
+tn_mode = env_bool("EC_TN")
 hour_s = os.environ.get("EC_HOUR", "").strip()
 minute_s = os.environ.get("EC_MINUTE", "").strip()
 lat_s = os.environ.get("EC_LAT", "").strip()
+lon_s = os.environ.get("EC_LON", "").strip()
 ambient = os.environ.get("EC_AMBIENT", "auto")
 intensity = os.environ.get("EC_INTENSITY", "balanced")
+dry = env_bool("EC_DRY")
+no_render = env_bool("EC_NO_RENDER")
 
+if tn_mode:
+    from oklch import contrast_ratio as cr
+    from tamil_palette import roles_for_tamil
+    from tamil_schedule import resolve_tamil, state_to_dict as tn_state_to_dict
+
+    kwargs = {}
+    if hour_s != "":
+        kwargs["hour"] = int(hour_s)
+    if minute_s != "":
+        kwargs["minute"] = int(minute_s)
+    if lat_s != "":
+        kwargs["latitude"] = float(lat_s)
+    if lon_s != "":
+        kwargs["longitude"] = float(lon_s)
+    tinai = os.environ.get("EC_TINAI", "").strip()
+    perum = os.environ.get("EC_PERUM", "").strip()
+    siru = os.environ.get("EC_SIRU", "").strip()
+    naz_s = os.environ.get("EC_NAZHIGAI", "").strip()
+    if tinai:
+        kwargs["tinai"] = tinai
+    if perum:
+        kwargs["perum"] = perum
+    if siru:
+        kwargs["siru"] = siru
+    if naz_s != "":
+        kwargs["nazhigai"] = int(naz_s)
+
+    try:
+        state = resolve_tamil(**kwargs)
+    except (ValueError, RuntimeError) as e:
+        print(f"eye-comfort-theme: error: {e}", file=sys.stderr)
+        sys.exit(2)
+
+    amb = ambient if ambient in ("indoor", "outdoor") else "indoor"
+    roles = roles_for_tamil(
+        state.tinai,
+        state.siru,
+        nazhigai=state.nazhigai,
+        ambient=amb,  # type: ignore[arg-type]
+        intensity=intensity,  # type: ignore[arg-type]
+        high_contrast=env_bool("EC_HIGH_CONTRAST"),
+    )
+    contrast = round(cr(roles["foreground"], roles["background"]), 2)
+
+    if os.environ.get("EC_CSS", "0") == "1":
+        sys.stdout.write(css_custom_properties(roles, state.phase))  # type: ignore[arg-type]
+        sys.exit(0)
+
+    payload = tn_state_to_dict(state)
+    payload["roles"] = roles
+    payload["contrast_fg_bg"] = contrast
+    payload["ambient"] = amb
+    payload["intensity"] = intensity
+    payload["motion"] = "reduce" if env_bool("EC_REDUCED_MOTION") else "ok"
+    payload["calendar"] = "tamil_nadu"
+
+    if os.environ.get("EC_JSON", "0") == "1":
+        print(json.dumps(payload, indent=2))
+        sys.exit(0)
+
+    if os.environ.get("EC_PRINT_ONLY", "0") == "1":
+        print(state.theme)
+        sys.exit(0)
+
+    print(
+        f"eye-comfort-theme tn: tinai={state.tinai} siru={state.siru} "
+        f"perum={state.perum} nazhigai={state.nazhigai} "
+        f"jaamam={state.jaamam.current} theme={state.theme} "
+        f"phase={state.phase} tinai_src={state.tinai_source} "
+        f"contrast={contrast}:1"
+    )
+    print(f"scene: {state.scene}")
+
+    state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
+    if state_dir.as_posix():
+        state_path = state_dir / "state.json"
+        if dry:
+            print(f"(dry-run) would write {state_path}")
+        else:
+            try:
+                state_dir.mkdir(parents=True, exist_ok=True)
+                state_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            except OSError as e:
+                print(f"warn: could not write state file ({e})", file=sys.stderr)
+
+    if dry:
+        print(f"(dry-run) would run: omarchy-theme-set {state.theme}")
+        if not no_render:
+            print(f"(dry-run) would render roles into theme package {state.theme}")
+        sys.exit(0)
+
+    apply_theme(state.theme, roles, state.phase, state.wallpaper_hint, no_render=no_render)
+    sys.exit(0)
+
+# --- circadian path ---
+from schedule import resolve, state_to_dict
+
+mode = os.environ.get("EC_MODE", "auto")
 kwargs = dict(
     mode=mode,
     ambient=ambient,  # type: ignore[arg-type]
@@ -214,11 +757,6 @@ if os.environ.get("EC_CSS", "0") == "1":
 
 if os.environ.get("EC_JSON", "0") == "1":
     print(json.dumps(state_to_dict(state), indent=2))
-    # still continue to apply unless dry/print — JSON is additive print
-    # Actually for scripting, --json alone should not apply. Treat like preview.
-    # Fall through only if not json-only... User may want --json --dry-run.
-    # Convention: --json prints and exits unless also applying without dry.
-    # Prefer: --json implies print-only for safety.
     sys.exit(0)
 
 if os.environ.get("EC_PRINT_ONLY", "0") == "1":
@@ -231,13 +769,14 @@ print(
     f"source={state.source} contrast={state.contrast_fg_bg}:1 "
     f"cct≈{state.cct_k}K"
 )
+print(f"scene: {state.scene}")
 
 state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
 if state_dir.as_posix():
     state_path = state_dir / "state.json"
     payload = state_to_dict(state)
     payload["motion"] = "reduce" if state.reduced_motion else "ok"
-    if os.environ.get("EC_DRY", "0") == "1":
+    if dry:
         print(f"(dry-run) would write {state_path}")
     else:
         try:
@@ -246,35 +785,11 @@ if state_dir.as_posix():
         except OSError as e:
             print(f"warn: could not write state file ({e})", file=sys.stderr)
 
-if os.environ.get("EC_DRY", "0") == "1":
+if dry:
     print(f"(dry-run) would run: omarchy-theme-set {state.theme}")
-    if os.environ.get("EC_NO_RENDER", "0") != "1":
+    if not no_render:
         print(f"(dry-run) would render roles into theme package {state.theme}")
     sys.exit(0)
 
-# Live-render resolved roles into installed Omarchy theme (morning≠midday, etc.)
-if os.environ.get("EC_NO_RENDER", "0") != "1":
-    themes_root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "omarchy" / "themes"
-    dest = themes_root / state.theme
-    if dest.is_dir():
-        icons = dest / "icons.theme"
-        write_theme_package(
-            dest,
-            state.roles,
-            name=state.theme,
-            phase=state.phase,
-            icons_src=icons if icons.is_file() else None,
-        )
-    else:
-        print(f"warn: theme dir missing ({dest}); skip live render", file=sys.stderr)
-
-import shutil
-if shutil.which("omarchy-theme-set") is None:
-    print("warn: omarchy-theme-set not on PATH; theme resolved but not applied", file=sys.stderr)
-    sys.exit(0)
-
-import subprocess
-subprocess.check_call(["omarchy-theme-set", state.theme])
-active = Path.home() / ".config" / "omarchy" / "current" / "theme.name"
-print(f"active: {active.read_text(encoding='utf-8').strip() if active.is_file() else 'unknown'}")
+apply_theme(state.theme, state.roles, state.phase, state.wallpaper_hint, no_render=no_render)
 PY

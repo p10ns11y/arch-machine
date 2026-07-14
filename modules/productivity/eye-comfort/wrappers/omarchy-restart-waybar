@@ -1,0 +1,42 @@
+#!/bin/bash
+# Eye-comfort PATH override for stock omarchy-restart-waybar.
+# Stock: pkill -9 waybar; uwsm-app -- waybar  (often leaves no bar when UWSM
+# races / lacks Hyprland session env). Prefer hyprctl, then UWSM, then setsid.
+set -u
+
+pkill -9 -x waybar 2>/dev/null || true
+sleep 0.15
+
+waybar_up() { pgrep -x waybar >/dev/null 2>&1; }
+
+# Prefer compositor launch when Hyprland signature is in the environment.
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1; then
+  hyprctl dispatch exec waybar >/dev/null 2>&1 || true
+  for _ in 1 2 3 4 5 6; do
+    waybar_up && exit 0
+    sleep 0.2
+  done
+fi
+
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+if [[ -p "${RUNTIME}/uwsm-app-daemon-in" && -p "${RUNTIME}/uwsm-app-daemon-out" ]]; then
+  REAL_UWSM="${EC_UWSM_APP_REAL:-/usr/bin/uwsm-app}"
+  if [[ -x "$REAL_UWSM" ]]; then
+    setsid "$REAL_UWSM" -- waybar >/dev/null 2>&1 &
+    for _ in 1 2 3 4 5 6 7 8; do
+      waybar_up && exit 0
+      sleep 0.25
+    done
+  fi
+fi
+
+if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v waybar >/dev/null 2>&1; then
+  setsid waybar >/dev/null 2>&1 &
+  for _ in 1 2 3 4 5 6; do
+    waybar_up && exit 0
+    sleep 0.2
+  done
+fi
+
+waybar_up
+exit $?
