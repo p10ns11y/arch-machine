@@ -58,7 +58,7 @@ Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your*
 | Surface | Shows |
 |---------|--------|
 | **Bar text** | `tinai · siru · nN` (compact; tinai from last `tn` apply) |
-| **Tooltip** | Date line → scene → labeled fields (Pango; full nazhigai/jaamam wording) |
+| **Tooltip** | Date → Tinai → Pozhuthu (Perum+Siru) → Jaamam/Nazhigai heart → Theme (Pango) |
 | **Click** | `notify-send` plain-text body (same content, no markup) |
 | **CLI** | `eye-comfort-theme status` · `eye-comfort-theme waybar` |
 

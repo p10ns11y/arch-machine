@@ -11,10 +11,12 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from tamil_schedule import (
+    JAAMAMS_PER_DAY,
     NAZHIGAI_MINUTES,
+    NAZHIGAIS_PER_SIRU,
     PERUM_LABEL,
     SIRU_LABEL,
     TINAI_META,
@@ -24,7 +26,14 @@ from tamil_schedule import (
 # Soft amber / muted ink from DESIGN.md dark tokens (readable on warm dark tooltips)
 _PANGO_ACCENT = "#C9A66B"
 _PANGO_MUTED = "#8A8278"
+_PANGO_SOFT = "#A89F94"
 _STRIP_PANGO = re.compile(r"</?[^>]+>")
+
+_TINAI_SOURCE_LABEL = {
+    "flag": "apply",
+    "geo": "geo",
+    "default": "default",
+}
 
 
 def default_state_path() -> Path:
@@ -68,59 +77,113 @@ def _plain_from_pango(markup: str) -> str:
     )
 
 
+def _muted(text: str) -> str:
+    return f'<span foreground="{_PANGO_MUTED}">{text}</span>'
+
+
+def _soft(text: str) -> str:
+    return f'<span foreground="{_PANGO_SOFT}">{text}</span>'
+
+
+def _accent_b(text: str) -> str:
+    return f'<span foreground="{_PANGO_ACCENT}"><b>{text}</b></span>'
+
+
 def _date_line(now: datetime) -> str:
     """Civil date + ISO week — never glued to tinai/siru."""
     week = now.isocalendar()[1]
     return f"{now.day} {now.strftime('%B')}  ·  week {week}  ·  {now.year}"
 
 
-def _nazhigai_full(nazhigai: int) -> str:
-    into_min = nazhigai * NAZHIGAI_MINUTES
-    return (
-        f"nazhigai {nazhigai} "
-        f"(≈{nazhigai}×{NAZHIGAI_MINUTES} min ≈ {into_min} min into this siru)"
+def _title_tinai(name: str) -> str:
+    """DESIGN-TN romanization: Tinai (not Thinai); Title Case display."""
+    return name[:1].upper() + name[1:] if name else name
+
+
+def _jaamam_part_sense(part: Any) -> str:
+    if part.full:
+        return "full watch · 3 h"
+    mins = int(round(part.nazhigai * NAZHIGAI_MINUTES))
+    amount = (
+        f"{int(round(part.nazhigai))}"
+        if abs(part.nazhigai - round(part.nazhigai)) < 1e-9
+        else f"{part.nazhigai:g}"
     )
+    return f"{amount} nazhigai · ≈{mins} min in this Siru"
+
+
+def _jaamam_heart_lines(tn: Any) -> List[str]:
+    """Living clock heart — current watch + Siru split narrative."""
+    jam = tn.jaamam
+    lines = [
+        _accent_b("Jaamam"),
+        f"  Watching <b>{jam.current}</b> of {JAAMAMS_PER_DAY}",
+        f"  {_soft('Split')}  ·  {_pango_esc(jam.label)}",
+        _soft("  This Siru holds —"),
+    ]
+    for part in jam.parts:
+        sense = _pango_esc(_jaamam_part_sense(part))
+        name = f"Jaamam {part.index}"
+        if part.index == jam.current:
+            lines.append(f"    <b>{_pango_esc(name)}</b>  —  {sense}")
+        else:
+            lines.append(f"    {_muted(_pango_esc(name))}  —  {sense}")
+    return lines
+
+
+def _nazhigai_heart_lines(tn: Any) -> List[str]:
+    """Nazhigai as elapsed pulse inside the current Siru."""
+    n = tn.nazhigai
+    into_min = n * NAZHIGAI_MINUTES
+    siru_title = _pango_esc(_title_tinai(tn.siru))
+    return [
+        _accent_b("Nazhigai"),
+        f"  Nazhigai <b>{n}</b>  ·  step of {NAZHIGAIS_PER_SIRU} into {siru_title}",
+        _soft(
+            f"  ≈ {into_min} min elapsed"
+            f"  ·  {n} × {NAZHIGAI_MINUTES} min into this Siru"
+        ),
+    ]
 
 
 def tn_tooltip_markup(tn: Any, now: datetime) -> str:
-    """Multi-line Pango tooltip: date → scene → labeled fields (breathing room)."""
+    """Pango tooltip: date → Tinai → Pozhuthu → Jaamam/Nazhigai heart → Theme."""
     meta = TINAI_META[tn.tinai]
-    perum_words = tn.perum.replace("_", " ")
     date = _pango_esc(_date_line(now))
-    landscape = _pango_esc(meta["landscape"])
+    landscape = _pango_esc(meta["landscape"].title())
     flower = _pango_esc(meta["flower"])
-    siru = _pango_esc(tn.siru)
-    jam_label = _pango_esc(tn.jaamam.label)
-    nazh = _pango_esc(_nazhigai_full(tn.nazhigai))
-    perum_short = _pango_esc(perum_words)
-    tinai = _pango_esc(tn.tinai)
-    tinai_src = _pango_esc(tn.tinai_source)
-    siru_label = _pango_esc(SIRU_LABEL[tn.siru])
+    tinai_name = _pango_esc(_title_tinai(tn.tinai))
+    tinai_src = _pango_esc(
+        _TINAI_SOURCE_LABEL.get(tn.tinai_source, tn.tinai_source)
+    )
     perum_label = _pango_esc(PERUM_LABEL[tn.perum])
+    siru_label = _pango_esc(SIRU_LABEL[tn.siru])
     theme = _pango_esc(tn.theme)
-    jam_now = tn.jaamam.current
 
-    # Leading/trailing blank lines + CSS padding give edge breathing room.
-    return "\n".join(
+    lines: List[str] = [
+        "",
+        _accent_b(date),
+        "",
+        "<b>Tinai</b>",
+        f"  {landscape}  —  {flower}  ·  {tinai_name} ({tinai_src})",
+        "",
+        "<b>Pozhuthu</b>",
+        f"  {_muted('Perum')}  {perum_label}",
+        f"  {_muted('Siru')}   {siru_label}",
+        "",
+    ]
+    lines.extend(_jaamam_heart_lines(tn))
+    lines.append("")
+    lines.extend(_nazhigai_heart_lines(tn))
+    lines.extend(
         [
             "",
-            f'<span foreground="{_PANGO_ACCENT}"><b>{date}</b></span>',
-            "",
-            f"<b>{landscape}</b>  —  {flower}  ·  {siru}",
-            f'<span foreground="{_PANGO_MUTED}">{jam_label}</span>',
-            f'<span foreground="{_PANGO_MUTED}">{nazh}</span>',
-            f'<span foreground="{_PANGO_MUTED}">{perum_short}</span>',
-            "",
-            f'<span foreground="{_PANGO_MUTED}">tinai</span>     {tinai} ({tinai_src})',
-            f'<span foreground="{_PANGO_MUTED}">siru</span>      {siru_label}',
-            f'<span foreground="{_PANGO_MUTED}">jaamam</span>    now {jam_now}',
-            f"             {jam_label}",
-            f'<span foreground="{_PANGO_MUTED}">nazhigai</span>  {nazh}',
-            f'<span foreground="{_PANGO_MUTED}">perum</span>     {perum_label}',
-            f'<span foreground="{_PANGO_MUTED}">theme</span>     {theme}',
+            _muted("Theme"),
+            f"  {_muted(theme)}",
             "",
         ]
     )
+    return "\n".join(lines)
 
 
 def tn_waybar_payload(
@@ -169,20 +232,21 @@ def circadian_waybar_payload(
     phase_e = _pango_esc(phase)
     lines = [
         "",
-        f'<span foreground="{_PANGO_ACCENT}"><b>{date}</b></span>',
+        _accent_b(date),
         "",
         f"<b>{phase_e}</b>",
     ]
     if scene_e:
-        lines.append(f'<span foreground="{_PANGO_MUTED}">{scene_e}</span>')
+        lines.append(f"  {_muted(scene_e)}")
     if state.get("cct_k") is not None:
         lines.append(
-            f'<span foreground="{_PANGO_MUTED}">cct</span>       '
-            f'≈{_pango_esc(state["cct_k"])}K'
+            f"  {_muted('Cct')}       ≈{_pango_esc(state['cct_k'])}K"
         )
     lines.extend(
         [
-            f'<span foreground="{_PANGO_MUTED}">theme</span>     {theme_e}',
+            "",
+            _muted("Theme"),
+            f"  {_muted(theme_e)}",
             "",
         ]
     )

@@ -27,12 +27,14 @@
   color: #a88b6e;
 }
 
-/* Global tooltip was padding: 2px — text hugged the left edge */
+/* Global tooltip was padding: 2px — text hugged the left edge.
+ * TN tooltip is multi-section (Tinai / Pozhuthu / Jaamam+Nazhigai heart). */
 tooltip {
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-radius: 6px;
 }
 
 tooltip label {
-  padding: 2px 4px;
+  padding: 4px 6px;
+  line-height: 1.35;
 }

@@ -159,12 +159,16 @@ def test_waybar_payload():
     assert p["text"] == "neythal · erpaadu · n2"
     tip = p["tooltip"]
     assert "jaamam 5 (full)" in tip
-    assert "nazhigai 2" in tip
+    assert "Nazhigai <b>2</b>" in tip or "nazhigai 2" in tip.lower()
     assert "week 29" in tip  # ISO week; date line separate from tinai
     assert "2026neythal" not in tip.replace(" ", "")
     assert "14 July" in tip
     assert "<b>" in tip  # Pango hierarchy
-    assert "seashore" in tip
+    assert "Seashore" in tip
+    assert "Tinai" in tip and "Pozhuthu" in tip
+    assert "Jaamam" in tip and "Nazhigai" in tip
+    assert "Perum" in tip and "Siru" in tip  # grouped under Pozhuthu
+    assert tip.index("Pozhuthu") < tip.index("Jaamam") < tip.index("Nazhigai")
     # JSON-serializable for waybar
     json.dumps(p)
     p2 = waybar_payload(
