@@ -14,13 +14,23 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from tamil_schedule import (
+    JAAMAM_DISPLAY_TITLE,
     JAAMAMS_PER_DAY,
+    NAZHIGAI_DISPLAY,
+    NAZHIGAI_DISPLAY_TITLE,
     NAZHIGAI_MINUTES,
     NAZHIGAIS_PER_SIRU,
+    PERUM_DISPLAY_TITLE,
     PERUM_LABEL,
+    POZHUTU_DISPLAY_TITLE,
+    SIRU_DISPLAY_TITLE,
     SIRU_LABEL,
+    TINAI_DISPLAY_TITLE,
     TINAI_META,
+    nazhigai_ordinal,
     resolve_tamil,
+    siru_display,
+    tinai_display,
 )
 
 # Soft amber / muted ink from DESIGN.md dark tokens (readable on warm dark tooltips)
@@ -28,12 +38,6 @@ _PANGO_ACCENT = "#C9A66B"
 _PANGO_MUTED = "#8A8278"
 _PANGO_SOFT = "#A89F94"
 _STRIP_PANGO = re.compile(r"</?[^>]+>")
-
-_TINAI_SOURCE_LABEL = {
-    "flag": "apply",
-    "geo": "geo",
-    "default": "default",
-}
 
 
 def default_state_path() -> Path:
@@ -77,6 +81,33 @@ def _plain_from_pango(markup: str) -> str:
     )
 
 
+def _visible_width(markup: str) -> int:
+    """Plain-text length of one Pango line (for optical layout)."""
+    return len(_plain_from_pango(markup))
+
+
+def _center_first_content_line(lines: List[str]) -> List[str]:
+    """Pad the first non-empty line so it sits under the widest body line.
+
+    Waybar GTK tooltips are one Label (no per-line CSS). Do not use
+    text-align / line-height in tooltip CSS — GTK rejects some props and
+    aborts Waybar. Leading spaces only center the date; body stays left.
+    """
+    widths = [_visible_width(ln) for ln in lines if ln.strip()]
+    if not widths:
+        return lines
+    target = max(widths)
+    out = list(lines)
+    for i, ln in enumerate(out):
+        if not ln.strip():
+            continue
+        pad = max(0, (target - _visible_width(ln)) // 2)
+        if pad:
+            out[i] = (" " * pad) + ln
+        break
+    return out
+
+
 def _muted(text: str) -> str:
     return f'<span foreground="{_PANGO_MUTED}">{text}</span>'
 
@@ -95,11 +126,6 @@ def _date_line(now: datetime) -> str:
     return f"{now.day} {now.strftime('%B')}  ·  week {week}  ·  {now.year}"
 
 
-def _title_tinai(name: str) -> str:
-    """DESIGN-TN romanization: Tinai (not Thinai); Title Case display."""
-    return name[:1].upper() + name[1:] if name else name
-
-
 def _jaamam_part_sense(part: Any) -> str:
     if part.full:
         return "full watch · 3 h"
@@ -109,21 +135,23 @@ def _jaamam_part_sense(part: Any) -> str:
         if abs(part.nazhigai - round(part.nazhigai)) < 1e-9
         else f"{part.nazhigai:g}"
     )
-    return f"{amount} nazhigai · ≈{mins} min in this Siru"
+    return (
+        f"{amount} {NAZHIGAI_DISPLAY} · ≈{mins} min in this {SIRU_DISPLAY_TITLE}"
+    )
 
 
 def _jaamam_heart_lines(tn: Any) -> List[str]:
-    """Living clock heart — current watch + Siru split narrative."""
+    """Living clock heart — current watch + Ciṟu split narrative."""
     jam = tn.jaamam
     lines = [
-        _accent_b("Jaamam"),
+        _accent_b(JAAMAM_DISPLAY_TITLE),
         f"  Watching <b>{jam.current}</b> of {JAAMAMS_PER_DAY}",
         f"  {_soft('Split')}  ·  {_pango_esc(jam.label)}",
-        _soft("  This Siru holds —"),
+        _soft(f"  This {SIRU_DISPLAY_TITLE} holds —"),
     ]
     for part in jam.parts:
         sense = _pango_esc(_jaamam_part_sense(part))
-        name = f"Jaamam {part.index}"
+        name = f"{JAAMAM_DISPLAY_TITLE} {part.index}"
         if part.index == jam.current:
             lines.append(f"    <b>{_pango_esc(name)}</b>  —  {sense}")
         else:
@@ -132,30 +160,34 @@ def _jaamam_heart_lines(tn: Any) -> List[str]:
 
 
 def _nazhigai_heart_lines(tn: Any) -> List[str]:
-    """Nazhigai as elapsed pulse inside the current Siru."""
-    n = tn.nazhigai
-    into_min = n * NAZHIGAI_MINUTES
-    siru_title = _pango_esc(_title_tinai(tn.siru))
+    """Nāḻikai as elapsed pulse inside the current Ciṟu (1-based ordinal copy)."""
+    index = tn.nazhigai  # 0-based storage
+    ordinal = nazhigai_ordinal(index)
+    into_min = index * NAZHIGAI_MINUTES
+    siru_title = _pango_esc(siru_display(tn.siru))
+    unit = NAZHIGAI_DISPLAY
+    if ordinal == 1:
+        detail = f"first {NAZHIGAI_MINUTES} minutes of this {SIRU_DISPLAY_TITLE}"
+    elif ordinal == 2:
+        detail = f"after {into_min} minutes, first {unit} over"
+    else:
+        detail = f"after {into_min} minutes, first {ordinal - 1} {unit} over"
     return [
-        _accent_b("Nazhigai"),
-        f"  Nazhigai <b>{n}</b>  ·  step of {NAZHIGAIS_PER_SIRU} into {siru_title}",
-        _soft(
-            f"  ≈ {into_min} min elapsed"
-            f"  ·  {n} × {NAZHIGAI_MINUTES} min into this Siru"
+        _accent_b(NAZHIGAI_DISPLAY_TITLE),
+        (
+            f"  Running {NAZHIGAI_DISPLAY_TITLE} <b>{ordinal}</b>"
+            f"  ·  {ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"
         ),
+        _soft(f"  {_pango_esc(detail)}"),
     ]
 
 
 def tn_tooltip_markup(tn: Any, now: datetime) -> str:
-    """Pango tooltip: date → Tinai → Pozhuthu → Jaamam/Nazhigai heart → Theme."""
+    """Pango tooltip: date → Tiṇai → Poḻutu → Jāmam/Nāḻikai heart → Theme."""
     meta = TINAI_META[tn.tinai]
     date = _pango_esc(_date_line(now))
     landscape = _pango_esc(meta["landscape"].title())
-    flower = _pango_esc(meta["flower"])
-    tinai_name = _pango_esc(_title_tinai(tn.tinai))
-    tinai_src = _pango_esc(
-        _TINAI_SOURCE_LABEL.get(tn.tinai_source, tn.tinai_source)
-    )
+    tinai_name = _pango_esc(tinai_display(tn.tinai))
     perum_label = _pango_esc(PERUM_LABEL[tn.perum])
     siru_label = _pango_esc(SIRU_LABEL[tn.siru])
     theme = _pango_esc(tn.theme)
@@ -164,12 +196,13 @@ def tn_tooltip_markup(tn: Any, now: datetime) -> str:
         "",
         _accent_b(date),
         "",
-        "<b>Tinai</b>",
-        f"  {landscape}  —  {flower}  ·  {tinai_name} ({tinai_src})",
+        f"<b>{TINAI_DISPLAY_TITLE}</b>",
+        # Landscape gloss + tiṇai once (no flower echo, no tinai_source leak).
+        f"  {landscape}  —  {tinai_name}",
         "",
-        "<b>Pozhuthu</b>",
-        f"  {_muted('Perum')}  {perum_label}",
-        f"  {_muted('Siru')}   {siru_label}",
+        f"<b>{POZHUTU_DISPLAY_TITLE}</b>",
+        f"  {_muted(PERUM_DISPLAY_TITLE)}  {perum_label}",
+        f"  {_muted(SIRU_DISPLAY_TITLE)}   {siru_label}",
         "",
     ]
     lines.extend(_jaamam_heart_lines(tn))
@@ -183,7 +216,7 @@ def tn_tooltip_markup(tn: Any, now: datetime) -> str:
             "",
         ]
     )
-    return "\n".join(lines)
+    return "\n".join(_center_first_content_line(lines))
 
 
 def tn_waybar_payload(
@@ -207,7 +240,11 @@ def tn_waybar_payload(
             pass
 
     tn = resolve_tamil(**kwargs)
-    text = f"{tn.tinai} · {tn.siru} · n{tn.nazhigai}"
+    # Compact bar: ISO 15919 Title Case · N{ordinal} (1-based). Storage stays 0-based.
+    text = (
+        f"{tinai_display(tn.tinai)} · {siru_display(tn.siru)} · "
+        f"N{nazhigai_ordinal(tn.nazhigai)}"
+    )
     tooltip = tn_tooltip_markup(tn, now)
     return {
         "text": text,
@@ -252,7 +289,7 @@ def circadian_waybar_payload(
     )
     return {
         "text": text,
-        "tooltip": "\n".join(lines),
+        "tooltip": "\n".join(_center_first_content_line(lines)),
         "class": f"eye-comfort eye-comfort-{phase}",
         "alt": "circadian",
     }
@@ -281,9 +318,10 @@ def waybar_payload(
 def status_text(*, state_path: Optional[Path] = None, now: Optional[datetime] = None) -> str:
     """Human one-liner + scene for `eye-comfort-theme status` (plain text)."""
     payload = waybar_payload(state_path=state_path, now=now)
-    return f"{payload['text']}\n{_plain_from_pango(payload['tooltip'])}"
+    # lstrip drops optical date pad + leading blank lines from the tooltip.
+    return f"{payload['text']}\n{_plain_from_pango(payload['tooltip']).lstrip()}"
 
 
 def notify_body(*, state_path: Optional[Path] = None, now: Optional[datetime] = None) -> str:
     """Body for notify-send (plain; click action / second widget surface)."""
-    return _plain_from_pango(waybar_payload(state_path=state_path, now=now)["tooltip"])
+    return _plain_from_pango(waybar_payload(state_path=state_path, now=now)["tooltip"]).lstrip()
