@@ -18,3 +18,5 @@ Phases (local, no lat): dawn 05–07 · morning 07–10 · midday 10–14 · aft
 Committed `colors.toml` / Ghostty / nvim hosts are generated from OKLCH SoT (`lib/generate_packages.py`); do not hand-edit those files.
 
 **Live reload:** install deploys nvim hotreload + `theme-set.d` hook so open editors update on switch. The switcher always sets `OMARCHY_PATH` so Omarchy templates emit `hyprland.conf` (avoids Hyprland `source=` globbing errors).
+
+**Host edits:** which Omarchy/`~/.config` paths install or the switcher touch (and which they never touch) — [`modules/productivity/eye-comfort/docs/HOST-EDITS.md`](../modules/productivity/eye-comfort/docs/HOST-EDITS.md).

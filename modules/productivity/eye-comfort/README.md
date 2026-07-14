@@ -145,6 +145,10 @@ Install copies into:
 - `~/.config/omarchy/themes/`
 - `~/.local/bin/eye-comfort-theme`
 - `~/.local/lib/eye-comfort/`
+- `~/.config/nvim/lua/plugins/omarchy-theme-hotreload.lua`
+- `~/.config/omarchy/hooks/theme-set.d/90-reload-nvim-tmux.sh`
 - `~/.config/systemd/user/eye-comfort-theme.{service,timer}` (with `--with-timer`)
 
 Does **not** commit live `~/.config` (gitignored at repo root).
+
+Full inventory of host/Omarchy paths touched (and explicitly not touched): [docs/HOST-EDITS.md](./docs/HOST-EDITS.md).

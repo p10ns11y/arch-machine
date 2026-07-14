@@ -1,7 +1,7 @@
 # Design System — Eye Comfort
 
 Visual system for Omarchy themes `eye-comfort-{dawn,light,dusk,dark}` with seven circadian phases.  
-Strategic context: [PRODUCT.md](./PRODUCT.md) · Token lock: [PALETTE.md](./PALETTE.md)
+Strategic context: [PRODUCT.md](./PRODUCT.md) · Token lock: [PALETTE.md](./PALETTE.md) · Host edits: [HOST-EDITS.md](./HOST-EDITS.md)
 
 ## Theme
 
