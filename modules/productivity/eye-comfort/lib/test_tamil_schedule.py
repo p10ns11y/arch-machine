@@ -104,6 +104,10 @@ def test_resolve_flags():
 
     s3 = resolve_tamil(siru="maalai", nazhigai=3, tinai="mullai")
     assert s3.siru == "maalai" and s3.nazhigai == 3
+    assert "nazhigai 3 (≈3×24 min ≈ 72 min elapsed)" in s3.scene
+
+    s5 = resolve_tamil(siru="nanpagal", nazhigai=5, tinai="marutham")
+    assert "nazhigai 5 (≈5×24 min ≈ 120 min elapsed)" in s5.scene
 
 
 def test_parse_aliases():

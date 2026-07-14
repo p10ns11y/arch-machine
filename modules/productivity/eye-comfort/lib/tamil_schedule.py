@@ -402,10 +402,19 @@ def wallpaper_fallback_names(hint: str) -> list[str]:
 
 
 def scene_line(tinai: Tinai, perum: Perum, siru: Siru, nazhigai: int) -> str:
+    """One-line delight string for CLI apply (never blocks the task).
+
+    Nazhigai step N ≈ N × 24 min into the current Siru (design: 1 Nazhigai ≈ 24 min).
+    """
     meta = TINAI_META[tinai]
+    into_min = nazhigai * NAZHIGAI_MINUTES
+    nazh = (
+        f"nazhigai {nazhigai} "
+        f"(≈{nazhigai}×{NAZHIGAI_MINUTES} min ≈ {into_min} min elapsed)"
+    )
     return (
         f"{meta['landscape']} · {meta['flower']} · "
-        f"{siru} n{nazhigai} · {perum.replace('_', ' ')}"
+        f"{siru} · {nazh} · {perum.replace('_', ' ')}"
     )
 
 
