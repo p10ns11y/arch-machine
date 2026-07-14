@@ -52,7 +52,8 @@ def tokens_css_path() -> Path:
 
 def generate_one(name: str, dest: Path) -> None:
     icons = dest / "icons.theme"
-    if name in PACKAGE_TN:
+    is_tn = name in PACKAGE_TN
+    if is_tn:
         tinai = PACKAGE_TN[name]  # type: ignore[assignment]
         phase, siru = canonical_phase_for_tinai(tinai)  # type: ignore[arg-type]
         roles = roles_for_tamil(
@@ -72,6 +73,13 @@ def generate_one(name: str, dest: Path) -> None:
         phase=phase,
         icons_src=icons if icons.is_file() else None,
     )
+    # TN packages are live-rendered across dark Siru (dusk/night). Do not commit
+    # light.mode from a light canonical bake — stale light.mode → Yazi/Ghostty
+    # mismatch on dark applies. Live eye-comfort-theme sets light.mode correctly.
+    if is_tn:
+        stale = dest / "light.mode"
+        if stale.exists():
+            stale.unlink()
 
 
 def generate_phases_css(dest: Path | None = None) -> Path:
@@ -172,6 +180,14 @@ def check_all(root: Path) -> int:
                 (dest / "icons.theme").write_text(icons.read_text(encoding="utf-8"), encoding="utf-8")
             generate_one(name, dest)
             for fname in HOST_FILES:
+                # TN: light.mode is render-time only (never committed).
+                if fname == "light.mode" and name in PACKAGE_TN:
+                    if (src / fname).exists():
+                        drifts.append(
+                            f"{name}/{fname}: must not be committed "
+                            "(live render sets luminance; remove from package)"
+                        )
+                    continue
                 a, b = src / fname, dest / fname
                 a_exists, b_exists = a.exists(), b.exists()
                 if a_exists != b_exists:

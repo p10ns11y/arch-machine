@@ -10,9 +10,8 @@ Omarchy rule of thumb: **never edit `~/.local/share/omarchy/`** (upstream git tr
 |------|-----|-----|
 | `~/.config/nvim/lua/plugins/omarchy-theme-hotreload.lua` | `install.sh` overwrites | Stock omarchy-nvim hotreload forces `vim.o.background = "dark"` on every `LazyReload`, so light↔dark leaves mixed statusline/syntax. Replacement reads `light.mode`, re-applies soft gruvbox SoT (`dark0_soft` / `light0_soft`), and reloads on `LazyReload` / theme.name / FocusGained. |
 | `~/.config/omarchy/hooks/theme-set.d/90-reload-nvim-tmux.sh` | `install.sh` copies | `omarchy-theme-set` restarts Ghostty/waybar/etc. but **not** nvim or tmux. Hook pushes reload to open nvim sockets + sources tmux.conf. |
-| `~/.config/omarchy/hooks/theme-set.d/91-reload-yazi.sh` | `install.sh` copies | Yazi cannot hot-reload flavors. Pins `theme.toml` dark+light to active SoT and soft-quits open yazis so the next launch rematches terminal bg. |
 | `~/.config/omarchy/hooks/theme-set` | Hand-stubbed if a prior full hook existed | Earlier debug copy duplicated LazyReload with `theme-set.d`. Stub defers to `.d/` so reload fires once. Safe to delete if you only use `.d/` scripts. |
-| `~/.config/omarchy/themes/eye-comfort-{dawn,light,dusk,dark}/` | `install.sh` rsync + live render | User Omarchy theme packages (colors, Ghostty, neovim.lua, icons, wallpapers). Live render updates roles before `omarchy-theme-set`. |
+| `~/.config/omarchy/themes/eye-comfort-{dawn,light,dusk,dark}/` + `eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}/` | `install.sh` rsync + live render | User Omarchy theme packages (colors, Ghostty, neovim.lua, icons, wallpapers). Live render updates roles before `omarchy-theme-set`. TN packages share the same apply path; no Yazi rematch. |
 | `~/.config/omarchy/themes/eye-comfort-tokens/` + `PALETTE.md` / `PRODUCT.md` / `DESIGN.md` | `install.sh` | Docs/tokens next to themes for operators. |
 | `~/.local/bin/eye-comfort-theme` | `install.sh` | Circadian switcher CLI. |
 | `~/.local/lib/eye-comfort/*.py` | `install.sh` | Schedule / palette / render helpers (`PYTHONPATH`). |
@@ -20,7 +19,7 @@ Omarchy rule of thumb: **never edit `~/.local/share/omarchy/`** (upstream git tr
 | `~/.config/eye-comfort/apply.lock` (fallback) or `$XDG_RUNTIME_DIR/eye-comfort-apply.lock` | switcher flock | Serializes concurrent `eye-comfort-theme` applies (hourly + TN timers otherwise race `rm -rf current/theme`). Prefer runtime dir. |
 | `~/.config/systemd/user/eye-comfort-theme.{service,timer}` | `install.sh --with-timer` | Hourly `auto` apply. Imports Wayland/Hyprland env so waybar restart works; service sets `OMARCHY_PATH`. Mutually exclusive with TN timer. |
 | `~/.config/systemd/user/eye-comfort-tn.{service,timer}` | `install.sh --with-tn-timer` | Nazhigai ≈24 min. Disables circadian timer on enable (same race). |
-| `~/.config/yazi/flavors/eye-comfort-{dark,light}.yazi/` (+ optional `theme.toml`) | `install.sh` | Matching file-manager flavors. |
+| `~/.config/yazi/flavors/eye-comfort-{dark,light}.yazi/` (+ static `theme.toml`) | `install.sh` only | Dual flavors (`dark` / `light` keys). **No** apply-time sync, rematch, or quit. Theme apply does not touch open Yazi — reopen after light↔dark if contrast looks wrong. |
 | `~/.config/eye-comfort/state.json` | `eye-comfort-theme` on apply | Last phase, ambient, intensity, contrast, motion preference. |
 
 ## Written indirectly by Omarchy (not hand-edited)
@@ -44,6 +43,7 @@ These change when `eye-comfort-theme` → `omarchy-theme-set` runs with `OMARCHY
 | `~/.config/hypr/hyprland.conf` | Unchanged. Line ~13 already sources `~/.config/omarchy/current/theme/hyprland.conf`; the banner was a **missing generated file**, not a bad `source=` line. |
 | Other `~/.config/hypr/*.conf` (monitors, bindings, …) | Untouched. |
 | `/usr/share/omarchy-nvim/**` | Stock package left alone; only the user copy under `~/.config/nvim/` is replaced. |
+| Open Yazi processes / apply-time `theme.toml` rewrite | Pre-TN model is install-only dual flavors. Failed post-TN rematch (`91-reload-yazi.sh` + `_sync_yazi_flavor`) is removed; `install.sh` deletes a leftover host `91-reload-yazi.sh` if present. Do not re-add. |
 
 ## Re-apply / audit
 

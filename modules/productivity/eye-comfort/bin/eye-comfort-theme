@@ -368,53 +368,6 @@ def _ensure_waybar(env: dict) -> None:
         )
 
 
-def _sync_yazi_flavor(env: dict, *, dark: bool) -> None:
-    """Pin Yazi dark+light flavor keys to the active SoT and soft-quit open yazis.
-
-    Yazi loads flavors once at startup and picks dark/light from the terminal bg.
-    After Ghostty swaps under an open Yazi, light-flavor dark text on a dark
-    terminal (or the inverse) makes the file list unreadable. There is no live
-    flavor API — quit so the next launch rematches SoT.
-    """
-    yazi_cfg = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "yazi"
-    flavors = yazi_cfg / "flavors"
-    if not flavors.is_dir():
-        return
-    flavor = "eye-comfort-dark" if dark else "eye-comfort-light"
-    if not (flavors / f"{flavor}.yazi").is_dir():
-        return
-    theme_toml = yazi_cfg / "theme.toml"
-    try:
-        yazi_cfg.mkdir(parents=True, exist_ok=True)
-        theme_toml.write_text(
-            "# Managed by eye-comfort-theme.\n"
-            "# Both dark and light pin the active SoT so auto-detect cannot mismatch.\n"
-            "[flavor]\n"
-            f'dark = "{flavor}"\n'
-            f'light = "{flavor}"\n',
-            encoding="utf-8",
-        )
-    except OSError as e:
-        print(f"warn: cannot write {theme_toml} ({e})", file=sys.stderr)
-        return
-
-    running = (
-        subprocess.call(
-            ["pgrep", "-x", "yazi"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        == 0
-    )
-    if running:
-        subprocess.call(
-            ["pkill", "-TERM", "-x", "yazi"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        print(f"yazi: flavor={flavor}; quit open instances (Yazi cannot hot-reload themes)")
-    else:
-        print(f"yazi: flavor={flavor}")
-
-
 def _swaybg_running() -> bool:
     return (
         subprocess.call(
@@ -556,13 +509,14 @@ def _apply_theme_locked(
             file=sys.stderr,
         )
 
+    cur_theme = Path.home() / ".config" / "omarchy" / "current" / "theme"
+
     try:
         subprocess.check_call([theme_set, theme], env=env)
     except subprocess.CalledProcessError as e:
         print(f"error: omarchy-theme-set failed (exit {e.returncode})", file=sys.stderr)
         sys.exit(e.returncode or 1)
 
-    cur_theme = Path.home() / ".config" / "omarchy" / "current" / "theme"
     required = ("neovim.lua", "hyprland.conf")
     missing = [name for name in required if not (cur_theme / name).is_file()]
     if missing:
@@ -588,9 +542,6 @@ def _apply_theme_locked(
 
     # Stock omarchy-theme-set always pkill's waybar; never assume it came back.
     _ensure_waybar(env)
-
-    dark = not (cur_theme / "light.mode").is_file()
-    _sync_yazi_flavor(env, dark=dark)
 
     hypr_conf = cur_theme / "hyprland.conf"
     if not hypr_conf.is_file():

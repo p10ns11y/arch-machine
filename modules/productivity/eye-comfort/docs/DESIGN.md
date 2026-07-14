@@ -85,7 +85,7 @@ ANSI `color4` / `color12` are **warm slate-teal** (OKLCH H≈200–205°), not c
 | Omarchy templates | `colors.toml` → generated surfaces |
 | Ghostty | theme `ghostty.conf` only |
 | nvim | `neovim.lua` → soft gruvbox + `dark0_soft`/`light0_soft` SoT overrides |
-| Yazi | flavors `eye-comfort-{dark,light}` (dawn→light, dusk→dark; package-static) |
+| Yazi | flavors `eye-comfort-{dark,light}` (dawn→light, dusk→dark; install-only dual map — no apply rematch; reopen after light↔dark if needed) |
 | Wallpaper | shared: dawn←light, dusk←dark backgrounds |
 | CSS tokens | `tokens/phases.css` / `eye-comfort-theme --css` |
 

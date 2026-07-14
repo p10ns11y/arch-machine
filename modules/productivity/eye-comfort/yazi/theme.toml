@@ -1,6 +1,5 @@
-# Managed by eye-comfort install / eye-comfort-theme apply.
-# Both keys are rewritten on each apply to pin the active SoT flavor so
-# terminal auto dark/light mis-detect cannot load the opposite palette.
+# Static dual-flavor map (installed by eye-comfort install.sh).
+# Yazi picks dark/light from terminal luminance; no apply-time sync or quit.
 [flavor]
 dark = "eye-comfort-dark"
 light = "eye-comfort-light"

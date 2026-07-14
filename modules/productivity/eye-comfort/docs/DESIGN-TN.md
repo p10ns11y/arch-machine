@@ -64,7 +64,7 @@ Instant theme swaps. Nazhigai timer (~24 min) only soft-tints — no page choreo
 
 ## Components / hosts
 
-Same render path (`colors.toml`, Ghostty, nvim, Yazi via light/dark flavors).
+Same render path (`colors.toml`, Ghostty, nvim). Yazi uses an install-only dual map (`eye-comfort-dark` / `eye-comfort-light`); no apply rematch — reopen after light↔dark if contrast looks wrong.
 CLI: `eye-comfort-theme tn …`. State key `calendar: tamil_nadu`.
 
 ## Layout (wallpaper)

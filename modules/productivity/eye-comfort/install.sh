@@ -179,21 +179,19 @@ if [[ -f "$NVIM_HOTRELOAD_SRC" ]]; then
   echo "  nvim: $NVIM_PLUGINS/omarchy-theme-hotreload.lua"
 fi
 
-# Omarchy theme-set.d hooks → reload open nvim/tmux + yazi flavor sync
-for hook_src in \
-  "$SCRIPT_DIR/hooks/theme-set.d/90-reload-nvim-tmux.sh" \
-  "$SCRIPT_DIR/hooks/theme-set.d/91-reload-yazi.sh"
-do
-  [[ -f "$hook_src" ]] || continue
-  hook_name=$(basename "$hook_src")
-  HOOK_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
+# Omarchy theme-set.d hooks → reload open nvim/tmux (Yazi uses static dual-flavor theme.toml)
+HOOK_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
+hook_src="$SCRIPT_DIR/hooks/theme-set.d/90-reload-nvim-tmux.sh"
+if [[ -f "$hook_src" ]]; then
   run mkdir -p "$HOOK_DIR"
-  run cp -a "$hook_src" "$HOOK_DIR/$hook_name"
+  run cp -a "$hook_src" "$HOOK_DIR/90-reload-nvim-tmux.sh"
   if (( ! DRY )); then
-    chmod +x "$HOOK_DIR/$hook_name"
+    chmod +x "$HOOK_DIR/90-reload-nvim-tmux.sh"
+    # Drop pre-TN yazi rematch hook if still on host
+    rm -f "$HOOK_DIR/91-reload-yazi.sh"
   fi
-  echo "  hook: $HOOK_DIR/$hook_name"
-done
+  echo "  hook: $HOOK_DIR/90-reload-nvim-tmux.sh"
+fi
 
 # Yazi flavors (optional)
 YAZI_SRC="$SCRIPT_DIR/yazi"
@@ -261,8 +259,9 @@ if [[ -n "$SET_MODE" ]]; then
 fi
 
 echo "done."
-echo "  Apply: omarchy-theme-set eye-comfort-{dawn,light,dusk,dark}"
-echo "  Tamil: omarchy-theme-set eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}"
+echo "  Prefer: eye-comfort-theme [auto|dawn|light|dusk|dark|tn]  (live render + state.json)"
 echo "  Circadian: eye-comfort-theme [--help]"
 echo "  Tamil calendrical: eye-comfort-theme tn [--tinai …] [--help]"
+echo "  Bare Omarchy (no live render): omarchy-theme-set eye-comfort-{dawn,light,dusk,dark}"
+echo "  Bare Omarchy TN: omarchy-theme-set eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}"
 echo "  Cycle wallpaper: omarchy theme bg next"

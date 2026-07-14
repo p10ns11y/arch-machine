@@ -56,7 +56,7 @@ Packages: `eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}`.
 | `hooks/theme-set.d/90-reload-nvim-tmux.sh` | Omarchy hook: push LazyReload + tmux refresh |
 | `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
 | `lib/tamil_{schedule,palette}.py` | Perum/Siru/Tinai/Nazhigai + tint |
-| `yazi/` | File manager flavors (dark/light) |
+| `yazi/` | Install-only dual flavors (`eye-comfort-dark` / `eye-comfort-light`); no apply hook |
 
 ## Circadian phases
 
@@ -113,8 +113,23 @@ On apply (not `--json`/`--dry-run`), the switcher live-renders resolved roles in
 `install.sh` also deploys:
 - `~/.config/nvim/lua/plugins/omarchy-theme-hotreload.lua` — reads Omarchy `light.mode`, re-applies gruvbox soft overrides (`dark0_soft` / `light0_soft`), listens for `LazyReload`
 - `~/.config/omarchy/hooks/theme-set.d/90-reload-nvim-tmux.sh` — pushes `LazyReload` to open nvim sockets + reloads tmux
+- `~/.config/yazi/flavors/eye-comfort-{dark,light}.yazi/` + static `theme.toml` — dual-flavor map only (install-time; apply does **not** rematch or quit Yazi)
 
-Open editors pick up the new theme without restart; if a socket is missing, focus the nvim window once (`FocusGained` fallback).
+### What live-reloads (and what does not)
+
+| Surface | On `eye-comfort-theme` / `omarchy-theme-set` |
+|---------|-----------------------------------------------|
+| Ghostty | May reload via Omarchy (e.g. SIGUSR2) |
+| nvim | Hook `90-reload-nvim-tmux` + hotreload plugin (`LazyReload` / FocusGained) |
+| tmux | Same hook sources tmux.conf |
+| Waybar / Mako / wallpaper | Stock Omarchy restart / apply path |
+| **Yazi** | **Does not** rematch or quit. Flavors are install-only dual packs. After light↔dark, **reopen Yazi** if contrast looks wrong (dark-on-dark / light-on-light). |
+
+A post-TN attempt (`91-reload-yazi` + `_sync_yazi_flavor`) never delivered reliable live rematch and is **removed**. `install.sh` deletes a leftover `91-reload-yazi.sh` on the host if present. Do not re-add it.
+
+Tamil Nadu packages/timers (`eye-comfort-tn-*`, `--with-tn-timer`) share the same apply path for Ghostty/nvim; they do **not** add Yazi hot-reload either.
+
+Open nvim editors pick up the new theme without restart; if a socket is missing, focus the nvim window once (`FocusGained` fallback).
 
 State file: `~/.config/eye-comfort/state.json` (phase, CCT hint, contrast, motion preference).
 
@@ -165,6 +180,7 @@ Install copies into:
 - `~/.local/lib/eye-comfort/`
 - `~/.config/nvim/lua/plugins/omarchy-theme-hotreload.lua`
 - `~/.config/omarchy/hooks/theme-set.d/90-reload-nvim-tmux.sh`
+- `~/.config/yazi/flavors/eye-comfort-{dark,light}.yazi/` + `theme.toml` (install-only dual map; apply does **not** rematch)
 - `~/.config/systemd/user/eye-comfort-theme.{service,timer}` (with `--with-timer`)
 
 Does **not** commit live `~/.config` (gitignored at repo root).
