@@ -11,7 +11,9 @@ cd modules/productivity/eye-comfort
 ./install.sh
 ./install.sh --set auto          # resolve phase from local hour (full switcher)
 ./install.sh --set dawn          # force dawn via switcher (live render + state.json)
+./install.sh --set tn            # Tamil Nadu calendrical resolve
 ./install.sh --with-timer        # optional hourly systemd user timer
+./install.sh --with-tn-timer     # optional ~24 min Nazhigai refresh (waybar-safe)
 ```
 
 All `--set` modes route through `eye-comfort-theme` (not a bare `omarchy-theme-set`), so applied packages get live role render and `~/.config/eye-comfort/state.json`.
@@ -23,7 +25,20 @@ Regenerate committed host files after palette changes:
 ```bash
 PYTHONPATH=lib python3 lib/generate_packages.py
 PYTHONPATH=lib python3 lib/test_schedule.py
+PYTHONPATH=lib python3 lib/test_tamil_schedule.py
 ```
+
+## Tamil Nadu overlay (v1)
+
+Eye comfort remains primary. Cultural structure: Perum × Siru × Tinai × Nazhigai.
+Docs: [docs/DESIGN-TN.md](docs/DESIGN-TN.md) · [docs/PRODUCT-TN.md](docs/PRODUCT-TN.md).
+
+```bash
+eye-comfort-theme tn --tinai neythal --dry-run
+eye-comfort-theme tn --lat 13.08 --lon 80.27 --json
+```
+
+Packages: `eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}`.
 
 ## Layout
 
@@ -31,13 +46,16 @@ PYTHONPATH=lib python3 lib/test_schedule.py
 |------|---------|
 | `docs/PALETTE.md` | Color SoT + vision justifications |
 | `docs/PRODUCT.md` / `DESIGN.md` | Impeccable design context |
-| `themes/eye-comfort-{dawn,light,dusk,dark}` | Omarchy packages |
+| `themes/eye-comfort-{dawn,light,dusk,dark}` | Circadian Omarchy packages |
+| `themes/eye-comfort-tn-*` | Tamil tinai packages |
 | `tokens/phases.css` | OKLCH CSS custom properties per phase |
-| `bin/eye-comfort-theme` | Circadian switcher (flags below) |
+| `bin/eye-comfort-theme` | Circadian + `tn` switcher |
 | `units/eye-comfort-theme.{service,timer}` | Hourly systemd user timer |
+| `units/eye-comfort-tn.{service,timer}` | Optional Nazhigai (~24 min) timer |
 | `nvim/omarchy-theme-hotreload.lua` | Live nvim light/dark reload (install → `~/.config/nvim/…`) |
 | `hooks/theme-set.d/90-reload-nvim-tmux.sh` | Omarchy hook: push LazyReload + tmux refresh |
 | `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
+| `lib/tamil_{schedule,palette}.py` | Perum/Siru/Tinai/Nazhigai + tint |
 | `yazi/` | File manager flavors (dark/light) |
 
 ## Circadian phases

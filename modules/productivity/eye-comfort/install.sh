@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Install eye-comfort Omarchy themes + circadian switcher onto this machine.
-# Usage: ./install.sh [--set dark|light|dawn|dusk|auto] [--with-timer] [--dry-run]
+# Install eye-comfort Omarchy themes + circadian/Tamil switcher onto this machine.
+# Usage: ./install.sh [--set dark|light|dawn|dusk|auto|tn] [--with-timer] [--with-tn-timer] [--dry-run]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,6 +18,7 @@ SYSTEMD_USER="$HOME/.config/systemd/user"
 
 SET_MODE=""
 WITH_TIMER=0
+WITH_TN_TIMER=0
 DRY=0
 
 while [[ $# -gt 0 ]]; do
@@ -34,11 +35,15 @@ while [[ $# -gt 0 ]]; do
       WITH_TIMER=1
       shift
       ;;
+    --with-tn-timer)
+      WITH_TN_TIMER=1
+      shift
+      ;;
     --dry-run)
       DRY=1
       shift
       ;;
-    dark|light|dawn|dusk|auto)
+    dark|light|dawn|dusk|auto|tn)
       SET_MODE="$1"
       shift
       ;;
@@ -82,7 +87,7 @@ link_backgrounds() {
 echo "eye-comfort install → $OMARCHY_THEMES"
 run mkdir -p "$OMARCHY_THEMES" "$LOCAL_BIN" "$LOCAL_LIB"
 
-for f in PALETTE.md PRODUCT.md DESIGN.md; do
+for f in PALETTE.md PRODUCT.md DESIGN.md DESIGN-TN.md PRODUCT-TN.md; do
   if [[ -f "$DOCS_SRC/$f" ]]; then
     run cp -a "$DOCS_SRC/$f" "$OMARCHY_THEMES/$f"
   fi
@@ -97,7 +102,9 @@ if [[ -d "$TOKENS_SRC" ]]; then
   fi
 fi
 
-for t in eye-comfort-dark eye-comfort-light eye-comfort-dawn eye-comfort-dusk; do
+for t in eye-comfort-dark eye-comfort-light eye-comfort-dawn eye-comfort-dusk \
+         eye-comfort-tn-kurinji eye-comfort-tn-mullai eye-comfort-tn-marutham \
+         eye-comfort-tn-neythal eye-comfort-tn-palai; do
   if [[ -d "$THEMES_SRC/$t" ]]; then
     run mkdir -p "$OMARCHY_THEMES/$t"
     if (( DRY )); then
@@ -118,6 +125,18 @@ if [[ -d "$OMARCHY_THEMES/eye-comfort-light" ]]; then
     rsync -a "$THEMES_SRC/eye-comfort-dark/backgrounds/" "$OMARCHY_THEMES/eye-comfort-dark/backgrounds/"
   fi
 fi
+# TN wallpaper READMEs (and any future JPGs)
+for t in eye-comfort-tn-kurinji eye-comfort-tn-mullai eye-comfort-tn-marutham \
+         eye-comfort-tn-neythal eye-comfort-tn-palai; do
+  if [[ -d "$THEMES_SRC/$t/backgrounds" ]]; then
+    if (( DRY )); then
+      echo "DRY: rsync $t backgrounds"
+    else
+      mkdir -p "$OMARCHY_THEMES/$t/backgrounds"
+      rsync -a "$THEMES_SRC/$t/backgrounds/" "$OMARCHY_THEMES/$t/backgrounds/"
+    fi
+  fi
+done
 link_backgrounds "$OMARCHY_THEMES/eye-comfort-dawn" "$OMARCHY_THEMES/eye-comfort-light"
 link_backgrounds "$OMARCHY_THEMES/eye-comfort-dusk" "$OMARCHY_THEMES/eye-comfort-dark"
 
@@ -135,6 +154,7 @@ if (( DRY )); then
 else
   rsync -a "$LIB_SRC/" "$LOCAL_LIB/"
   chmod +x "$LOCAL_LIB/test_schedule.py" 2>/dev/null || true
+  chmod +x "$LOCAL_LIB/test_tamil_schedule.py" 2>/dev/null || true
 fi
 echo "  switcher: $LOCAL_BIN/eye-comfort-theme"
 echo "  lib: $LOCAL_LIB"
@@ -183,6 +203,9 @@ fi
 if [[ -f "$LOCAL_LIB/test_schedule.py" ]] && (( ! DRY )); then
   PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_schedule.py"
 fi
+if [[ -f "$LOCAL_LIB/test_tamil_schedule.py" ]] && (( ! DRY )); then
+  PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_tamil_schedule.py"
+fi
 
 if (( WITH_TIMER )); then
   run mkdir -p "$SYSTEMD_USER"
@@ -194,24 +217,34 @@ if (( WITH_TIMER )); then
   fi
 fi
 
+if (( WITH_TN_TIMER )); then
+  run mkdir -p "$SYSTEMD_USER"
+  run cp -a "$SYSTEMD_SRC/eye-comfort-tn.service" "$SYSTEMD_SRC/eye-comfort-tn.timer" "$SYSTEMD_USER/"
+  if (( ! DRY )); then
+    systemctl --user daemon-reload
+    systemctl --user enable --now eye-comfort-tn.timer
+    echo "  tn timer enabled (Nazhigai ≈24 min; waybar restore in switcher)"
+  fi
+fi
+
 if [[ -n "$SET_MODE" ]]; then
   if ! command -v omarchy-theme-set >/dev/null 2>&1; then
     echo "warn: omarchy-theme-set not on PATH; skip --set" >&2
   elif (( DRY )); then
     echo "DRY: would set mode $SET_MODE"
   else
-    # All --set modes go through the switcher (live render + state.json),
-    # not a bare omarchy-theme-set (SN-EC-3).
     case "$SET_MODE" in
-      dark|light|dawn|dusk|auto)
+      dark|light|dawn|dusk|auto|tn)
         "$LOCAL_BIN/eye-comfort-theme" "$SET_MODE"
         ;;
-      *) echo "unknown --set $SET_MODE (use dark|light|dawn|dusk|auto)" >&2; exit 1 ;;
+      *) echo "unknown --set $SET_MODE (use dark|light|dawn|dusk|auto|tn)" >&2; exit 1 ;;
     esac
   fi
 fi
 
 echo "done."
 echo "  Apply: omarchy-theme-set eye-comfort-{dawn,light,dusk,dark}"
+echo "  Tamil: omarchy-theme-set eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}"
 echo "  Circadian: eye-comfort-theme [--help]"
+echo "  Tamil calendrical: eye-comfort-theme tn [--tinai …] [--help]"
 echo "  Cycle wallpaper: omarchy theme bg next"

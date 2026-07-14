@@ -128,7 +128,7 @@ def write_theme_package(
 ) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     dark = is_dark_phase(phase)
-    note = f"circadian {phase} (OKLCH SoT → hex)"
+    note = f"{phase} (OKLCH SoT → hex)"
     (dest / "colors.toml").write_text(
         render_colors_toml(roles, name=name, note=note), encoding="utf-8"
     )

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate committed Omarchy package host files from OKLCH palette SoT.
 
-One generator → four packages (dawn / light / dusk / dark). Use --check in CI
-so committed colors.toml / ghostty.conf / neovim.lua cannot drift from SoT.
+One generator → circadian packages (dawn/light/dusk/dark) plus Tamil tinai
+packages (eye-comfort-tn-*). Use --check in CI so committed colors.toml /
+ghostty.conf / neovim.lua cannot drift from SoT.
 """
 from __future__ import annotations
 
@@ -13,6 +14,8 @@ from pathlib import Path
 
 from palette import Phase, css_custom_properties, roles_for_phase
 from render import write_theme_package
+from tamil_palette import canonical_phase_for_tinai, roles_for_tamil
+from tamil_schedule import TINAI, TINAI_THEME
 
 # Canonical phase baked into each committed host package
 PACKAGE_PHASE: dict[str, Phase] = {
@@ -21,6 +24,9 @@ PACKAGE_PHASE: dict[str, Phase] = {
     "eye-comfort-dusk": "dusk",
     "eye-comfort-dark": "night",
 }
+
+# Tamil Nadu tinai packages (landscape identity; Siru live-renders luminance)
+PACKAGE_TN: dict[str, str] = {TINAI_THEME[t]: t for t in TINAI}
 
 # All schedule phases for CSS token mirrors (morning/afternoon share light package)
 CSS_PHASES: tuple[Phase, ...] = (
@@ -45,9 +51,20 @@ def tokens_css_path() -> Path:
 
 
 def generate_one(name: str, dest: Path) -> None:
-    phase = PACKAGE_PHASE[name]
-    roles = roles_for_phase(phase, ambient="indoor", intensity="balanced")
     icons = dest / "icons.theme"
+    if name in PACKAGE_TN:
+        tinai = PACKAGE_TN[name]  # type: ignore[assignment]
+        phase, siru = canonical_phase_for_tinai(tinai)  # type: ignore[arg-type]
+        roles = roles_for_tamil(
+            tinai,  # type: ignore[arg-type]
+            siru,
+            nazhigai=4,
+            ambient="indoor",
+            intensity="balanced",
+        )
+    else:
+        phase = PACKAGE_PHASE[name]
+        roles = roles_for_phase(phase, ambient="indoor", intensity="balanced")
     write_theme_package(
         dest,
         roles,
@@ -118,13 +135,20 @@ def generate_roles_json(dest: Path | None = None) -> Path:
     return out
 
 
+def all_package_names() -> list[str]:
+    return list(PACKAGE_PHASE.keys()) + list(PACKAGE_TN.keys())
+
+
 def generate_all(root: Path) -> None:
-    for name in PACKAGE_PHASE:
+    for name in all_package_names():
         dest = root / name
         if not dest.is_dir():
             raise SystemExit(f"missing theme package dir: {dest}")
         generate_one(name, dest)
-        print(f"generated {name} ← {PACKAGE_PHASE[name]}")
+        if name in PACKAGE_PHASE:
+            print(f"generated {name} ← {PACKAGE_PHASE[name]}")
+        else:
+            print(f"generated {name} ← tinai={PACKAGE_TN[name]}")
     css = generate_phases_css()
     print(f"generated {css.relative_to(root.parent)}")
     roles = generate_roles_json()
@@ -136,7 +160,7 @@ def check_all(root: Path) -> int:
     drifts: list[str] = []
     with tempfile.TemporaryDirectory(prefix="eye-comfort-gen-") as tmp:
         tmp_root = Path(tmp)
-        for name in PACKAGE_PHASE:
+        for name in all_package_names():
             src = root / name
             if not src.is_dir():
                 drifts.append(f"missing {name}")

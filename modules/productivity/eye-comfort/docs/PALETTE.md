@@ -15,6 +15,8 @@ With `--lat`, boundaries track approximate sunrise/sunset. Override: `eye-comfor
 
 **Tokens:** OKLCH CSS mirrors in `tokens/phases.css`; live resolve via `eye-comfort-theme --css`.
 
+**Tamil Nadu overlay:** five tinai packages (`eye-comfort-tn-*`) reuse this OKLCH family with landscape hue leans + Siru luminance + Nazhigai micro-tint. Details: [DESIGN-TN.md](./DESIGN-TN.md). Tests: `lib/test_tamil_schedule.py`.
+
 ---
 
 ## Packages ↔ phases

@@ -1,0 +1,11 @@
+[Unit]
+Description=Eye-comfort Tamil Nazhigai/Siru theme refresh
+
+[Timer]
+# Every 24 minutes ≈ 1 Nazhigai. Soft tint refresh; full package swap only when Siru/tinai changes.
+# Reuses waybar-restore harden path inside eye-comfort-theme (do not strip OMARCHY_PATH).
+OnCalendar=*:0/24
+Persistent=true
+
+[Install]
+WantedBy=timers.target

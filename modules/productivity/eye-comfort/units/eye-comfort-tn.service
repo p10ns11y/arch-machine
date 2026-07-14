@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply eye-comfort Tamil Nadu (tinai × siru) theme
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=oneshot
+Environment=OMARCHY_PATH=%h/.local/share/omarchy
+Environment=PATH=%h/.local/share/omarchy/bin:%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStartPre=-/bin/sh -c 'systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE DISPLAY DBUS_SESSION_BUS_ADDRESS 2>/dev/null || true'
+# Soft Nazhigai: each run re-resolves minute-based micro-tint; Siru shifts every ~4h
+ExecStart=%h/.local/bin/eye-comfort-theme tn

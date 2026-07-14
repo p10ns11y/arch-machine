@@ -35,6 +35,8 @@ typography:
 Visual system for Omarchy themes `eye-comfort-{dawn,light,dusk,dark}` with seven circadian phases.  
 Strategic context: [PRODUCT.md](./PRODUCT.md) · Token lock: [PALETTE.md](./PALETTE.md) · Host edits: [HOST-EDITS.md](./HOST-EDITS.md)
 
+**Tamil Nadu overlay (v1):** tinai packages + Perum/Siru/Nazhigai — see [DESIGN-TN.md](./DESIGN-TN.md) · [PRODUCT-TN.md](./PRODUCT-TN.md). CLI: `eye-comfort-theme tn`.
+
 ## Theme
 
 | Mode | Scene | Strategy |
