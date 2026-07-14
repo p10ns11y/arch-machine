@@ -1,3 +1,6 @@
+# Managed by eye-comfort install / eye-comfort-theme apply.
+# Both keys are rewritten on each apply to pin the active SoT flavor so
+# terminal auto dark/light mis-detect cannot load the opposite palette.
 [flavor]
 dark = "eye-comfort-dark"
 light = "eye-comfort-light"

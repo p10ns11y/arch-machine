@@ -179,17 +179,21 @@ if [[ -f "$NVIM_HOTRELOAD_SRC" ]]; then
   echo "  nvim: $NVIM_PLUGINS/omarchy-theme-hotreload.lua"
 fi
 
-# Omarchy theme-set.d hook → reload open nvim + tmux after omarchy-theme-set
-HOOK_SRC="$SCRIPT_DIR/hooks/theme-set.d/90-reload-nvim-tmux.sh"
-HOOK_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
-if [[ -f "$HOOK_SRC" ]]; then
+# Omarchy theme-set.d hooks → reload open nvim/tmux + yazi flavor sync
+for hook_src in \
+  "$SCRIPT_DIR/hooks/theme-set.d/90-reload-nvim-tmux.sh" \
+  "$SCRIPT_DIR/hooks/theme-set.d/91-reload-yazi.sh"
+do
+  [[ -f "$hook_src" ]] || continue
+  hook_name=$(basename "$hook_src")
+  HOOK_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
   run mkdir -p "$HOOK_DIR"
-  run cp -a "$HOOK_SRC" "$HOOK_DIR/90-reload-nvim-tmux.sh"
+  run cp -a "$hook_src" "$HOOK_DIR/$hook_name"
   if (( ! DRY )); then
-    chmod +x "$HOOK_DIR/90-reload-nvim-tmux.sh"
+    chmod +x "$HOOK_DIR/$hook_name"
   fi
-  echo "  hook: $HOOK_DIR/90-reload-nvim-tmux.sh"
-fi
+  echo "  hook: $HOOK_DIR/$hook_name"
+done
 
 # Yazi flavors (optional)
 YAZI_SRC="$SCRIPT_DIR/yazi"

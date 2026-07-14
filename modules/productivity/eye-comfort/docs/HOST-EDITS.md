@@ -10,6 +10,7 @@ Omarchy rule of thumb: **never edit `~/.local/share/omarchy/`** (upstream git tr
 |------|-----|-----|
 | `~/.config/nvim/lua/plugins/omarchy-theme-hotreload.lua` | `install.sh` overwrites | Stock omarchy-nvim hotreload forces `vim.o.background = "dark"` on every `LazyReload`, so light↔dark leaves mixed statusline/syntax. Replacement reads `light.mode`, re-applies soft gruvbox SoT (`dark0_soft` / `light0_soft`), and reloads on `LazyReload` / theme.name / FocusGained. |
 | `~/.config/omarchy/hooks/theme-set.d/90-reload-nvim-tmux.sh` | `install.sh` copies | `omarchy-theme-set` restarts Ghostty/waybar/etc. but **not** nvim or tmux. Hook pushes reload to open nvim sockets + sources tmux.conf. |
+| `~/.config/omarchy/hooks/theme-set.d/91-reload-yazi.sh` | `install.sh` copies | Yazi cannot hot-reload flavors. Pins `theme.toml` dark+light to active SoT and soft-quits open yazis so the next launch rematches terminal bg. |
 | `~/.config/omarchy/hooks/theme-set` | Hand-stubbed if a prior full hook existed | Earlier debug copy duplicated LazyReload with `theme-set.d`. Stub defers to `.d/` so reload fires once. Safe to delete if you only use `.d/` scripts. |
 | `~/.config/omarchy/themes/eye-comfort-{dawn,light,dusk,dark}/` | `install.sh` rsync + live render | User Omarchy theme packages (colors, Ghostty, neovim.lua, icons, wallpapers). Live render updates roles before `omarchy-theme-set`. |
 | `~/.config/omarchy/themes/eye-comfort-tokens/` + `PALETTE.md` / `PRODUCT.md` / `DESIGN.md` | `install.sh` | Docs/tokens next to themes for operators. |
