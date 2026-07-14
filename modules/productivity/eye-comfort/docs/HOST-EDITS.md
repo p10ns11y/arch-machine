@@ -15,7 +15,7 @@ Omarchy rule of thumb: **never edit `~/.local/share/omarchy/`** (upstream git tr
 | `~/.config/omarchy/themes/eye-comfort-tokens/` + `PALETTE.md` / `PRODUCT.md` / `DESIGN.md` | `install.sh` | Docs/tokens next to themes for operators. |
 | `~/.local/bin/eye-comfort-theme` | `install.sh` | Circadian switcher CLI. |
 | `~/.local/lib/eye-comfort/*.py` | `install.sh` | Schedule / palette / render helpers (`PYTHONPATH`). |
-| `~/.config/systemd/user/eye-comfort-theme.{service,timer}` | `install.sh --with-timer` | Hourly `auto` apply. Service sets `OMARCHY_PATH` + PATH so templates still generate under systemd (no login env). |
+| `~/.config/systemd/user/eye-comfort-theme.{service,timer}` | `install.sh --with-timer` | Hourly `auto` apply. Imports Wayland/Hyprland env so waybar restart works; service sets `OMARCHY_PATH`. |
 | `~/.config/yazi/flavors/eye-comfort-{dark,light}.yazi/` (+ optional `theme.toml`) | `install.sh` | Matching file-manager flavors. |
 | `~/.config/eye-comfort/state.json` | `eye-comfort-theme` on apply | Last phase, ambient, intensity, contrast, motion preference. |
 
