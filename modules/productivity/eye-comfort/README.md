@@ -35,6 +35,17 @@ PYTHONPATH=lib python3 lib/test_tamil_schedule.py
 Eye comfort remains primary. Cultural structure: Perum × Siru × Tinai × Nazhigai × Jaamam.
 Docs: [docs/DESIGN-TN.md](docs/DESIGN-TN.md) · [docs/PRODUCT-TN.md](docs/PRODUCT-TN.md).
 
+### Planned cultural calendars (backlog — no packages yet)
+
+| Overlay | Docs (stubs) | Roadmap | Notes |
+|---------|----------------|---------|--------|
+| **Calendar seam** | — | [SN-EC-CAL](../../../arch-design/coming-next.md) | Registry so TN is not hard-coded forever |
+| **India (pan)** | [PRODUCT-IN.md](docs/PRODUCT-IN.md) | SN-EC-IN | Ṛtu + regions; **alongside** TN |
+| **Sweden** | [PRODUCT-SE.md](docs/PRODUCT-SE.md) | SN-EC-SE | Seasons + saga/myth identity, lat-honest |
+| **America 1776+** | [PRODUCT-US.md](docs/PRODUCT-US.md) | SN-EC-US | Early republic + plain craft + cowboy/modern |
+
+Implement order suggestion: seam → India → Sweden → America. Kick off only when ready; stubs are not installable themes.
+
 ```bash
 eye-comfort-theme tn --tinai neythal --dry-run
 eye-comfort-theme tn --lat 13.08 --lon 80.27 --json
@@ -78,6 +89,7 @@ Does not change the existing `omarchy-restart-waybar` PATH wrappers.
 | `units/eye-comfort-tn.{service,timer}` | Optional Nazhigai (~24 min) timer |
 | `nvim/omarchy-theme-hotreload.lua` | Live nvim light/dark reload (install → `~/.config/nvim/…`) |
 | `hooks/theme-set.d/90-reload-nvim-tmux.sh` | Omarchy hook: push LazyReload + tmux refresh |
+| `hooks/theme-set.d/91-delta-bat.sh` | Omarchy hook: `delta.features` light/dark + `delta.env` |
 | `lib/{schedule,palette,oklch,render}.py` | Phase math + tokens + host render |
 | `lib/tamil_{schedule,palette}.py` | Perum/Siru/Tinai/Nazhigai/Jaamam + tint |
 | `lib/waybar_status.py` | Waybar JSON + notify tooltip body |
