@@ -137,7 +137,7 @@ User-facing copy uses ISO 15919:
 | dry interior + Mudhu Venil | palai |
 | else / missing coords | marutham |
 
-**Timers:** optional `--with-tn-timer` installs `eye-comfort-tn.timer`
+**Timers:** optional `--with-tn-timer` installs `eye-comfort-tn.timer` (unit `Conflicts=` peer circadian timer)
 (`OnCalendar=*:0/24`) calling `eye-comfort-theme tn`. Mutually exclusive with
 the hourly circadian timer — `install.sh` disables the other on enable so they
 cannot race `omarchy-theme-set`’s `current/theme` swap. Switcher keeps
