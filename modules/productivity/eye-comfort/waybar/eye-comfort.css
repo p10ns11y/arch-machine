@@ -3,6 +3,11 @@
  *   @import url("file:///home/USER/.local/lib/eye-comfort/waybar/eye-comfort.css");
  * into ~/.config/waybar/style.css, or paste the rules below.
  * Never edit ~/.local/share/omarchy/.
+ *
+ * Crisp type (HiDPI scale 2): use real font weights only.
+ * CaskaydiaMono Nerd Font ships Regular (400) and SemiBold (600) — not Medium (500).
+ * Avoid synthetic weight + letter-spacing (both soft-blur mono stems).
+ * Tooltips: Tamil fallback + light/dark-safe body ink (Pango span colors adapt in waybar_status.py).
  */
 
 #custom-eye-comfort {
@@ -10,8 +15,9 @@
   margin-left: 12px;
   margin-right: 8px;
   padding: 0 6px;
-  letter-spacing: 0.03em;
-  font-weight: 500;
+  /* Real Regular face — no Medium/500 synthesize, no letter-spacing smear */
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 #custom-eye-comfort.eye-comfort-maalai,
@@ -28,13 +34,25 @@
 }
 
 /* Global tooltip was padding: 2px — text hugged the left edge.
- * TN tooltip is multi-section (Tinai / Pozhuthu / Jaamam+Nazhigai heart). */
+ * TN tooltip is multi-section (Tinai / Pozhuthu / Jaamam+Nazhigai heart).
+ * Body color follows @foreground so cream paper gets dark ink, not washed gold. */
 tooltip {
   padding: 14px 18px;
   border-radius: 6px;
+  font-family: "CaskaydiaMono Nerd Font", "Noto Sans Tamil", "Noto Sans Tamil UI", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: @foreground;
+  background-color: @background;
 }
 
 tooltip label {
   /* no line-height — GTK CSS (Waybar) rejects it and aborts */
   padding: 4px 6px;
+  font-family: "CaskaydiaMono Nerd Font", "Noto Sans Tamil", "Noto Sans Tamil UI", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: @foreground;
 }

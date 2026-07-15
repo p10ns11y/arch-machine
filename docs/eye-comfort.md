@@ -20,3 +20,5 @@ Committed `colors.toml` / Ghostty / nvim hosts are generated from OKLCH SoT (`li
 **Live reload:** install deploys nvim hotreload + `theme-set.d` hook so open nvim editors update on switch. The switcher always sets `OMARCHY_PATH` so Omarchy templates emit `hyprland.conf` (avoids Hyprland `source=` globbing errors). Yazi does not rematch on theme apply; reopen after light↔dark if contrast wrong. Ghostty/nvim may live-reload.
 
 **Host edits:** which Omarchy/`~/.config` paths install or the switcher touch (and which they never touch) — [`modules/productivity/eye-comfort/docs/HOST-EDITS.md`](../modules/productivity/eye-comfort/docs/HOST-EDITS.md).
+
+**Planned cultural calendars** (stubs only; SN-EC-CAL then IN/SE/US): [PRODUCT-IN](../modules/productivity/eye-comfort/docs/PRODUCT-IN.md) · [PRODUCT-SE](../modules/productivity/eye-comfort/docs/PRODUCT-SE.md) · [PRODUCT-US](../modules/productivity/eye-comfort/docs/PRODUCT-US.md) — see [coming-next](../arch-design/coming-next.md).

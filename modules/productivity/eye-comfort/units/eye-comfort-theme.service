@@ -2,6 +2,8 @@
 Description=Apply eye-comfort Omarchy theme for current local hour
 After=graphical-session.target
 Wants=graphical-session.target
+# Avoid concurrent oneshot with TN apply (same omarchy theme swap path).
+Conflicts=eye-comfort-tn.service
 
 [Service]
 Type=oneshot

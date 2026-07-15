@@ -152,6 +152,81 @@ stateDiagram-v2
 
 **Verify:** `tinfoil tui` → Evidence shows `logs/evidence-bundle-*.json` tail
 
+### SN-EC-CAL · Eye-comfort calendar plugin seam
+
+**Problem:** Tamil Nadu calendar is hard-coded in CLI/waybar; Sweden / America 1776 / pan-India overlays cannot ship without forking the switcher.
+
+**Problem context:** `modules/productivity/eye-comfort` — TN pattern works; next cultures need a registry.
+
+```mermaid
+flowchart LR
+  CLI[eye-comfort-theme MODE] --> Reg[calendar registry]
+  Reg --> TN[tamil_nadu]
+  Reg --> SE[sweden]
+  Reg --> US[america_1776]
+  Reg --> IN[india]
+  Reg --> Render[live roles + omarchy-theme-set]
+  Reg --> Bar[waybar chip generic]
+```
+
+| File | Work |
+|------|------|
+| `bin/eye-comfort-theme` | mode → registry resolve |
+| `lib/*_schedule.py` | TN behind interface; no behavior change |
+| `lib/waybar_status.py` | bar/tooltip from `state.calendar` |
+| `lib/generate_packages.py` | multi-family package lists |
+
+**Done when:** `tn` regression tests green; adding a calendar is new lib + packages only.
+
+**Verify:** `PYTHONPATH=lib python3 lib/test_tamil_schedule.py` (+ future calendar suite)
+
+### SN-EC-IN · Pan-India ṛtu / region overlay
+
+**Problem:** Operators want subcontinental India rhythm, not only Tamil tinai; TN must stay.
+
+| File | Work |
+|------|------|
+| `docs/PRODUCT-IN.md`, `DESIGN-IN.md` | ṛtu + region packages; TN coexistence |
+| `lib/india_{schedule,palette}.py` | calendar + AA leans |
+| `themes/eye-comfort-in-*` | ~5 regional packages |
+| CLI | `eye-comfort-theme in` · `calendar: india` |
+
+**Done when:** `in --json` AA-clean; TN untouched.
+
+**Verify:** contrast matrix + dry-run apply one `eye-comfort-in-*`
+
+### SN-EC-SE · Sweden seasons + saga/myth overlay
+
+**Problem:** High-latitude light + Nordic year need structure; sagas/gods as restrained identity, not metal kitsch.
+
+| File | Work |
+|------|------|
+| `docs/PRODUCT-SE.md`, `DESIGN-SE.md` | årstid + saga realms + lat defaults |
+| `lib/sweden_{schedule,palette}.py` | solar-first SE |
+| `themes/eye-comfort-se-*` | ~5 packages (asgard…nifl or landskap) |
+| CLI | `eye-comfort-theme se` · `calendar: sweden` |
+
+**Done when:** lat-honest midsummer/winter documented; AA tests pass.
+
+**Verify:** `se --lat 59.3 --json` day/night extremes; contrast suite
+
+### SN-EC-US · America 1776 + plain + modern/cowboy
+
+**Problem:** Early-republic desk mood + Amish/plain craft + open modern America (cowboy/range, civic if AA) as optional culture mode.
+
+| File | Work |
+|------|------|
+| `docs/PRODUCT-US.md`, `DESIGN-US.md` | 1776 spine; plain; range/modern welcome |
+| `lib/america_{schedule,palette}.py` | seasons + craft leans |
+| `themes/eye-comfort-us-*` | parchment, hearth, field, workshop, plain, range |
+| CLI | `eye-comfort-theme us` · `calendar: america_1776` |
+
+**Done when:** packages AA-clean; no ban on cowboy/modern when restrained.
+
+**Verify:** contrast matrix; dry-run `us` apply
+
+**Depends:** SN-EC-CAL preferred first; cultures can sequence IN → SE → US.
+
 ## §9 Gantt (suggested)
 
 ```mermaid
@@ -164,6 +239,11 @@ gantt
   SN-3 Profile harness    :sn3, after sn1, 5d
   SN-2 TUI flows          :sn2, after sn1, 10d
   SN-4 Evidence TUI       :sn4, after sn2, 5d
+  section EyeComfort culture
+  SN-EC-CAL calendar seam :eccal, after sn4, 5d
+  SN-EC-IN pan-India      :ecin, after eccal, 8d
+  SN-EC-SE Sweden saga    :ecse, after eccal, 8d
+  SN-EC-US America 1776   :ecus, after eccal, 8d
 ```
 
 ## §10 Monitoring signals

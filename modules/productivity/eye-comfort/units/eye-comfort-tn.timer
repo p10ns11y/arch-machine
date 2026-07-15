@@ -1,5 +1,7 @@
 [Unit]
 Description=Eye-comfort Tamil Nazhigai/Siru theme refresh
+# Peer circadian timer races on ~/.config/omarchy/current/theme — stop it if started.
+Conflicts=eye-comfort-theme.timer
 
 [Timer]
 # Every 24 minutes ≈ 1 Nazhigai. Soft tint refresh; full package swap only when Siru/tinai changes.

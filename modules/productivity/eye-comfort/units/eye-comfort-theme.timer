@@ -1,5 +1,7 @@
 [Unit]
 Description=Hourly eye-comfort circadian theme switch
+# Peer TN timer races on ~/.config/omarchy/current/theme — stop it if started.
+Conflicts=eye-comfort-tn.timer
 
 [Timer]
 OnCalendar=hourly
