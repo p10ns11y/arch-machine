@@ -58,6 +58,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Timers race on omarchy current/theme — never enable both.
+if (( WITH_TIMER && WITH_TN_TIMER )); then
+  echo "error: --with-timer and --with-tn-timer are mutually exclusive (pick one)" >&2
+  echo "  circadian hourly:  ./install.sh --with-timer" >&2
+  echo "  TN Nazhigai ~24m:  ./install.sh --with-tn-timer" >&2
+  exit 1
+fi
+
 run() {
   if (( DRY )); then
     echo "DRY: $*"
@@ -87,7 +95,8 @@ link_backgrounds() {
 echo "eye-comfort install → $OMARCHY_THEMES"
 run mkdir -p "$OMARCHY_THEMES" "$LOCAL_BIN" "$LOCAL_LIB"
 
-for f in PALETTE.md PRODUCT.md DESIGN.md DESIGN-TN.md PRODUCT-TN.md; do
+for f in PALETTE.md PRODUCT.md DESIGN.md DESIGN-TN.md PRODUCT-TN.md \
+  PRODUCT-SE.md PRODUCT-US.md PRODUCT-IN.md; do
   if [[ -f "$DOCS_SRC/$f" ]]; then
     run cp -a "$DOCS_SRC/$f" "$OMARCHY_THEMES/$f"
   fi
@@ -155,6 +164,7 @@ else
   rsync -a "$LIB_SRC/" "$LOCAL_LIB/"
   chmod +x "$LOCAL_LIB/test_schedule.py" 2>/dev/null || true
   chmod +x "$LOCAL_LIB/test_tamil_schedule.py" 2>/dev/null || true
+  chmod +x "$LOCAL_LIB/test_timer_mutex.py" 2>/dev/null || true
 fi
 WRAP_SRC="$SCRIPT_DIR/wrappers"
 if [[ -d "$WRAP_SRC" ]]; then
@@ -191,18 +201,22 @@ if [[ -f "$NVIM_HOTRELOAD_SRC" ]]; then
   echo "  nvim: $NVIM_PLUGINS/omarchy-theme-hotreload.lua"
 fi
 
-# Omarchy theme-set.d hooks → reload open nvim/tmux (Yazi uses static dual-flavor theme.toml)
+# Omarchy theme-set.d hooks → nvim/tmux reload + delta light/dark mode
 HOOK_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
-hook_src="$SCRIPT_DIR/hooks/theme-set.d/90-reload-nvim-tmux.sh"
-if [[ -f "$hook_src" ]]; then
-  run mkdir -p "$HOOK_DIR"
-  run cp -a "$hook_src" "$HOOK_DIR/90-reload-nvim-tmux.sh"
-  if (( ! DRY )); then
-    chmod +x "$HOOK_DIR/90-reload-nvim-tmux.sh"
-    # Drop pre-TN yazi rematch hook if still on host
-    rm -f "$HOOK_DIR/91-reload-yazi.sh"
+run mkdir -p "$HOOK_DIR"
+for hook_name in 90-reload-nvim-tmux.sh 91-delta-bat.sh; do
+  hook_src="$SCRIPT_DIR/hooks/theme-set.d/$hook_name"
+  if [[ -f "$hook_src" ]]; then
+    run cp -a "$hook_src" "$HOOK_DIR/$hook_name"
+    if (( ! DRY )); then
+      chmod +x "$HOOK_DIR/$hook_name"
+    fi
+    echo "  hook: $HOOK_DIR/$hook_name"
   fi
-  echo "  hook: $HOOK_DIR/90-reload-nvim-tmux.sh"
+done
+if (( ! DRY )); then
+  # Drop pre-TN yazi rematch hook if still on host (not 91-delta-bat.sh)
+  rm -f "$HOOK_DIR/91-reload-yazi.sh"
 fi
 
 # Yazi flavors (optional)
@@ -230,6 +244,15 @@ if [[ -f "$LOCAL_LIB/test_schedule.py" ]] && (( ! DRY )); then
 fi
 if [[ -f "$LOCAL_LIB/test_tamil_schedule.py" ]] && (( ! DRY )); then
   PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_tamil_schedule.py"
+fi
+if [[ -f "$LOCAL_LIB/test_timer_mutex.py" ]] && (( ! DRY )); then
+  # Mutex test lives next to install.sh units; run from module tree if present
+  MUTEX_TEST="$SCRIPT_DIR/lib/test_timer_mutex.py"
+  if [[ -f "$MUTEX_TEST" ]]; then
+    python3 "$MUTEX_TEST"
+  else
+    python3 "$LOCAL_LIB/test_timer_mutex.py"
+  fi
 fi
 
 if (( WITH_TIMER )); then
