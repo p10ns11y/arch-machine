@@ -32,7 +32,14 @@ from tamil_schedule import (
     siru_for_hour,
     wallpaper_fallback_names,
 )
-from waybar_status import tn_waybar_payload, waybar_payload
+from waybar_status import (
+    _PANGO_DARK,
+    _PANGO_LIGHT,
+    activate_pango_surface,
+    surface_is_light,
+    tn_waybar_payload,
+    waybar_payload,
+)
 
 
 def test_perum_windows():
@@ -207,7 +214,7 @@ def test_waybar_payload():
     date_ln = next(ln for ln in tip.splitlines() if "14 July" in ln)
     assert date_ln.startswith(" ")
     assert date_ln.lstrip().startswith("<span")
-    assert "<b>" in tip  # Pango hierarchy
+    assert "<b>" in tip or 'font_weight="700"' in tip  # Pango hierarchy
     assert "Seashore" in tip
     assert "Seashore  —  Neytal" in tip
     assert "(apply)" not in tip
@@ -275,6 +282,36 @@ def test_bad_inputs():
         pass
 
 
+def test_tooltip_pango_adapts_to_light_surface():
+    """Cream paper must not use dark-only gold spans (~2:1 wash)."""
+    light_state = {
+        "tinai": "marutham",
+        "calendar": "tamil_nadu",
+        "roles": {"background": "#FCF0E2", "foreground": "#2C2622"},
+    }
+    dark_state = {
+        "tinai": "marutham",
+        "calendar": "tamil_nadu",
+        "roles": {"background": "#322A23", "foreground": "#E8DED0"},
+    }
+    assert surface_is_light(light_state) is True
+    assert surface_is_light(dark_state) is False
+    assert activate_pango_surface(light_state)["accent"] == _PANGO_LIGHT["accent"]
+    assert activate_pango_surface(dark_state)["accent"] == _PANGO_DARK["accent"]
+
+    tip_l = tn_waybar_payload(
+        state=light_state, now=datetime(2026, 7, 15, 17, 55)
+    )["tooltip"]
+    tip_d = tn_waybar_payload(
+        state=dark_state, now=datetime(2026, 7, 15, 22, 0)
+    )["tooltip"]
+    assert _PANGO_LIGHT["accent"] in tip_l
+    assert _PANGO_LIGHT["muted"] in tip_l
+    assert _PANGO_DARK["accent"] not in tip_l
+    assert _PANGO_DARK["accent"] in tip_d
+    assert _PANGO_LIGHT["accent"] not in tip_d
+
+
 if __name__ == "__main__":
     test_perum_windows()
     test_siru_windows()
@@ -288,4 +325,5 @@ if __name__ == "__main__":
     test_parse_aliases()
     test_all_tinai_siru_contrast()
     test_bad_inputs()
+    test_tooltip_pango_adapts_to_light_surface()
     print("test_tamil_schedule.py: OK")

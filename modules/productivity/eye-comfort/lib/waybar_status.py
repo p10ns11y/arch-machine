@@ -33,15 +33,71 @@ from tamil_schedule import (
     tinai_display,
 )
 
-# Soft amber / muted ink from DESIGN.md dark tokens (readable on warm dark tooltips)
-_PANGO_ACCENT = "#C9A66B"
-_PANGO_MUTED = "#8A8278"
-_PANGO_SOFT = "#A89F94"
+# Tooltip Pango spans — DESIGN.md locks. Dark tokens wash out on cream paper
+# (~2:1); pick palette from surface (roles.background / light.mode).
+_PANGO_DARK = {
+    "accent": "#C9A66B",  # dark-amber on umber
+    "muted": "#8A8278",
+    "soft": "#A89F94",
+}
+_PANGO_LIGHT = {
+    "accent": "#885920",  # light-amber on cream ≥5:1
+    "muted": "#72685E",  # comment ink ≥4.5:1
+    "soft": "#6E665C",
+}
+_ACTIVE_PANGO = dict(_PANGO_DARK)
 _STRIP_PANGO = re.compile(r"</?[^>]+>")
+_LIGHT_MODE_PATH = Path.home() / ".config" / "omarchy" / "current" / "theme" / "light.mode"
 
 
 def default_state_path() -> Path:
     return Path.home() / ".config" / "eye-comfort" / "state.json"
+
+
+def _hex_rel_luminance(hex_color: str) -> Optional[float]:
+    """sRGB relative luminance, or None if not a #RRGGBB color."""
+    h = hex_color.strip().lstrip("#")
+    if len(h) != 6:
+        return None
+    try:
+        r, g, b = (int(h[i : i + 2], 16) / 255.0 for i in (0, 2, 4))
+    except ValueError:
+        return None
+
+    def lin(c: float) -> float:
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+    R, G, B = lin(r), lin(g), lin(b)
+    return 0.2126 * R + 0.7152 * G + 0.0722 * B
+
+
+def surface_is_light(state: Optional[Dict[str, Any]] = None) -> bool:
+    """True when tooltip/bar paper is day cream (not umber night).
+
+    Prefer live roles.background from state.json; fall back to Omarchy light.mode.
+    """
+    st = state if state is not None else {}
+    roles = st.get("roles")
+    if isinstance(roles, dict):
+        bg = roles.get("background")
+        if isinstance(bg, str):
+            L = _hex_rel_luminance(bg)
+            if L is not None:
+                # Midpoint: cream ~0.9, umber night ~0.05
+                return L >= 0.45
+    try:
+        if _LIGHT_MODE_PATH.is_file():
+            return True
+    except OSError:
+        pass
+    return False
+
+
+def activate_pango_surface(state: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+    """Select light/dark span colors for the next tooltip build; return active map."""
+    global _ACTIVE_PANGO
+    _ACTIVE_PANGO = dict(_PANGO_LIGHT if surface_is_light(state) else _PANGO_DARK)
+    return dict(_ACTIVE_PANGO)
 
 
 def load_state(path: Optional[Path] = None) -> Dict[str, Any]:
@@ -109,15 +165,19 @@ def _center_first_content_line(lines: List[str]) -> List[str]:
 
 
 def _muted(text: str) -> str:
-    return f'<span foreground="{_PANGO_MUTED}">{text}</span>'
+    return f'<span foreground="{_ACTIVE_PANGO["muted"]}">{text}</span>'
 
 
 def _soft(text: str) -> str:
-    return f'<span foreground="{_PANGO_SOFT}">{text}</span>'
+    return f'<span foreground="{_ACTIVE_PANGO["soft"]}">{text}</span>'
 
 
 def _accent_b(text: str) -> str:
-    return f'<span foreground="{_PANGO_ACCENT}"><b>{text}</b></span>'
+    # Avoid nested <b> + missing Medium face: weight 700 when available, else Regular
+    return (
+        f'<span foreground="{_ACTIVE_PANGO["accent"]}" '
+        f'font_weight="700">{text}</span>'
+    )
 
 
 def _date_line(now: datetime) -> str:
@@ -182,8 +242,11 @@ def _nazhigai_heart_lines(tn: Any) -> List[str]:
     ]
 
 
-def tn_tooltip_markup(tn: Any, now: datetime) -> str:
+def tn_tooltip_markup(
+    tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
+) -> str:
     """Pango tooltip: date → Tiṇai → Poḻutu → Jāmam/Nāḻikai heart → Theme."""
+    activate_pango_surface(state)
     meta = TINAI_META[tn.tinai]
     date = _pango_esc(_date_line(now))
     landscape = _pango_esc(meta["landscape"].title())
@@ -245,7 +308,7 @@ def tn_waybar_payload(
         f"{tinai_display(tn.tinai)} · {siru_display(tn.siru)} · "
         f"N{nazhigai_ordinal(tn.nazhigai)}"
     )
-    tooltip = tn_tooltip_markup(tn, now)
+    tooltip = tn_tooltip_markup(tn, now, state=st)
     return {
         "text": text,
         "tooltip": tooltip,
@@ -259,6 +322,7 @@ def circadian_waybar_payload(
     state: Dict[str, Any], now: Optional[datetime] = None
 ) -> Dict[str, Any]:
     now = now or datetime.now()
+    activate_pango_surface(state)
     phase = str(state.get("phase") or "unknown")
     theme = str(state.get("theme") or "eye-comfort")
     scene = str(state.get("scene") or "")
@@ -271,7 +335,7 @@ def circadian_waybar_payload(
         "",
         _accent_b(date),
         "",
-        f"<b>{phase_e}</b>",
+        f'<span font_weight="700">{phase_e}</span>',
     ]
     if scene_e:
         lines.append(f"  {_muted(scene_e)}")
