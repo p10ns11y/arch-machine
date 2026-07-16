@@ -1,7 +1,10 @@
 [Unit]
 Description=Apply eye-comfort Omarchy theme for current local hour
 After=graphical-session.target
-Wants=graphical-session.target
+# Do NOT Wants=/Requires= graphical-session.target. With Linger=yes + Persistent=
+# timers, Wants= activates graphical-session before UWSM/Hyprland and aborts
+# first login ("A compositor or graphical-session* target is already active!").
+# After= only orders when both start; it does not pull the target.
 # Avoid concurrent oneshot with TN apply (same omarchy theme swap path).
 Conflicts=eye-comfort-tn.service
 
