@@ -15,13 +15,15 @@ description: >-
 
 Agents **must** apply this skill before shipping changes to **user** systemd units that interact with Wayland sessions, theme apply, or autostart.
 
-**Locations (keep both; do not drop the project copy):**
+**Locations (two independent copies — project first, then general):**
 
-| Install | Path |
-|---------|------|
-| **arch-machine (canonical for this project)** | `.agents/skills/session-unit-order/` (git-tracked) |
-| **User** | `~/skills/session-unit-order` → project tree (or a local copy) |
-| **Library mirror** | [p10ns11y/skills](https://github.com/p10ns11y/skills) `session-unit-order/` |
+| Install | Path | Role |
+|---------|------|------|
+| **This project (keep)** | `arch-machine/.agents/skills/session-unit-order/` | Born from this repo’s incident; always keep a full copy in-tree |
+| **User general** | `~/skills/session-unit-order/` | Independent **copy** (not a symlink to the project) for everyday agents |
+| **Skills library remote** | [p10ns11y/skills](https://github.com/p10ns11y/skills) via `~/Work/personal/skills/` | Sync `~/skills` (or the library clone) when generalizing for others |
+
+Workflow: fix/create in **project** → copy into **`~/skills`** → commit/push **skills** remote when ready for general use.
 
 **Incident writeup (arch-machine):**  
 `modules/productivity/eye-comfort/docs/REGRESSION-UWSM-SESSION.md`.  
