@@ -77,11 +77,34 @@ def test_install_rejects_dual_timer_flags():
     )
 
 
+def test_services_do_not_pull_graphical_session():
+    """Shipped services must not Wants=/Requires= graphical-session.target.
+
+    Pulling that target (via Wants=) before UWSM starts Hyprland aborts first
+    login when Persistent= timers fire under Linger=yes user managers.
+    """
+    for path in (THEME_SVC, TN_SVC):
+        text = _unit_text(path)
+        for bad in (
+            r"(?m)^Wants=.*\bgraphical-session\.target\b",
+            r"(?m)^Requires=.*\bgraphical-session\.target\b",
+            r"(?m)^BindsTo=.*\bgraphical-session\.target\b",
+        ):
+            assert not re.search(bad, text), (
+                f"{path.name} must not pull graphical-session.target "
+                f"(matched {bad!r}); use After= only"
+            )
+        assert re.search(r"(?m)^After=.*\bgraphical-session\.target\b", text), (
+            f"{path.name} should still After=graphical-session.target for ordering"
+        )
+
+
 def main() -> int:
     tests = [
         test_timer_units_conflict_each_other,
         test_service_units_conflict_each_other,
         test_install_rejects_dual_timer_flags,
+        test_services_do_not_pull_graphical_session,
     ]
     failed = 0
     for t in tests:
