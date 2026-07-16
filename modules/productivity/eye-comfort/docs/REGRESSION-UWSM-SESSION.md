@@ -86,9 +86,10 @@ journalctl -b -1 --no-pager | rg -i 'uwsm|graphical-session|eye-comfort|sddm-hel
 
 ## Agent prevention
 
-Use skill **`session-unit-order`**:
+Use skill **`session-unit-order`** ([p10ns11y/skills](https://github.com/p10ns11y/skills)):
 
-- Repo: `.agents/skills/session-unit-order/`
-- User: `~/skills/session-unit-order` → same tree (symlink)
+- Library: `~/Work/personal/skills/session-unit-order/` (or clone of that repo)
+- Repo: `.agents/skills/session-unit-order` → library (symlink)
+- User: `~/skills/session-unit-order` → library (symlink)
 
 Load when editing user systemd units, eye-comfort timers, UWSM/Hyprland session startup, or diagnosing first-boot-after-shutdown login failures.
