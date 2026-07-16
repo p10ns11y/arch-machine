@@ -86,10 +86,11 @@ journalctl -b -1 --no-pager | rg -i 'uwsm|graphical-session|eye-comfort|sddm-hel
 
 ## Agent prevention
 
-Use skill **`session-unit-order`** ([p10ns11y/skills](https://github.com/p10ns11y/skills)):
+Use skill **`session-unit-order`** (tracked in this repo; not removed in favor of a bare symlink-only install):
 
-- Library: `~/Work/personal/skills/session-unit-order/` (or clone of that repo)
-- Repo: `.agents/skills/session-unit-order` → library (symlink)
-- User: `~/skills/session-unit-order` → library (symlink)
+- **This project:** `.agents/skills/session-unit-order/` (full skill tree, git-tracked)
+- **User:** `~/skills/session-unit-order` → this project's skill tree
+- **Library mirror (optional):** [p10ns11y/skills](https://github.com/p10ns11y/skills) `session-unit-order/`
+- **On Omarchy hosts:** also load **`omarchy`** (`~/.agents/skills/omarchy` → `~/.local/share/omarchy/default/omarchy-skill`) for safe `~/.config/omarchy/` themes/hooks — never edit `~/.local/share/omarchy/`
 
 Load when editing user systemd units, eye-comfort timers, UWSM/Hyprland session startup, or diagnosing first-boot-after-shutdown login failures.

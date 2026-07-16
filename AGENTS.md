@@ -9,7 +9,7 @@ Profile-based Arch Linux bootstrap + **tinfoil** sentinel (CLI + Bubble Tea/gum 
 | ai-optimization | `.agents/skills/ai-optimization` | Large bash/Go scout; token budgets |
 | fusion-sage | `.agents/skills/fusion-sage` | Cross-module synthesis + surplus |
 | higher-order-decision-architect | `.agents/skills/higher-order-decision-architect` | Material architecture/security choices |
-| session-unit-order | `.agents/skills/session-unit-order` → `~/Work/personal/skills/…` (also `~/skills/…`; [p10ns11y/skills](https://github.com/p10ns11y/skills)) | User systemd + UWSM/Hyprland; forbid `Wants=graphical-session` on Persistent timers; first-boot login fails |
+| session-unit-order | `.agents/skills/session-unit-order` (in-repo; `~/skills/session-unit-order` → same; also published to [p10ns11y/skills](https://github.com/p10ns11y/skills)) | User systemd + UWSM/Hyprland; on Omarchy also load **omarchy** skill; forbid `Wants=graphical-session` on Persistent timers |
 | stellar-roadmap | `.agents/skills/stellar-roadmap` | `arch-design/coming-next.md`, SN-* cards |
 | verification-cockpit | `.agents/skills/verification-cockpit` | Regenerate `.agents/verification/` |
 
