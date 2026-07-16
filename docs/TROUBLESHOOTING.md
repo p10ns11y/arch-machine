@@ -2,6 +2,18 @@
 
 ## Common Issues
 
+### First boot after shutdown fails; second (hard power) works
+
+Eye-comfort / UWSM race: a user oneshot with `Wants=graphical-session.target` plus `Persistent=` timers under Linger can activate the session target before Hyprland. See:
+
+- [REGRESSION-UWSM-SESSION.md](../modules/productivity/eye-comfort/docs/REGRESSION-UWSM-SESSION.md) — symptom, root cause, fix, journal re-verify
+- Agent skill: `.agents/skills/session-unit-order/` (also `~/skills/session-unit-order`)
+
+```bash
+journalctl -b -1 --no-pager | rg -i 'uwsm|graphical-session|already active|sddm-helper exited'
+python3 modules/productivity/eye-comfort/lib/test_timer_mutex.py
+```
+
 ### Permission Denied
 ```bash
 # Make scripts executable

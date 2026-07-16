@@ -21,4 +21,6 @@ Committed `colors.toml` / Ghostty / nvim hosts are generated from OKLCH SoT (`li
 
 **Host edits:** which Omarchy/`~/.config` paths install or the switcher touch (and which they never touch) — [`modules/productivity/eye-comfort/docs/HOST-EDITS.md`](../modules/productivity/eye-comfort/docs/HOST-EDITS.md).
 
+**Regression (first boot fails / second works):** [`REGRESSION-UWSM-SESSION.md`](../modules/productivity/eye-comfort/docs/REGRESSION-UWSM-SESSION.md) — do not reintroduce `Wants=graphical-session` on timer oneshots; skill [session-unit-order](../.agents/skills/session-unit-order/SKILL.md).
+
 **Planned cultural calendars** (stubs only; SN-EC-CAL then IN/SE/US): [PRODUCT-IN](../modules/productivity/eye-comfort/docs/PRODUCT-IN.md) · [PRODUCT-SE](../modules/productivity/eye-comfort/docs/PRODUCT-SE.md) · [PRODUCT-US](../modules/productivity/eye-comfort/docs/PRODUCT-US.md) — see [coming-next](../arch-design/coming-next.md).

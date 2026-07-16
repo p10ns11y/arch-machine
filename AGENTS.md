@@ -9,6 +9,7 @@ Profile-based Arch Linux bootstrap + **tinfoil** sentinel (CLI + Bubble Tea/gum 
 | ai-optimization | `.agents/skills/ai-optimization` | Large bash/Go scout; token budgets |
 | fusion-sage | `.agents/skills/fusion-sage` | Cross-module synthesis + surplus |
 | higher-order-decision-architect | `.agents/skills/higher-order-decision-architect` | Material architecture/security choices |
+| session-unit-order | `.agents/skills/session-unit-order` (canonical; `~/skills/session-unit-order` → same) | User systemd + UWSM/Hyprland; forbid `Wants=graphical-session` on Persistent timers; first-boot login fails |
 | stellar-roadmap | `.agents/skills/stellar-roadmap` | `arch-design/coming-next.md`, SN-* cards |
 | verification-cockpit | `.agents/skills/verification-cockpit` | Regenerate `.agents/verification/` |
 
