@@ -166,12 +166,37 @@ pub fn init_vault(
     })
 }
 
+/// Effective Shamir threshold for reconstruction.
+///
+/// **Never trust `meta.k` alone** — an attacker who can write `meta.json` must not
+/// lower k (e.g. to 2) and unlock with only device+knowledge. We enforce a floor of
+/// [`DEFAULT_K`] and reject policy that is weaker than the protocol default.
+pub fn effective_threshold(meta_k: u8, meta_n: u8) -> Result<u8, CeremonyError> {
+    if meta_n < DEFAULT_N {
+        return Err(CeremonyError::Msg(format!(
+            "policy n={meta_n} below protocol DEFAULT_N={DEFAULT_N}"
+        )));
+    }
+    // Floor: disk cannot reduce k below protocol default.
+    let k = meta_k.max(DEFAULT_K);
+    if k > meta_n {
+        return Err(CeremonyError::Msg(format!(
+            "invalid policy k={k} > n={meta_n}"
+        )));
+    }
+    // Cap at DEFAULT_K for this release (single supported policy).
+    // Using max(meta_k, DEFAULT_K) already floors; if meta_k > DEFAULT_K we honor the
+    // higher bar (stricter is safe).
+    Ok(k)
+}
+
 fn reconstruct_root(
     root: &Path,
     confirmations: &[Confirmation],
     fingerprint_override: Option<&[u8]>,
 ) -> Result<Vec<u8>, CeremonyError> {
     let meta = read_meta(root)?.ok_or_else(|| CeremonyError::Msg("no vault".into()))?;
+    let k = effective_threshold(meta.k, meta.n)?;
     let wrap = read_passphrase_wrap(root).ok();
     let device_blob = read_device_blob(root).ok();
     let knowledge_blob = read_knowledge_blob(root).ok();
@@ -185,14 +210,14 @@ fn reconstruct_root(
         fingerprint_override,
     )?;
 
-    if released.len() < meta.k as usize {
+    if released.len() < k as usize {
         return Err(CeremonyError::Msg(format!(
-            "insufficient shares: got {} need {}",
+            "insufficient shares: got {} need {} (protocol floor k>={DEFAULT_K})",
             released.len(),
-            meta.k
+            k
         )));
     }
-    Ok(shamir_combine(&released, meta.k)?)
+    Ok(shamir_combine(&released, k)?)
 }
 
 /// Daily unlock: passphrase + device + knowledge (k=3).
@@ -397,5 +422,47 @@ mod tests {
             None,
         );
         assert!(matches!(err, Err(CeremonyError::Factor(FactorError::IpTrustForbidden))));
+    }
+
+    #[test]
+    fn meta_k_downgrade_cannot_unlock_with_two_factors() {
+        // Attacker rewrites meta.json k=2; device+knowledge must still fail (need k>=3).
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        init_vault(&root, "pass-eeee-long", &escrow, "know-ffff-long").unwrap();
+
+        // Tamper: lower k on disk
+        let meta_path = root.join("meta.json");
+        let mut meta: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&meta_path).unwrap()).unwrap();
+        meta["k"] = serde_json::json!(2);
+        std::fs::write(&meta_path, serde_json::to_string_pretty(&meta).unwrap()).unwrap();
+
+        // Prove effective_threshold floors to DEFAULT_K
+        assert_eq!(effective_threshold(2, 4).unwrap(), DEFAULT_K);
+
+        let err = recover_with_confirmations(
+            &root,
+            &[
+                Confirmation::Device,
+                Confirmation::Knowledge("know-ffff-long".into()),
+            ],
+            None,
+        );
+        assert!(
+            err.is_err(),
+            "DOWNGRADE_SUCCESS would mean meta.k=2 was trusted; err={err:?}"
+        );
+        // Full legitimate recover still works
+        assert!(drill(&root, &escrow, "know-ffff-long").is_ok());
+    }
+
+    #[test]
+    fn effective_threshold_floors_and_rejects_bad_n() {
+        assert_eq!(effective_threshold(2, 4).unwrap(), 3);
+        assert_eq!(effective_threshold(3, 4).unwrap(), 3);
+        assert_eq!(effective_threshold(4, 5).unwrap(), 4);
+        assert!(effective_threshold(3, 2).is_err());
     }
 }

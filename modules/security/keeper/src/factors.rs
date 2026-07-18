@@ -319,22 +319,12 @@ pub fn release_shares_from_confirmations(
     Ok(map.into_values().collect())
 }
 
-/// Demonstration pure function: fingerprint material alone cannot produce a vault root.
-/// Returns false always for "fingerprint-only root" attempts (API surface for tests).
-pub fn confirmation_alone_derives_root(_confirmations: &[Confirmation]) -> bool {
-    // By design the factors module never exposes a root KDF from confirmation.
-    false
-}
-
 /// Load offline share from path (helper).
 pub fn load_offline_share(path: &Path) -> Result<Share, FactorError> {
     let raw = fs::read_to_string(path)?;
     let sj: crate::crypto::ShareJson = serde_json::from_str(&raw)?;
     Ok(Share::try_from(sj)?)
 }
-
-// Re-export wrap for enroll of passphrase share
-pub use crate::crypto::wrap_with_passphrase as enroll_passphrase_wrap;
 
 #[cfg(test)]
 mod tests {
@@ -354,16 +344,6 @@ mod tests {
             city: "Chennai".into(),
         };
         assert_eq!(confirmation_weight(&c2), 0);
-    }
-
-    #[test]
-    fn confirmation_alone_never_derives_root() {
-        let cs = vec![
-            Confirmation::Device,
-            Confirmation::PublicIp("8.8.8.8".into()),
-            Confirmation::Knowledge("anything".into()),
-        ];
-        assert!(!confirmation_alone_derives_root(&cs));
     }
 
     #[test]
