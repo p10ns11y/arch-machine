@@ -145,6 +145,18 @@ mount | grep fuse
 - Standard filesystem permissions apply
 - Root access doesn't bypass encryption
 
+## Keeper (threshold secrets + drill)
+
+For **new** secrets and MFA recovery codes, prefer the **keeper** CLI in this repo:
+
+- Path: `modules/security/keeper/`
+- Docs: `modules/security/keeper/docs/` (threat model, recovery ceremony, location policy)
+- Commands: `cargo run --manifest-path modules/security/keeper/Cargo.toml -- init|put|get|status|drill` (or `target/release/keeper` after `cargo build --release`)
+- Health requires a successful **drill** (recover without primary passphrase using offline escrow + device share).
+- **Public ISP IP / GeoIP are not trust signals** (see `docs/LOCATION.md`).
+
+gocryptfs below remains for legacy encrypted directories; import master keys into keeper once recovered.
+
 ## Backup and Recovery
 
 ### Backup Strategy

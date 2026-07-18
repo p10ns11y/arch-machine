@@ -1,0 +1,29 @@
+[package]
+name = "keeper"
+version = "0.1.0"
+edition = "2021"
+description = "Threshold secrets holder with enforced recovery drill (arch-machine)"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "keeper"
+path = "src/main.rs"
+
+[dependencies]
+aes-gcm = "0.10"
+base64 = "0.22"
+clap = { version = "4", features = ["derive", "env"] }
+hex = "0.4"
+hkdf = "0.12"
+ml-kem = { version = "0.3.2", features = ["getrandom"] }
+rand = "0.8"
+scrypt = "0.11"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+zeroize = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3"
