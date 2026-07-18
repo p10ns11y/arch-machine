@@ -4,6 +4,7 @@
 Hybrid **ML-KEM-768** sealed secrets. No second “knowledge” password.
 
 > **Mental model:** [docs/OPERATOR-MODEL.md](docs/OPERATOR-MODEL.md)  
+> **Dev hygiene (API keys / multi-tool):** [`docs/SECRETS-EVERYDAY.md`](../../../docs/SECRETS-EVERYDAY.md)  
 > Architecture: [`arch-design/keeper.md`](../../../arch-design/keeper.md)
 
 ## One card

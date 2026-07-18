@@ -1,5 +1,7 @@
 # Operator model — forgetfulness-proof (as far as crypto allows)
 
+**Broader advice (API keys, multi-tool sprawl, runtime inject):** [Everyday secrets for developers](../../../docs/SECRETS-EVERYDAY.md).
+
 ## The one card (memorize this, nothing else)
 
 | Slot | What | Where | If you lose it |
