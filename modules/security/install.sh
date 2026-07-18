@@ -582,14 +582,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     --agent-expand)
       echo "agent-expand: security module at $_mod_dir"
       if [[ -f "$_mod_dir/keeper/Cargo.toml" ]]; then
-        if command -v cargo >/dev/null 2>&1; then
-          # Real work: verify keeper crate builds (no sudo, no k3s)
-          (cd "$_mod_dir/keeper" && cargo check --quiet) || {
-            echo "warning: cargo check failed for keeper (continuing with stamp)" >&2
-          }
-        else
-          echo "cargo not on PATH; skip keeper check"
+        if ! command -v cargo >/dev/null 2>&1; then
+          echo "cargo required for security --agent-expand (keeper check)" >&2
+          exit 1
         fi
+        # Fail closed: do not stamp success when keeper does not build
+        (cd "$_mod_dir/keeper" && cargo check --quiet) || {
+          echo "error: cargo check failed for keeper — not writing .agent-expanded" >&2
+          exit 1
+        }
       fi
       date -Iseconds >"$_mod_dir/.agent-expanded"
       echo "wrote $_mod_dir/.agent-expanded"

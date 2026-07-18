@@ -143,20 +143,7 @@ fn cli_enroll_yubi_mock_strong_get_and_solo_fail() {
         .unwrap();
     assert!(init.status.success(), "{}", String::from_utf8_lossy(&init.stderr));
 
-    let put = bin()
-        .env("KEEPER_PASSPHRASE", pass)
-        .args([
-            "put",
-            "api",
-            "--value",
-            "token-from-yubi-path",
-            "--root",
-            root.to_str().unwrap(),
-        ])
-        .output()
-        .unwrap();
-    assert!(put.status.success(), "{}", String::from_utf8_lossy(&put.stderr));
-
+    // Enroll before secrets so mock path is clean; then put + strong get (CI allow flag)
     let en = bin()
         .env("KEEPER_PASSPHRASE", pass)
         .env("KEEPER_YUBI_MOCK_SECRET", mock)
@@ -178,10 +165,25 @@ fn cli_enroll_yubi_mock_strong_get_and_solo_fail() {
     assert!(en_body.contains("yubikey"));
     assert!(en_body.contains("any-2-of-4") || en_body.contains("\"n\": 4") || en_body.contains("\"n\":4"));
 
-    // Strong get: yubi + device
+    let put = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "put",
+            "api",
+            "--value",
+            "token-from-yubi-path",
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(put.status.success(), "{}", String::from_utf8_lossy(&put.stderr));
+
+    // Strong get with mock after secrets requires explicit CI allow
     let get = bin()
         .env_remove("KEEPER_PASSPHRASE")
         .env("KEEPER_YUBI_MOCK_SECRET", mock)
+        .env("KEEPER_ALLOW_YUBI_MOCK", "1")
         .args(["get", "api", "--yubi", "--root", root.to_str().unwrap()])
         .output()
         .unwrap();
@@ -203,4 +205,19 @@ fn cli_enroll_yubi_mock_strong_get_and_solo_fail() {
         String::from_utf8_lossy(&probe.stderr)
     );
     assert!(String::from_utf8_lossy(&probe.stdout).contains("soloYubiRejected"));
+
+    // After enroll, status must not stay falsely healthy
+    let st = bin()
+        .args(["status", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    let st_body = String::from_utf8_lossy(&st.stdout);
+    assert!(
+        st_body.contains("any-2-of-4-strong-yubi"),
+        "status model: {st_body}"
+    );
+    assert!(
+        st_body.contains("\"drillProven\": false") || st_body.contains("\"drillProven\":false"),
+        "enroll must clear drill: {st_body}"
+    );
 }

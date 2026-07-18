@@ -22,3 +22,8 @@ eye-comfort-generate-check:
 
 ci-help:
 	@echo "make lint | validate-profiles | evidence-smoke | eye-comfort-test | eye-comfort-generate-check"
+
+# Keeper threshold vault tests (also intended for CI — see PR #28 if workflow scope blocks push)
+.PHONY: keeper-test
+keeper-test:
+	cargo test --manifest-path modules/security/keeper/Cargo.toml

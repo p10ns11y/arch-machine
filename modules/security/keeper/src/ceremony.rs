@@ -260,6 +260,7 @@ pub fn unlock_yubi_device(
     root: &Path,
     backend: &dyn YubiChallenge,
 ) -> Result<Vec<u8>, CeremonyError> {
+    refuse_yubi_mock_with_secrets(root)?;
     let response = yubi_response_for_root(root, backend)?;
     reconstruct_root(
         root,
@@ -277,6 +278,7 @@ pub fn unlock_yubi_escrow(
     escrow_path: &Path,
     backend: &dyn YubiChallenge,
 ) -> Result<Vec<u8>, CeremonyError> {
+    refuse_yubi_mock_with_secrets(root)?;
     let response = yubi_response_for_root(root, backend)?;
     reconstruct_root(
         root,
@@ -296,6 +298,7 @@ pub fn unlock_yubi_passphrase(
     passphrase: &str,
     backend: &dyn YubiChallenge,
 ) -> Result<Vec<u8>, CeremonyError> {
+    refuse_yubi_mock_with_secrets(root)?;
     let response = yubi_response_for_root(root, backend)?;
     reconstruct_root(
         root,
@@ -319,6 +322,7 @@ pub fn enroll_yubikey(
             "yubikey already enrolled (re-enroll not supported in this release)".into(),
         ));
     }
+    refuse_yubi_mock_with_secrets(root)?;
     let r = unlock_daily(root, passphrase)?;
     let k = DEFAULT_K;
     let n = 4u8;
@@ -351,6 +355,9 @@ pub fn enroll_yubikey(
         "device".into(),
         "yubikey".into(),
     ];
+    // Re-split invalidates offline escrow and factor bindings — require a fresh drill.
+    meta.drill_proven = false;
+    meta.last_drill_at = None;
     write_meta(root, &meta)?;
 
     Ok(EnrollYubiResult {
@@ -359,8 +366,51 @@ pub fn enroll_yubikey(
         n,
         slot: backend.slot(),
         factors: vec!["passphrase", "offline", "device", "yubikey"],
-        model: "any-2-of-4-strong-yubi",
+        model: model_label(true),
     })
+}
+
+/// Status/enroll model string from whether YubiKey share is enrolled.
+pub fn model_label(yubi_enrolled: bool) -> &'static str {
+    if yubi_enrolled {
+        "any-2-of-4-strong-yubi"
+    } else {
+        "any-2-of-3"
+    }
+}
+
+/// True if vault already has at least one named sealed secret (not just canary).
+pub fn vault_has_named_secrets(root: &Path) -> bool {
+    let dir = root.join("secrets");
+    let Ok(rd) = std::fs::read_dir(&dir) else {
+        return false;
+    };
+    rd.flatten().any(|e| {
+        e.path()
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.ends_with(".sealed.json"))
+            .unwrap_or(false)
+    })
+}
+
+/// Refuse mock YubiKey backend when the vault already holds real secrets.
+/// Override for intentional CI: `KEEPER_ALLOW_YUBI_MOCK=1`.
+pub fn refuse_yubi_mock_with_secrets(root: &Path) -> Result<(), CeremonyError> {
+    let mock_on = std::env::var("KEEPER_YUBI_MOCK_SECRET")
+        .map(|s| !s.is_empty())
+        .unwrap_or(false);
+    let allow = std::env::var("KEEPER_ALLOW_YUBI_MOCK")
+        .map(|s| s == "1" || s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    if mock_on && vault_has_named_secrets(root) && !allow {
+        return Err(CeremonyError::Msg(
+            "KEEPER_YUBI_MOCK_SECRET is set but vault already has named secrets — \
+             refuse mock hardware path (unset mock, use practice vault, or set KEEPER_ALLOW_YUBI_MOCK=1 for CI only)"
+                .into(),
+        ));
+    }
+    Ok(())
 }
 
 /// Daily unlock: passphrase + this machine (k=2).
@@ -487,6 +537,8 @@ pub fn status(root: &Path) -> Result<Status, CeremonyError> {
             free: None,
         }),
         Some(meta) => {
+            let yubi = yubi_blob_exists(root)
+                || meta.factors.iter().any(|f| f == "yubikey");
             let healthy = meta.drill_proven;
             Ok(Status {
                 exists: true,
@@ -497,16 +549,19 @@ pub fn status(root: &Path) -> Result<Status, CeremonyError> {
                 created_at: Some(meta.created_at),
                 seal_algorithm: Some(meta.seal_algorithm),
                 factors: Some(meta.factors),
-                model: Some("any-2-of-3"),
+                model: Some(model_label(yubi)),
                 reason: if healthy {
                     "drill-proven".into()
+                } else if yubi {
+                    "drill required once after re-split (enroll-yubikey rewrote escrow): recover --escrow <NEW file>"
+                        .into()
                 } else {
                     "drill required once: recover --escrow <file> (offline + this machine; no passphrase)"
                         .into()
                 },
                 remember: Some("ONE passphrase (head or password manager)"),
                 store_offline: Some("ONE escrow file OFF this laptop (USB / other house)"),
-                free: Some(if yubi_blob_exists(root) {
+                free: Some(if yubi {
                     "device + optional YubiKey (strong hardware share; never 1FA)"
                 } else {
                     "device fingerprint (automatic); optional: enroll-yubikey for strong path"
@@ -684,27 +739,65 @@ mod tests {
         let escrow = dir.path().join("off.json");
         let pass = "yubi-enroll-pass-xx";
         init_vault(&root, pass, &escrow).unwrap();
-        put_secret(&root, pass, "tok", "secret-value-42").unwrap();
-
+        // Enroll before named secrets so mock path is allowed under refuse_yubi_mock_with_secrets
         let y = MockYubi::from_seed("hardware-mock-seed");
         let er = enroll_yubikey(&root, pass, &escrow, &y).unwrap();
         assert_eq!(er.n, 4);
         assert!(er.factors.contains(&"yubikey"));
+        put_secret(&root, pass, "tok", "secret-value-42").unwrap();
 
         // Solo YubiKey fails
         assert!(try_unlock_yubi_only(&root, &y).is_err());
 
-        // Strong path: Y + device
+        // Strong path: Y + device (library path with MockYubi — not env mock)
         assert_eq!(
             get_secret_yubi_device(&root, "tok", &y).unwrap(),
             "secret-value-42"
         );
-        // Y + escrow
         assert_eq!(
             get_secret_yubi_escrow(&root, &escrow, "tok", &y).unwrap(),
             "secret-value-42"
         );
-        // Daily still works
         assert_eq!(get_secret(&root, pass, "tok").unwrap(), "secret-value-42");
+    }
+
+    #[test]
+    fn enroll_yubikey_clears_drill_proven_and_status_model() {
+        use crate::yubi::MockYubi;
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        let pass = "drill-reset-pass-xx";
+        init_vault(&root, pass, &escrow).unwrap();
+        drill(&root, &escrow).unwrap();
+        assert!(status(&root).unwrap().healthy);
+        assert_eq!(status(&root).unwrap().model, Some("any-2-of-3"));
+
+        let y = MockYubi::from_seed("reset-drill-seed");
+        enroll_yubikey(&root, pass, &escrow, &y).unwrap();
+
+        let st = status(&root).unwrap();
+        assert!(
+            !st.healthy && !st.drill_proven,
+            "enroll must clear drill; got healthy={} drill={}",
+            st.healthy,
+            st.drill_proven
+        );
+        assert_eq!(st.model, Some("any-2-of-4-strong-yubi"));
+        assert_eq!(st.n, Some(4));
+    }
+
+    #[test]
+    fn mock_yubi_env_refused_when_named_secrets_exist() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        let pass = "mock-refuse-pass-xx";
+        init_vault(&root, pass, &escrow).unwrap();
+        put_secret(&root, pass, "real", "payload").unwrap();
+        std::env::set_var("KEEPER_YUBI_MOCK_SECRET", "should-refuse");
+        let err = refuse_yubi_mock_with_secrets(&root);
+        std::env::remove_var("KEEPER_YUBI_MOCK_SECRET");
+        assert!(err.is_err(), "expected refuse when mock+secrets");
     }
 }

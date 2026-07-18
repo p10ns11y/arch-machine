@@ -237,7 +237,8 @@ Environment:
 | `KEEPER_ROOT` | Vault directory (default `~/.local/share/keeper`) |
 | `KEEPER_PASSPHRASE` | Session passphrase (not stored on disk as plaintext) |
 | `KEEPER_PASSPHRASE_FILE` | Passphrase from file instead of env |
-| `KEEPER_YUBI_MOCK_SECRET` | **Test-only** fake YubiKey — do not use with real secrets |
+| `KEEPER_YUBI_MOCK_SECRET` | **Test-only** fake YubiKey — refused if vault already has named secrets |
+| `KEEPER_ALLOW_YUBI_MOCK` | Set `1` only in CI to override the refuse above |
 
 ---
 
