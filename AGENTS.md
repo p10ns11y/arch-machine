@@ -46,6 +46,8 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 |------|------|
 | Architecture index | `docs/INDEX.md` |
 | Roadmap | `arch-design/coming-next.md` |
+| Keeper architecture | `arch-design/keeper.md` |
+| Keeper backlog | `arch-design/coming-next-keeper.md` (SN-KEEP-*) |
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | TUI (Elm/gum) | `lib/tui/{model,view,update,messages}.sh` |

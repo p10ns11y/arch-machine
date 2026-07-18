@@ -38,6 +38,10 @@ chmod +x install.sh migrate.sh
 #    (or ./install.sh --thin)
 
 # 2. Use the sentinel immediately
+# Prefer Grok agent-as-TUI (optional plugin; no gum UI required):
+#   ~/.grok/plugins/arch-machine  (see Work/personal/plugins/arch-machine)
+#   /arch-status  /arch-init  /arch-audit  /arch-expand
+#
 tinfoil tui              # interactive menus (audit, profiles, remediation, evidence)
 tinfoil                  # quick global audit
 

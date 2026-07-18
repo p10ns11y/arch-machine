@@ -52,3 +52,11 @@ shellcheck.log
 yamllint.log
 nvim.log
 
+
+# keeper build artifacts
+modules/security/keeper/target/
+
+# agent expand stamps (Grok plugin)
+.agent-expanded
+**/.agent-expanded
+.arch-expand-state/
