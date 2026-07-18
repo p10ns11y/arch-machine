@@ -1,8 +1,11 @@
 # coming-next — arch-machine architecture backlog
 
+**Keeper deep-dive:** [keeper.md](./keeper.md) · [coming-next-keeper.md](./coming-next-keeper.md) (SN-KEEP-*)  
+**Grok agent-as-TUI:** [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` (prefer over gum `tinfoil tui` for ops)
+
 ## §0 Mission
 
-Ship and maintain a **thin-first, evidence-always, self-remediating** Arch Linux workstation guardian (`tinfoil`) with profile-driven ML/security modules.
+Ship and maintain a **thin-first, evidence-always, self-remediating** Arch Linux workstation guardian (`tinfoil`) with profile-driven ML/security modules — and a **threshold multi-factor keeper** for secrets that outlive passphrase loss.
 
 ## §0b Ten-year thrive picture
 
@@ -11,6 +14,7 @@ flowchart LR
   subgraph sentinel [SentinelSurface]
     CLI[tinfoil CLI]
     TUI[gum/BubbleTea TUI]
+    Grok[Grok plugin slash]
   end
   subgraph engine [ProfileEngine]
     Install[install.sh]
@@ -18,6 +22,7 @@ flowchart LR
   end
   subgraph bays [ModuleBay]
     Mods[modules/install_*]
+    Keeper[security/keeper]
   end
   subgraph heart [MaintenanceHeart]
     Audit[security-audit]
@@ -29,8 +34,10 @@ flowchart LR
     Bundles[JSON/TOON bundles]
   end
   CLI --> Install
+  Grok --> Install
   TUI --> Audit
   Install --> Mods
+  Mods --> Keeper
   Mods --> Weekly
   Weekly --> Extract
   Extract --> Bundles
@@ -40,10 +47,10 @@ flowchart LR
 
 | Horizon | Outcome | Signal |
 |---------|---------|--------|
-| 2026 | TUI + evidence first-class; CI harness real | Issue #7 closed; profile harness green |
+| 2026 | TUI + evidence first-class; keeper MVP; Grok expand | Issue #7; PR #28; profile harness green |
 | 2028 | Autonomous weekly sentinel on fleet machines | systemd timer + evidence drift alerts |
 | 2030 | Portable profile packs beyond Arch | adapter modules per distro |
-| 2036 | Agent-native ops: bundles drive remediation plans | LLM consumes TOON without re-scout |
+| 2036 | Agent-native ops: bundles + keeper under policy | LLM consumes TOON; drill-proven vault |
 
 ## §1 Scorecard
 
@@ -52,6 +59,8 @@ flowchart LR
 | Thin install | A- | Default `--thin` ships sentinel only | `install.sh`, README |
 | tinfoil CLI | A | Global binary + subcommands | `bin/tinfoil.go`, merged PR #3 |
 | TUI (Elm/gum) | B | Model/View/Update split; flows in progress | `lib/tui/*.sh`, Issue #7 |
+| **Grok agent TUI** | **B+** | Slash status/init/audit/expand; fail closed | `plugins/arch-machine`, BOUNDARY.md |
+| **Keeper (MFA vault)** | **A-** | k=3 n=4 + PQ seal + drill; PR open | `modules/security/keeper`, PR #28 |
 | Profiles | B | YAML compose modules | `config/profiles/*.yaml` |
 | Evidence | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
 | Remediation policy | A | Repo applies own 6-step policy | `policies/security-remediation.md` |
@@ -227,6 +236,28 @@ flowchart LR
 
 **Depends:** SN-EC-CAL preferred first; cultures can sequence IN → SE → US.
 
+### SN-KEEP · Keeper follow-ups (see coming-next-keeper.md)
+
+Full cards: [coming-next-keeper.md](./coming-next-keeper.md) · architecture: [keeper.md](./keeper.md)
+
+| Card | Problem (one line) |
+|------|--------------------|
+| **SN-KEEP-1** | Dogfood no-passphrase recover drill (no new code) |
+| **SN-KEEP-2** | CI `cargo test` for keeper crate |
+| **SN-KEEP-3** | Install release binary to `~/.local/bin/keeper` |
+| **SN-KEEP-4** | Device re-bind after reimage |
+| **SN-KEEP-5** | Optional fprintd as share release (not root) |
+| **SN-KEEP-6** | Trusted places enrollment (IP still banned) |
+
+```mermaid
+flowchart LR
+  K1[SN-KEEP-1 dogfood] --> K2[SN-KEEP-2 CI]
+  K1 --> K3[SN-KEEP-3 PATH]
+  K3 --> K4[SN-KEEP-4 rebind]
+  K4 --> K5[SN-KEEP-5 fprintd]
+  K5 --> K6[SN-KEEP-6 places]
+```
+
 ## §9 Gantt (suggested)
 
 ```mermaid
@@ -239,6 +270,11 @@ gantt
   SN-3 Profile harness    :sn3, after sn1, 5d
   SN-2 TUI flows          :sn2, after sn1, 10d
   SN-4 Evidence TUI       :sn4, after sn2, 5d
+  section Keeper
+  SN-KEEP-1 dogfood drill :k1, 2026-07-18, 3d
+  SN-KEEP-2 CI cargo      :k2, after k1, 3d
+  SN-KEEP-3 PATH install  :k3, after k1, 5d
+  SN-KEEP-4 rebind        :k4, after k3, 8d
   section EyeComfort culture
   SN-EC-CAL calendar seam :eccal, after sn4, 5d
   SN-EC-IN pan-India      :ecin, after eccal, 8d
@@ -260,12 +296,18 @@ gantt
 | Remediation policy | PR #4 merge `cb088cd` |
 | Agent skills wired | `AGENTS.md`, `.agents/skills` symlinks |
 | INDEX architecture doc | `docs/INDEX.md` |
+| Multi-factor keeper + PQ seal | PR #28 (open) `modules/security/keeper` |
+| Grok arch-machine plugin | [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` |
+| Module `--agent-expand` hooks | PR #28 `e9c264a` |
+| UWSM graphical-session race | PR #25 merge |
 
 ## §13 References
 
 | Source | Use |
 |--------|-----|
 | `docs/INDEX.md` | System map |
+| `arch-design/keeper.md` | Keeper architecture + mermaid |
+| `arch-design/coming-next-keeper.md` | SN-KEEP-* backlog |
 | `policies/security-remediation.md` | Boundary meta-rule |
 | `AGENTS.md` | Agent verify + skills |
 | `.agents/overlays/` | Repo-specific skill overlays |
@@ -274,4 +316,4 @@ gantt
 
 ---
 
-**Plain rule:** Thin install, loud evidence, ruthless remediation — the sentinel must pass its own audit before it audits your machine.
+**Plain rule:** Thin install, loud evidence, ruthless remediation — the sentinel must pass its own audit before it audits your machine. Offline escrow off-box, or the keeper is theater.

@@ -50,3 +50,5 @@ Recover/drill uses **offline + device + knowledge** (no passphrase).
 - [THREAT-MODEL.md](docs/THREAT-MODEL.md)
 - [RECOVERY-CEREMONY.md](docs/RECOVERY-CEREMONY.md)
 - [LOCATION.md](docs/LOCATION.md) — GPS places future; IP trust banned
+- Architecture (mermaid): [`arch-design/keeper.md`](../../../arch-design/keeper.md)
+- Backlog SN-KEEP-*: [`arch-design/coming-next-keeper.md`](../../../arch-design/coming-next-keeper.md)
