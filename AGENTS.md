@@ -51,8 +51,11 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | TUI (Elm/gum) | `lib/tui/{model,view,update,messages}.sh` |
-| CLI | `bin/tinfoil.go` |
+| CLI | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
+| **Control plane TUI** | `crates/tinfoil-tui` (Ratatui entry + loop) · `tinfoil tui` |
+| Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / JSON schema v1 |
 | Evidence | `maintenance/extract-evidence.sh`, `lib/evidence.sh` |
+| Surfaces | **tinfoil-tui** (main) · Grok plugin / dock · gum legacy |
 
 ## Expand commands
 
