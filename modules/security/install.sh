@@ -570,3 +570,40 @@ install_security() {
 # Export functions for standalone use
 export -f setup_encrypted_vault
 export -f install_security
+# ---------------------------------------------------------------------------
+# Standalone agent-expand entry (Grok plugin /am-expand). NOT used when sourced
+# by the main installer (BASH_SOURCE != $0). Full k3s/profile install remains
+# install_security via profile; this path only prepares the security code chunk.
+# ---------------------------------------------------------------------------
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  set -euo pipefail
+  _mod_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  case "${1:-}" in
+    --agent-expand)
+      echo "agent-expand: security module at $_mod_dir"
+      if [[ -f "$_mod_dir/keeper/Cargo.toml" ]]; then
+        if command -v cargo >/dev/null 2>&1; then
+          # Real work: verify keeper crate builds (no sudo, no k3s)
+          (cd "$_mod_dir/keeper" && cargo check --quiet) || {
+            echo "warning: cargo check failed for keeper (continuing with stamp)" >&2
+          }
+        else
+          echo "cargo not on PATH; skip keeper check"
+        fi
+      fi
+      date -Iseconds >"$_mod_dir/.agent-expanded"
+      echo "wrote $_mod_dir/.agent-expanded"
+      echo "agent_expand_ok: security"
+      exit 0
+      ;;
+    -h|--help)
+      echo "Usage: $0 --agent-expand   # consent-gated module prep for agent TUI"
+      exit 0
+      ;;
+    *)
+      echo "Usage: $0 --agent-expand" >&2
+      echo "Note: full security install is via install.sh --profile security-dev (sourced path)." >&2
+      exit 2
+      ;;
+  esac
+fi

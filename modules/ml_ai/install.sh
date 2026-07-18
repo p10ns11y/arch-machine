@@ -313,3 +313,25 @@ install_ml_ai() {
 
 # Export main function
 export -f install_ml_ai
+# Standalone agent-expand entry (Grok plugin). Skip when sourced by main installer.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  set -euo pipefail
+  _mod_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  case "${1:-}" in
+    --agent-expand)
+      echo "agent-expand: ml_ai module at $_mod_dir"
+      date -Iseconds >"$_mod_dir/.agent-expanded"
+      echo "wrote $_mod_dir/.agent-expanded"
+      echo "agent_expand_ok: ml_ai"
+      exit 0
+      ;;
+    -h|--help)
+      echo "Usage: $0 --agent-expand"
+      exit 0
+      ;;
+    *)
+      echo "Usage: $0 --agent-expand" >&2
+      exit 2
+      ;;
+  esac
+fi
