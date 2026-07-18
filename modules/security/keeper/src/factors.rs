@@ -29,6 +29,7 @@ pub enum ShareRole {
     Offline,
     Device,
     Knowledge,
+    YubiKey,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,6 +42,8 @@ pub enum Confirmation {
     Device,
     /// Knowledge answer (normalized) to open knowledge-sealed share.
     Knowledge(String),
+    /// Pre-computed YubiKey HMAC-SHA1 response for the enrolled challenge (share release only).
+    YubiKey { response: Vec<u8> },
     /// Explicitly rejected — never contributes trust.
     PublicIp(String),
     GeoIp { country: String, city: String },
@@ -69,6 +72,7 @@ pub fn confirmation_weight(c: &Confirmation) -> u8 {
         Confirmation::OfflineFile { .. } => 1,
         Confirmation::Device => 1,
         Confirmation::Knowledge(_) => 1,
+        Confirmation::YubiKey { .. } => 1,
         Confirmation::PublicIp(_) | Confirmation::GeoIp { .. } => 0,
     }
 }
@@ -262,6 +266,7 @@ pub fn release_shares_from_confirmations(
     _offline_share_json: Option<&crate::crypto::ShareJson>,
     device_blob: Option<&SealedShareBlob>,
     knowledge_blob: Option<&SealedShareBlob>,
+    yubi_blob: Option<&crate::yubi::YubiShareBlob>,
     // Override fingerprint for tests; None = live machine fingerprint.
     fingerprint_override: Option<&[u8]>,
 ) -> Result<Vec<Share>, FactorError> {
@@ -304,6 +309,11 @@ pub fn release_shares_from_confirmations(
                 let blob = knowledge_blob
                     .ok_or_else(|| FactorError::Denied("no knowledge share enrolled".into()))?;
                 out.push(open_share_for_knowledge(blob, ans)?);
+            }
+            Confirmation::YubiKey { response } => {
+                let blob = yubi_blob
+                    .ok_or_else(|| FactorError::Denied("no yubikey share enrolled".into()))?;
+                out.push(crate::yubi::open_share_for_yubi(blob, response)?);
             }
             Confirmation::PublicIp(_) | Confirmation::GeoIp { .. } => {
                 return Err(FactorError::IpTrustForbidden);
@@ -367,6 +377,7 @@ mod tests {
             None,
             Some(&dev_blob),
             Some(&know_blob),
+            None,
             Some(&fp),
         )
         .unwrap();
@@ -402,6 +413,7 @@ mod tests {
             None,
             Some(&dev_blob),
             Some(&know_blob),
+            None,
             Some(&fp),
         )
         .unwrap();
@@ -424,6 +436,7 @@ mod tests {
             None,
             None,
             Some(&dev_blob),
+            None,
             None,
             Some(&fp),
         );

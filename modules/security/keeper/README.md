@@ -1,7 +1,7 @@
 # keeper — simple threshold secrets (Rust)
 
-**Any 2 of 3:** passphrase · offline escrow · this device.  
-Hybrid **ML-KEM-768** sealed secrets. No second “knowledge” password.
+**Any 2 of enrolled factors:** passphrase · offline escrow · device · optional **YubiKey (strong)**.  
+Hybrid **ML-KEM-768** sealed secrets. No second “knowledge” password. **YubiKey alone never opens.**
 
 > **Mental model:** [docs/OPERATOR-MODEL.md](docs/OPERATOR-MODEL.md)  
 > **Dev hygiene (API keys / multi-tool):** [`docs/SECRETS-EVERYDAY.md`](../../../docs/SECRETS-EVERYDAY.md)  
@@ -14,10 +14,12 @@ Hybrid **ML-KEM-768** sealed secrets. No second “knowledge” password.
 | **Remember** | ONE passphrase |
 | **Store offline** | ONE escrow file (USB / other house) |
 | **Free** | Device fingerprint (automatic) |
+| **Strong (optional)** | YubiKey HMAC-SHA1 slot — share release only |
 
 ```text
 Daily:     passphrase + device
-Forgot P:  escrow + device     →  get NAME --escrow file
+Strong:    YubiKey + device     →  get NAME --yubi
+Forgot P:  escrow + device      →  get NAME --escrow file
 New PC:    passphrase + escrow (+ vault files)
 ```
 
@@ -45,6 +47,12 @@ cargo run --quiet -- get mfa --escrow ~/keeper-escrow.share.json
 # prove drill once:
 cargo run --quiet -- recover --escrow ~/keeper-escrow.share.json
 cargo run --quiet -- status   # healthy + remember/store/free card
+
+# optional strong hardware (live: ykchalresp; CI: mock secret)
+# cargo run --quiet -- enroll-yubikey --escrow ~/keeper-escrow.share.json
+# cargo run --quiet -- get mfa --yubi
+# cargo run --quiet -- yubi-probe   # must report soloYubiRejected
+# export KEEPER_YUBI_MOCK_SECRET='ci-only'  # mock HMAC backend
 ```
 
 ## What is encrypted where

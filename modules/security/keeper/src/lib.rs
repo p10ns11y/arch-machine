@@ -5,3 +5,4 @@ pub mod cli;
 pub mod crypto;
 pub mod factors;
 pub mod store;
+pub mod yubi;

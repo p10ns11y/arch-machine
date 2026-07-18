@@ -1,8 +1,10 @@
 //! CLI for keeper. Passphrase via env/file only (never argv).
 
 use crate::ceremony::{
-    drill, get_secret, get_secret_with_escrow, init_vault, put_secret, status,
+    drill, enroll_yubikey, get_secret, get_secret_with_escrow, get_secret_yubi_device,
+    get_secret_yubi_escrow, init_vault, put_secret, status, try_unlock_yubi_only,
 };
+use crate::yubi::{default_backend, DEFAULT_SLOT};
 use clap::{Parser, Subcommand};
 use serde_json::json;
 use std::fs;
@@ -12,7 +14,7 @@ use std::process::ExitCode;
 #[derive(Parser, Debug)]
 #[command(
     name = "keeper",
-    about = "Simple threshold secrets: any 2 of {passphrase, offline, device} — hybrid PQ seal"
+    about = "Threshold secrets: any 2 of enrolled factors; optional strong YubiKey share"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -23,13 +25,12 @@ pub struct Cli {
 pub enum Commands {
     /// Create vault (any 2 of 3: passphrase, offline escrow, device)
     Init {
-        /// Path to write the ONE offline escrow file (keep OFF this laptop)
         #[arg(long)]
         escrow: PathBuf,
         #[arg(long, env = "KEEPER_ROOT")]
         root: Option<PathBuf>,
     },
-    /// Store a named secret (needs passphrase + this machine)
+    /// Store a named secret (passphrase + device)
     Put {
         name: String,
         #[arg(long, conflicts_with = "file")]
@@ -42,31 +43,51 @@ pub enum Commands {
     /// Read a named secret
     ///
     /// Default: passphrase + device.  
-    /// With `--escrow`: offline file + device (no passphrase — forgot-password path).
+    /// `--escrow`: offline + device.  
+    /// `--yubi`: strong path (YubiKey + device, or YubiKey + `--escrow`).
     Get {
         name: String,
-        /// Offline escrow file (unlock without passphrase)
         #[arg(long)]
         escrow: Option<PathBuf>,
+        /// Use YubiKey challenge-response (strong factor; needs second factor)
+        #[arg(long)]
+        yubi: bool,
+        #[arg(long, default_value_t = DEFAULT_SLOT)]
+        yubi_slot: u8,
         #[arg(long, env = "KEEPER_ROOT")]
         root: Option<PathBuf>,
     },
-    /// Health + mental model card (remember / store / free)
+    /// Health + one-card model
     Status {
         #[arg(long, env = "KEEPER_ROOT")]
         root: Option<PathBuf>,
     },
-    /// Prove recover works (offline + device). Marks healthy.
+    /// Prove recover (offline + device)
     Drill {
         #[arg(long)]
         escrow: PathBuf,
         #[arg(long, env = "KEEPER_ROOT")]
         root: Option<PathBuf>,
     },
-    /// Same as drill
     Recover {
         #[arg(long)]
         escrow: PathBuf,
+        #[arg(long, env = "KEEPER_ROOT")]
+        root: Option<PathBuf>,
+    },
+    /// Enroll YubiKey as strong hardware share (re-splits to any-2-of-4; rewrites escrow)
+    EnrollYubikey {
+        #[arg(long)]
+        escrow: PathBuf,
+        #[arg(long, default_value_t = DEFAULT_SLOT)]
+        slot: u8,
+        #[arg(long, env = "KEEPER_ROOT")]
+        root: Option<PathBuf>,
+    },
+    /// Prove YubiKey alone cannot open (exit 1 = good)
+    YubiProbe {
+        #[arg(long, default_value_t = DEFAULT_SLOT)]
+        slot: u8,
         #[arg(long, env = "KEEPER_ROOT")]
         root: Option<PathBuf>,
     },
@@ -98,8 +119,7 @@ fn read_passphrase() -> Result<String, String> {
     }
     Err(
         "set KEEPER_PASSPHRASE or KEEPER_PASSPHRASE_FILE\n\
-         (daily path: one passphrase only — device is automatic)\n\
-         forgot passphrase?  get NAME --escrow /path/to/escrow.json"
+         forgot passphrase?  get NAME --escrow file   or   get NAME --yubi"
             .into(),
     )
 }
@@ -133,10 +153,10 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
                     "healthy": false,
                     "sealAlgorithm": res.seal_algorithm,
                     "factors": res.factors,
-                    "remember": "ONE passphrase (head or password manager)",
-                    "storeOffline": "copy escrow file OFF this laptop now",
-                    "free": "device (automatic)",
-                    "next": "recover --escrow <file> once to prove drill; then get needs only passphrase",
+                    "remember": "ONE passphrase",
+                    "storeOffline": "copy escrow OFF this laptop",
+                    "free": "device; later: enroll-yubikey for strong hardware share",
+                    "next": "optional: enroll-yubikey --escrow <file>; then get --yubi",
                 }))
                 .unwrap()
             );
@@ -164,9 +184,24 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
-        Commands::Get { name, escrow, root } => {
+        Commands::Get {
+            name,
+            escrow,
+            yubi,
+            yubi_slot,
+            root,
+        } => {
             let root = resolve_root(root);
-            let v = if let Some(esc) = escrow {
+            let v = if yubi {
+                let backend = default_backend(yubi_slot).map_err(|e| e.to_string())?;
+                if let Some(esc) = escrow {
+                    get_secret_yubi_escrow(&root, &esc, &name, backend.as_ref())
+                        .map_err(|e| e.to_string())?
+                } else {
+                    get_secret_yubi_device(&root, &name, backend.as_ref())
+                        .map_err(|e| e.to_string())?
+                }
+            } else if let Some(esc) = escrow {
                 get_secret_with_escrow(&root, &esc, &name).map_err(|e| e.to_string())?
             } else {
                 let pass = read_passphrase()?;
@@ -184,6 +219,10 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
                 m.insert(
                     "ipTrust".into(),
                     json!("forbidden (public ISP IP / GeoIP weight=0)"),
+                );
+                m.insert(
+                    "yubiEnrolled".into(),
+                    json!(crate::store::yubi_blob_exists(&root)),
                 );
             }
             println!("{}", serde_json::to_string_pretty(&obj).unwrap());
@@ -206,11 +245,54 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
                     "healthy": st.healthy,
                     "path": dr.path,
                     "reason": st.reason,
-                    "hint": "forgot passphrase later? get NAME --escrow <same file>",
                 }))
                 .unwrap()
             );
             Ok(ExitCode::SUCCESS)
+        }
+        Commands::EnrollYubikey { escrow, slot, root } => {
+            let root = resolve_root(root);
+            let pass = read_passphrase()?;
+            let backend = default_backend(slot).map_err(|e| e.to_string())?;
+            let res = enroll_yubikey(&root, &pass, &escrow, backend.as_ref())
+                .map_err(|e| e.to_string())?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&json!({
+                    "ok": res.ok,
+                    "k": res.k,
+                    "n": res.n,
+                    "slot": res.slot,
+                    "model": res.model,
+                    "factors": res.factors,
+                    "hint": "strong get: get NAME --yubi  (YubiKey + device); solo yubi is refused",
+                    "mock": std::env::var("KEEPER_YUBI_MOCK_SECRET").is_ok(),
+                }))
+                .unwrap()
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        Commands::YubiProbe { slot, root } => {
+            let root = resolve_root(root);
+            let backend = default_backend(slot).map_err(|e| e.to_string())?;
+            match try_unlock_yubi_only(&root, backend.as_ref()) {
+                Ok(_) => {
+                    eprintln!("SECURITY_FAIL: yubikey alone opened root");
+                    Ok(ExitCode::from(3))
+                }
+                Err(e) => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&json!({
+                            "ok": true,
+                            "soloYubiRejected": true,
+                            "detail": e.to_string(),
+                        }))
+                        .unwrap()
+                    );
+                    Ok(ExitCode::SUCCESS)
+                }
+            }
         }
     }
 }

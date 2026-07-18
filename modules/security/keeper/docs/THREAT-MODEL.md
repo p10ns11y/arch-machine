@@ -2,14 +2,15 @@
 
 ## Purpose
 
-Local-first secrets holder with **threshold recovery (any 2 of 3: passphrase, offline, device)**. Confirmation signals gate **share release**; they are **not** the root key. Default path has **one** human secret + **one** offline file (see OPERATOR-MODEL.md).
+Local-first secrets holder with **threshold recovery (any 2 of enrolled factors: passphrase, offline, device, optional YubiKey)**. Confirmation signals gate **share release**; they are **not** the root key. Default path has **one** human secret + **one** offline file; optional **strong** hardware factor (YubiKey HMAC-SHA1 challenge-response) never opens alone (see OPERATOR-MODEL.md).
 
 ## Adversaries
 
 | Adversary | Capability | Keeper response |
 |-----------|------------|-----------------|
 | Curious roommate | Physical brief access, no offline share | Needs k=3 factors; passphrase wrap resists offline guess (scrypt) |
-| Stolen laptop | Full disk, data root, no offline escrow | Device alone insufficient (**k=2**); need passphrase or offline escrow |
+| Stolen laptop | Full disk, data root, no offline escrow | Device alone insufficient (**k=2**); need passphrase, offline escrow, or (if enrolled) YubiKey **plus** a second factor |
+| Stolen YubiKey only | Hardware present, no laptop/escrow/passphrase | **YubiKey alone cannot reconstruct root** (share release only) |
 | Disk tamperer | Rewrites `meta.json` (e.g. lower `k` to 1) | **`effective_threshold` floors k at protocol `DEFAULT_K=2`** — disk cannot unlock with one factor |
 | Remote malware | Reads files, may keylog | Offline share out-of-band; no secrets on argv; agent-safe logging |
 | Network observer | Sees public IP / traffic | **Public ISP IP is not a trust signal** (see LOCATION.md) |
@@ -17,8 +18,8 @@ Local-first secrets holder with **threshold recovery (any 2 of 3: passphrase, of
 ## Invariants
 
 1. **Confirmation ≠ key material.** Machine-id, MAC, package inventory, public IP, and GeoIP never derive the root.
-2. **Root `R` = Shamir reconstruct(k of n shares).** Default: **k=2, n=3** (passphrase, offline escrow, device-bound).
-3. **No-passphrase drill/recover:** **offline + device** opens canary / secrets via `--escrow`; status non-healthy until drill once.
+2. **Root `R` = Shamir reconstruct(k of n shares).** Default: **k=2, n=3**; after `enroll-yubikey`: **k=2, n=4** (+ YubiKey share).
+3. **No-passphrase drill/recover:** **offline + device** or **YubiKey + device** (strong); status non-healthy until drill once.
 4. **Policy floor:** reconstruction uses `effective_threshold(meta.k, meta.n) = max(meta.k, DEFAULT_K=2)` — unauthenticated disk metadata cannot unlock with a single factor.
 5. **No secrets on argv** in happy-path docs; tests may use env `KEEPER_PASSPHRASE` / `KEEPER_KNOWLEDGE` / files.
 6. **Implementation language:** Rust (`modules/security/keeper` crate).
@@ -27,6 +28,7 @@ Local-first secrets holder with **threshold recovery (any 2 of 3: passphrase, of
 
 ## Out of scope (deferred)
 
+- Full FIDO2/WebAuthn browser stack (YubiKey path is HMAC-SHA1 challenge-response via `ykchalresp` or `KEEPER_YUBI_MOCK_SECRET`)
 - fprintd hardware path, GPS companion / trusted places enrollment (specified in LOCATION / RECOVERY-CEREMONY as future factors)
 - Cloud sync, browser autofill
 - Recovering legacy `~/.securevaultenc` without known password/master key

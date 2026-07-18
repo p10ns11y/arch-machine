@@ -58,6 +58,9 @@ impl Paths {
     pub fn knowledge_blob(&self) -> PathBuf {
         self.root.join("shares").join("knowledge.sealed.json")
     }
+    pub fn yubi_blob(&self) -> PathBuf {
+        self.root.join("shares").join("yubikey.sealed.json")
+    }
     pub fn canary(&self) -> PathBuf {
         self.root.join("canary.sealed.json")
     }
@@ -148,6 +151,18 @@ pub fn write_knowledge_blob(root: &Path, s: &SealedShareBlob) -> Result<(), Stor
 
 pub fn read_knowledge_blob(root: &Path) -> Result<SealedShareBlob, StoreError> {
     read_json(&Paths::new(root).knowledge_blob())
+}
+
+pub fn write_yubi_blob(root: &Path, s: &crate::yubi::YubiShareBlob) -> Result<(), StoreError> {
+    write_json(&Paths::new(root).yubi_blob(), s)
+}
+
+pub fn read_yubi_blob(root: &Path) -> Result<crate::yubi::YubiShareBlob, StoreError> {
+    read_json(&Paths::new(root).yubi_blob())
+}
+
+pub fn yubi_blob_exists(root: &Path) -> bool {
+    Paths::new(root).yubi_blob().exists()
 }
 
 pub fn write_canary(root: &Path, s: &Sealed) -> Result<(), StoreError> {

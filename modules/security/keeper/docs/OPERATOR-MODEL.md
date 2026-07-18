@@ -6,14 +6,16 @@
 
 | Slot | What | Where | If you lose it |
 |------|------|-------|----------------|
-| **REMEMBER** | **One** passphrase | Head or *one* password-manager entry | Use escrow on this machine |
+| **REMEMBER** | **One** passphrase | Head or *one* password-manager entry | Use escrow or **YubiKey + device** |
 | **STORE** | **One** escrow file | USB / paper QR / *other* house — **never only on this laptop** | Still unlock with passphrase on this machine |
 | **FREE** | Device fingerprint | Automatic | New PC: need passphrase **and** escrow |
+| **STRONG (optional)** | YubiKey HMAC-SHA1 slot | Hardware key you touch | Still need a *second* factor — **Yubi alone never opens** |
 
-**There is no second secret. No knowledge question. No “healthy means open.”**
+**There is no second secret. No knowledge question. No “healthy means open.”**  
+**YubiKey is share release only** — it does not KDF the root by itself.
 
 ```text
-any 2 of { passphrase, offline escrow, device }
+any 2 of { passphrase, offline escrow, device [, yubikey if enrolled] }
 ```
 
 ```mermaid
@@ -21,11 +23,15 @@ flowchart LR
   P[passphrase REMEMBER]
   O[offline STORE]
   D[device FREE]
+  Y[YubiKey STRONG optional]
   P --- R[root]
   O --- R
   D --- R
+  Y --- R
   Daily[daily get] --> P
   Daily --> D
+  Strong[get --yubi] --> Y
+  Strong --> D
   Forgot[forgot passphrase] --> O
   Forgot --> D
   NewPC[new machine] --> P
@@ -58,8 +64,22 @@ flowchart LR
 export KEEPER_ROOT=~/.local/share/keeper   # or default
 export KEEPER_PASSPHRASE='…'              # or KEEPER_PASSPHRASE_FILE
 keeper put mfa --value '…'
-keeper get mfa                            # passphrase only
+keeper get mfa                            # passphrase + device
 keeper status                             # healthy after one recover drill
+```
+
+## Strong path (optional YubiKey)
+
+```bash
+# once: rewrites escrow to n=4 (copy new escrow offline again)
+export KEEPER_PASSPHRASE='…'
+keeper enroll-yubikey --escrow /media/usb/keeper-escrow.json
+# daily strong (touch key; no passphrase):
+keeper get mfa --yubi
+# CI/tests without hardware:
+export KEEPER_YUBI_MOCK_SECRET='test-only-seed'
+# prove solo hardware cannot open:
+keeper yubi-probe
 ```
 
 ## Forgot passphrase (same machine)
@@ -68,6 +88,7 @@ keeper status                             # healthy after one recover drill
 keeper get mfa --escrow /media/usb/keeper-escrow.json
 # or prove drill:
 keeper recover --escrow /media/usb/keeper-escrow.json
+# or if Yubi enrolled: get mfa --yubi  (Yubi + device)
 ```
 
 ## Partial loss matrix (honest)

@@ -22,11 +22,14 @@ use crate::factors::{
     machine_fingerprint, release_shares_from_confirmations, seal_share_for_device, Confirmation,
     FactorError,
 };
+// Yubi enroll uses seal_share_for_device + machine_fingerprint above.
 use crate::store::{
     ensure_root, read_canary, read_device_blob, read_meta, read_passphrase_wrap, read_pq_dk_wrap,
-    read_pq_ek, read_secret, write_canary, write_device_blob, write_escrow, write_meta,
-    write_passphrase_wrap, write_pq_dk_wrap, write_pq_ek, write_secret, Meta, StoreError,
+    read_pq_ek, read_secret, read_yubi_blob, write_canary, write_device_blob, write_escrow,
+    write_meta, write_passphrase_wrap, write_pq_dk_wrap, write_pq_ek, write_secret, write_yubi_blob,
+    yubi_blob_exists, Meta, StoreError,
 };
+use crate::yubi::{open_yubi_share_with_backend, seal_share_for_yubi, YubiChallenge, YubiError};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use serde::Serialize;
 use std::path::Path;
@@ -46,8 +49,21 @@ pub enum CeremonyError {
     Crypto(#[from] crate::crypto::CryptoError),
     #[error(transparent)]
     Factor(#[from] FactorError),
+    #[error(transparent)]
+    Yubi(#[from] YubiError),
     #[error("{0}")]
     Msg(String),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnrollYubiResult {
+    pub ok: bool,
+    pub k: u8,
+    pub n: u8,
+    pub slot: u8,
+    pub factors: Vec<&'static str>,
+    pub model: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -206,6 +222,7 @@ fn reconstruct_root(
     let k = effective_threshold(meta.k, meta.n)?;
     let wrap = read_passphrase_wrap(root).ok();
     let device_blob = read_device_blob(root).ok();
+    let yubi_blob = read_yubi_blob(root).ok();
 
     let released = release_shares_from_confirmations(
         confirmations,
@@ -213,17 +230,137 @@ fn reconstruct_root(
         None,
         device_blob.as_ref(),
         None, // knowledge unused in simple model
+        yubi_blob.as_ref(),
         fingerprint_override,
     )?;
 
     if released.len() < k as usize {
         return Err(CeremonyError::Msg(format!(
-            "insufficient shares: got {} need {} (any 2 of passphrase|offline|device)",
+            "insufficient shares: got {} need {} (any 2 of enrolled factors; yubikey alone never enough)",
             released.len(),
             k
         )));
     }
     Ok(shamir_combine(&released, k)?)
+}
+
+fn yubi_response_for_root(
+    root: &Path,
+    backend: &dyn YubiChallenge,
+) -> Result<Vec<u8>, CeremonyError> {
+    let blob = read_yubi_blob(root)?;
+    let challenge = B64
+        .decode(&blob.challenge_b64)
+        .map_err(|e| CeremonyError::Msg(format!("yubi challenge: {e}")))?;
+    Ok(backend.challenge_response(&challenge)?)
+}
+
+/// Strong path: YubiKey + device (no passphrase).
+pub fn unlock_yubi_device(
+    root: &Path,
+    backend: &dyn YubiChallenge,
+) -> Result<Vec<u8>, CeremonyError> {
+    let response = yubi_response_for_root(root, backend)?;
+    reconstruct_root(
+        root,
+        &[
+            Confirmation::YubiKey { response },
+            Confirmation::Device,
+        ],
+        None,
+    )
+}
+
+/// Strong path: YubiKey + offline escrow.
+pub fn unlock_yubi_escrow(
+    root: &Path,
+    escrow_path: &Path,
+    backend: &dyn YubiChallenge,
+) -> Result<Vec<u8>, CeremonyError> {
+    let response = yubi_response_for_root(root, backend)?;
+    reconstruct_root(
+        root,
+        &[
+            Confirmation::YubiKey { response },
+            Confirmation::OfflineFile {
+                path: escrow_path.to_path_buf(),
+            },
+        ],
+        None,
+    )
+}
+
+/// Strong path: YubiKey + passphrase.
+pub fn unlock_yubi_passphrase(
+    root: &Path,
+    passphrase: &str,
+    backend: &dyn YubiChallenge,
+) -> Result<Vec<u8>, CeremonyError> {
+    let response = yubi_response_for_root(root, backend)?;
+    reconstruct_root(
+        root,
+        &[
+            Confirmation::YubiKey { response },
+            Confirmation::Passphrase(passphrase.into()),
+        ],
+        None,
+    )
+}
+
+/// Enroll YubiKey as 4th share; re-split k=2 n=4. Requires passphrase + rewrite of offline escrow.
+pub fn enroll_yubikey(
+    root: &Path,
+    passphrase: &str,
+    escrow_path: &Path,
+    backend: &dyn YubiChallenge,
+) -> Result<EnrollYubiResult, CeremonyError> {
+    if yubi_blob_exists(root) {
+        return Err(CeremonyError::Msg(
+            "yubikey already enrolled (re-enroll not supported in this release)".into(),
+        ));
+    }
+    let r = unlock_daily(root, passphrase)?;
+    let k = DEFAULT_K;
+    let n = 4u8;
+    let shares = shamir_split(&r, k, n)?;
+    let pass_share = &shares[0];
+    let offline_share = &shares[1];
+    let device_share = &shares[2];
+    let yubi_share = &shares[3];
+
+    let wrap = wrap_with_passphrase(&pass_share.data, pass_share.id, passphrase)?;
+    write_passphrase_wrap(root, &wrap)?;
+    write_escrow(escrow_path, &ShareJson::from(offline_share))?;
+
+    let fp = machine_fingerprint();
+    let dev_blob = seal_share_for_device(device_share, &fp)?;
+    write_device_blob(root, &dev_blob)?;
+
+    let yubi_blob = seal_share_for_yubi(yubi_share, backend)?;
+    write_yubi_blob(root, &yubi_blob)?;
+
+    // Prove solo Yubi cannot open (defensive: open share only, not root)
+    let _opened = open_yubi_share_with_backend(&yubi_blob, backend)?;
+
+    let mut meta = read_meta(root)?.ok_or_else(|| CeremonyError::Msg("no vault".into()))?;
+    meta.k = k;
+    meta.n = n;
+    meta.factors = vec![
+        "passphrase".into(),
+        "offline".into(),
+        "device".into(),
+        "yubikey".into(),
+    ];
+    write_meta(root, &meta)?;
+
+    Ok(EnrollYubiResult {
+        ok: true,
+        k,
+        n,
+        slot: backend.slot(),
+        factors: vec!["passphrase", "offline", "device", "yubikey"],
+        model: "any-2-of-4-strong-yubi",
+    })
 }
 
 /// Daily unlock: passphrase + this machine (k=2).
@@ -302,6 +439,36 @@ pub fn get_secret_with_escrow(
     open_named(root, &r, name)
 }
 
+/// Get via strong path: YubiKey + device.
+pub fn get_secret_yubi_device(
+    root: &Path,
+    name: &str,
+    backend: &dyn YubiChallenge,
+) -> Result<String, CeremonyError> {
+    let r = unlock_yubi_device(root, backend)?;
+    open_named(root, &r, name)
+}
+
+/// Get via strong path: YubiKey + escrow.
+pub fn get_secret_yubi_escrow(
+    root: &Path,
+    escrow_path: &Path,
+    name: &str,
+    backend: &dyn YubiChallenge,
+) -> Result<String, CeremonyError> {
+    let r = unlock_yubi_escrow(root, escrow_path, backend)?;
+    open_named(root, &r, name)
+}
+
+/// Attempt unlock with **only** YubiKey (must fail for k=2).
+pub fn try_unlock_yubi_only(
+    root: &Path,
+    backend: &dyn YubiChallenge,
+) -> Result<Vec<u8>, CeremonyError> {
+    let response = yubi_response_for_root(root, backend)?;
+    reconstruct_root(root, &[Confirmation::YubiKey { response }], None)
+}
+
 pub fn status(root: &Path) -> Result<Status, CeremonyError> {
     match read_meta(root)? {
         None => Ok(Status {
@@ -339,7 +506,11 @@ pub fn status(root: &Path) -> Result<Status, CeremonyError> {
                 },
                 remember: Some("ONE passphrase (head or password manager)"),
                 store_offline: Some("ONE escrow file OFF this laptop (USB / other house)"),
-                free: Some("device fingerprint (automatic on this machine)"),
+                free: Some(if yubi_blob_exists(root) {
+                    "device + optional YubiKey (strong hardware share; never 1FA)"
+                } else {
+                    "device fingerprint (automatic); optional: enroll-yubikey for strong path"
+                }),
             })
         }
     }
@@ -503,5 +674,37 @@ mod tests {
         assert_eq!(effective_threshold(2, 3).unwrap(), 2);
         assert_eq!(effective_threshold(3, 4).unwrap(), 3);
         assert!(effective_threshold(2, 2).is_err());
+    }
+
+    #[test]
+    fn yubi_plus_device_opens_yubi_alone_fails() {
+        use crate::yubi::MockYubi;
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        let pass = "yubi-enroll-pass-xx";
+        init_vault(&root, pass, &escrow).unwrap();
+        put_secret(&root, pass, "tok", "secret-value-42").unwrap();
+
+        let y = MockYubi::from_seed("hardware-mock-seed");
+        let er = enroll_yubikey(&root, pass, &escrow, &y).unwrap();
+        assert_eq!(er.n, 4);
+        assert!(er.factors.contains(&"yubikey"));
+
+        // Solo YubiKey fails
+        assert!(try_unlock_yubi_only(&root, &y).is_err());
+
+        // Strong path: Y + device
+        assert_eq!(
+            get_secret_yubi_device(&root, "tok", &y).unwrap(),
+            "secret-value-42"
+        );
+        // Y + escrow
+        assert_eq!(
+            get_secret_yubi_escrow(&root, &escrow, "tok", &y).unwrap(),
+            "secret-value-42"
+        );
+        // Daily still works
+        assert_eq!(get_secret(&root, pass, "tok").unwrap(), "secret-value-42");
     }
 }

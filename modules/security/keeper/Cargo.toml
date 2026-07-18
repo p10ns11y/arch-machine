@@ -16,6 +16,8 @@ base64 = "0.22"
 clap = { version = "4", features = ["derive", "env"] }
 hex = "0.4"
 hkdf = "0.12"
+hmac = "0.12"
+sha1 = "0.10"
 ml-kem = { version = "0.3.2", features = ["getrandom"] }
 rand = "0.8"
 scrypt = "0.11"

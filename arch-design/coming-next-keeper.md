@@ -272,6 +272,10 @@ sequenceDiagram
 
 **Verify:** tests with mock confirmation; no path where fprint alone opens secrets.
 
+### SN-KEEP-YUBI · Strong YubiKey share (shipped)
+
+**Shipped:** `enroll-yubikey`, `get --yubi`, `yubi-probe`, `KEEPER_YUBI_MOCK_SECRET` + live `ykchalresp`. YubiKey HMAC-SHA1 is share release only; any-2-of-4 after enroll.
+
 ### SN-KEEP-6 · Trusted places enrollment (GPS companion)
 
 **Problem:** LOCATION.md specifies places; not implemented.

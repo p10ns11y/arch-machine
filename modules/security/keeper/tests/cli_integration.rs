@@ -121,3 +121,86 @@ fn dual_cli_simple_recover_and_escrow_get() {
         assert!(String::from_utf8_lossy(&st2.stdout).contains("drill-proven"));
     }
 }
+
+#[test]
+fn cli_enroll_yubi_mock_strong_get_and_solo_fail() {
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("vault-y");
+    let escrow = dir.path().join("escrow-y.json");
+    let pass = "cli-yubi-pass-phrase-xx";
+    let mock = "cli-mock-yubi-hmac-seed";
+
+    let init = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "init",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(init.status.success(), "{}", String::from_utf8_lossy(&init.stderr));
+
+    let put = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "put",
+            "api",
+            "--value",
+            "token-from-yubi-path",
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(put.status.success(), "{}", String::from_utf8_lossy(&put.stderr));
+
+    let en = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .env("KEEPER_YUBI_MOCK_SECRET", mock)
+        .args([
+            "enroll-yubikey",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        en.status.success(),
+        "enroll: {}",
+        String::from_utf8_lossy(&en.stderr)
+    );
+    let en_body = String::from_utf8_lossy(&en.stdout);
+    assert!(en_body.contains("yubikey"));
+    assert!(en_body.contains("any-2-of-4") || en_body.contains("\"n\": 4") || en_body.contains("\"n\":4"));
+
+    // Strong get: yubi + device
+    let get = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .env("KEEPER_YUBI_MOCK_SECRET", mock)
+        .args(["get", "api", "--yubi", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(get.status.success(), "get --yubi: {}", String::from_utf8_lossy(&get.stderr));
+    assert_eq!(
+        String::from_utf8_lossy(&get.stdout).trim(),
+        "token-from-yubi-path"
+    );
+
+    // Solo yubi must fail
+    let probe = bin()
+        .env("KEEPER_YUBI_MOCK_SECRET", mock)
+        .args(["yubi-probe", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        probe.status.success(),
+        "yubi-probe should succeed when solo rejected: {}",
+        String::from_utf8_lossy(&probe.stderr)
+    );
+    assert!(String::from_utf8_lossy(&probe.stdout).contains("soloYubiRejected"));
+}
