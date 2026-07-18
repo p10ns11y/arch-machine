@@ -1,17 +1,24 @@
-# keeper — multi-factor threshold secrets (Rust)
+# keeper — simple threshold secrets (Rust)
 
-Local-first secrets holder: **k=3 of n=4** factors, **mandatory no-passphrase drill**, hybrid **ML-KEM-768** sealed secrets.
+**Any 2 of 3:** passphrase · offline escrow · this device.  
+Hybrid **ML-KEM-768** sealed secrets. No second “knowledge” password.
 
-## Factors (confirmation gates share release — never derive root alone)
+> **Mental model:** [docs/OPERATOR-MODEL.md](docs/OPERATOR-MODEL.md)  
+> Architecture: [`arch-design/keeper.md`](../../../arch-design/keeper.md)
 
-| Role | How released |
-|------|----------------|
-| **passphrase** | `KEEPER_PASSPHRASE` / file |
-| **offline** | Escrow file path at drill/recover |
-| **device** | Local machine fingerprint (auto on this host) |
-| **knowledge** | `KEEPER_KNOWLEDGE` / file |
+## One card
 
-**Forbidden:** public ISP IP / GeoIP as trust (weight = 0). See `docs/LOCATION.md`.
+| | |
+|--|--|
+| **Remember** | ONE passphrase |
+| **Store offline** | ONE escrow file (USB / other house) |
+| **Free** | Device fingerprint (automatic) |
+
+```text
+Daily:     passphrase + device
+Forgot P:  escrow + device     →  get NAME --escrow file
+New PC:    passphrase + escrow (+ vault files)
+```
 
 ## Build & test
 
@@ -24,31 +31,36 @@ cargo build --release
 ## Quick start
 
 ```bash
-export KEEPER_PASSPHRASE='strong-passphrase'
-export KEEPER_KNOWLEDGE='private knowledge answer'
+export KEEPER_PASSPHRASE='strong-passphrase'   # only secret you remember
 export KEEPER_ROOT=~/.local/share/keeper
 
 cargo run --quiet -- init --escrow ~/keeper-escrow.share.json
-cargo run --quiet -- put mfa --value '...'
-cargo run --quiet -- status          # exit 2 until drill
-# no passphrase:
+# COPY escrow OFF this laptop, then:
+
+cargo run --quiet -- put mfa --value '…'
+cargo run --quiet -- get mfa
+# forgot passphrase?
+cargo run --quiet -- get mfa --escrow ~/keeper-escrow.share.json
+# prove drill once:
 cargo run --quiet -- recover --escrow ~/keeper-escrow.share.json
-cargo run --quiet -- status          # drill-proven / healthy
+cargo run --quiet -- status   # healthy + remember/store/free card
 ```
 
-Daily unlock uses **passphrase + device + knowledge**.  
-Recover/drill uses **offline + device + knowledge** (no passphrase).
+## What is encrypted where
 
-## Crypto
+| Blob | Sealed by |
+|------|-----------|
+| Share 1 | scrypt(passphrase) |
+| Share 2 | plaintext file **you** take offline |
+| Share 3 | HKDF(device fingerprint) |
+| Secrets / canary | ML-KEM-768 + AES-GCM (root after 2 shares) |
 
-- Shamir k=3 n=4 over AES GF(256)
-- Share seals: scrypt (passphrase/knowledge), HKDF-device fingerprint (device)
-- Secrets/canary: **ML-KEM-768 + AES-256-GCM via HKDF-SHA256 (hybrid PQ)**
+Passphrase is **never** stored. Healthy = “you proved escrow recover once”; it does **not** leave the vault unlocked without P or escrow.
 
 ## Docs
 
-- [THREAT-MODEL.md](docs/THREAT-MODEL.md)
-- [RECOVERY-CEREMONY.md](docs/RECOVERY-CEREMONY.md)
-- [LOCATION.md](docs/LOCATION.md) — GPS places future; IP trust banned
-- Architecture (mermaid): [`arch-design/keeper.md`](../../../arch-design/keeper.md)
-- Backlog SN-KEEP-*: [`arch-design/coming-next-keeper.md`](../../../arch-design/coming-next-keeper.md)
+- [OPERATOR-MODEL.md](docs/OPERATOR-MODEL.md) — forgetfulness bounds  
+- [THREAT-MODEL.md](docs/THREAT-MODEL.md)  
+- [RECOVERY-CEREMONY.md](docs/RECOVERY-CEREMONY.md)  
+- [LOCATION.md](docs/LOCATION.md) — IP trust banned  
+- Backlog: [`arch-design/coming-next-keeper.md`](../../../arch-design/coming-next-keeper.md)

@@ -11,7 +11,7 @@
 
 ## 0. Mission
 
-Hold high-value secrets (MFA backup codes, recovery tokens) under a **k-of-n multi-factor root** that survives passphrase loss via **mandatory offline drill**, without treating public IP or confirmations as key material.
+Hold high-value secrets under **any 2 of 3** (passphrase · offline · device): **one** secret to remember, **one** file offline, device free — survive passphrase loss without a second knowledge password or IP theater.
 
 ---
 

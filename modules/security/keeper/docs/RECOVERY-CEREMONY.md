@@ -1,26 +1,29 @@
-# Recovery ceremony — multi-factor keeper
+# Recovery ceremony — simple any-2-of-3
 
 ## Init
 
-1. Generate root `R`; Shamir **k=3, n=4**.
+1. Generate root `R`; Shamir **k=2, n=3**.
 2. Enroll factors:
-   - **passphrase** — scrypt wrap of share 1  
-   - **offline** — share 2 written to operator escrow path  
-   - **device** — share 3 sealed to machine fingerprint  
-   - **knowledge** — share 4 sealed under knowledge-derived key  
+   - **passphrase** — scrypt wrap of share 1 (remember ONE secret)
+   - **offline** — share 2 written to escrow path (store OFF laptop)
+   - **device** — share 3 sealed to machine fingerprint (automatic)
 3. Generate ML-KEM-768 keypair; wrap decap seed under `R`; seal canary with hybrid PQ.
-4. Status remains **non-healthy** until drill/recover succeeds.
+4. Status remains **non-healthy** until drill/recover succeeds once.
 
 ## Daily unlock
 
-`passphrase` + `device` (this machine) + `knowledge` → reconstruct `R` → open hybrid secrets.
+`passphrase` + `device` → reconstruct `R` → open hybrid secrets.
 
-## Drill / recover (no primary passphrase)
+## Forgot passphrase / drill
 
-`offline` escrow file + `device` + `knowledge` → open canary → mark `drillProven`.
+`offline` escrow + `device` → open canary or secrets (`get --escrow`).
+
+## New machine
+
+Vault directory + `passphrase` + `offline` escrow (no device share required for reconstruct).
 
 ## Rules
 
 - Confirmation **releases a share**; it never KDFs the root alone.
 - Public ISP IP / GeoIP confirmations are **rejected**.
-- Optional future: fprintd, GPS trusted places (see LOCATION.md) as additional sealed shares.
+- Healthy ≠ unlocked session; get still needs P or escrow.
