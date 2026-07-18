@@ -73,3 +73,12 @@ jobs:
         run: make eye-comfort-test
       - name: Generated package SoT check
         run: make eye-comfort-generate-check
+
+  # Keeper threshold vault — crypto regressions must not be silent
+  keeper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test (modules/security/keeper)
+        run: cargo test --manifest-path modules/security/keeper/Cargo.toml
