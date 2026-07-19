@@ -1,4 +1,4 @@
-//! tinfoil-tui — Ratatui **entry and loop controller** for arch-machine.
+//! archy — Ratatui **entry and loop controller** for arch-machine.
 //!
 //! - Main interface for operators (don't get lost: breadcrumbs + next actions)
 //! - Runs shell scripts / Go `tinfoil` / `install.sh` as backends
@@ -27,7 +27,7 @@ use std::time::Duration;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "tinfoil-tui",
+    name = "archy",
     about = "arch-machine control plane (Ratatui) — inventory, audit, install dry-run, Grok dock"
 )]
 struct Cli {
@@ -73,7 +73,7 @@ fn main() -> io::Result<()> {
     terminal.show_cursor()?;
 
     if let Err(e) = &result {
-        eprintln!("tinfoil-tui error: {e}");
+        eprintln!("archy error: {e}");
     }
     result
 }
@@ -182,7 +182,7 @@ fn suspend_and_run_grok(
 }
 
 fn wait_enter() {
-    println!("Press Enter to return to tinfoil-tui…");
+    println!("Press Enter to return to archy…");
     let mut s = String::new();
     let _ = io::stdin().read_line(&mut s);
 }

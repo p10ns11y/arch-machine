@@ -88,6 +88,18 @@ func main() {
 		// Future: Grok plugin + Rust TUI call maintenance/inventory.sh directly.
 		handleInventory(args[1:])
 
+	case "search", "catalog":
+		// SN-CAT-1: searchable tools.yaml + profile catalog (read-only shell backend).
+		handleShellScript("maintenance/catalog.sh", "catalog", args[1:])
+
+	case "pkg", "actuate":
+		// SN-INV-2: consent-gated update/remove (dry-run default).
+		handleShellScript("maintenance/package-actuate.sh", "pkg", args[1:])
+
+	case "omarchy", "omarchy-status":
+		// SN-OM-1: read-only Omarchy host status (official omarchy CLI when present).
+		handleShellScript("maintenance/omarchy-status.sh", "omarchy", args[1:])
+
 	default:
 		// Backward compat + convenience:
 		//   tinfoil .          → audit current dir
@@ -119,23 +131,30 @@ func printBannerAndHelp() {
 	fmt.Println()
 	fmt.Println("COMMANDS:")
 	fmt.Println("  inventory, inv    List installed packages/tools (JSON snapshot; read-only)")
+	fmt.Println("  search, catalog   Search tools.yaml + profiles (read-only catalog)")
+	fmt.Println("  pkg, actuate      Update/remove packages (dry-run default; refuse-list)")
+	fmt.Println("  omarchy           Omarchy host status (version/theme/pkg probes; read-only)")
 	fmt.Println("  audit [path]      Run full security audit (global or on a directory)")
 	fmt.Println("  install           Perform profiled installation (equivalent to ./install.sh)")
 	fmt.Println("  vault setup|mount [enc_dir] [mount_point]   Manage encrypted gocryptfs vault")
-	fmt.Println("  tui, ui, menu     Ratatui control plane (tinfoil-tui) or gum fallback")
+	fmt.Println("  tui, ui, menu     Ratatui control plane (archy) or gum fallback")
 	fmt.Println("  version           Show version")
 	fmt.Println("  help              Show this help")
 	fmt.Println()
 	fmt.Println("EXAMPLES:")
 	fmt.Println("  tinfoil inventory              # Explicit pkgs + tools.yaml + mise + upgrades")
 	fmt.Println("  tinfoil inventory --json       # Agent-ready JSON on stdout")
+	fmt.Println("  tinfoil search docker          # Catalog: which tool + profiles")
+	fmt.Println("  tinfoil omarchy                # Omarchy version/theme/update (read-only)")
+	fmt.Println("  tinfoil pkg --update jq        # Dry-run plan (default)")
 	fmt.Println("  tinfoil audit .                # Audit current directory")
 	fmt.Println("  tinfoil install --profile ml-dev --dry-run")
 	fmt.Println("  tinfoil vault setup")
 	fmt.Println()
-	fmt.Println("Control plane: Ratatui tinfoil-tui (entry + loop) steers shell/Go backends.")
-	fmt.Println("  tinfoil tui                # prefers tinfoil-tui binary, else gum")
-	fmt.Println("  maintenance/inventory.sh   # call directly without Go")
+	fmt.Println("Control plane: Ratatui archy (entry + loop) steers shell/Go backends.")
+	fmt.Println("  tinfoil tui                # prefers archy binary, else gum")
+	fmt.Println("  docs/omarchy.md            # Day-1 Omarchy + arch-machine playbook")
+	fmt.Println("  docs/omarchy-commands.md   # Full Omarchy CLI reference")
 	fmt.Println("  /arch-status /arch-audit   # Grok agent-as-TUI when plugin installed")
 }
 
@@ -262,21 +281,21 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-// runRustTui execs tinfoil-tui when available (Ratatui control plane).
+// runRustTui execs archy when available (Ratatui control plane / loop controller).
 // Returns true if it handled the request (found and ran, or ran with error exit).
 func runRustTui(extra []string) bool {
 	candidates := []string{}
-	if p, err := exec.LookPath("tinfoil-tui"); err == nil {
+	if p, err := exec.LookPath("archy"); err == nil {
 		candidates = append(candidates, p)
 	}
 	// Dev builds relative to repo / this binary
 	binDir := filepath.Dir(os.Args[0])
 	for _, rel := range []string{
-		filepath.Join(binDir, "tinfoil-tui"),
-		filepath.Join(binDir, "..", "crates", "tinfoil-tui", "target", "release", "tinfoil-tui"),
-		filepath.Join(binDir, "..", "crates", "tinfoil-tui", "target", "debug", "tinfoil-tui"),
-		"crates/tinfoil-tui/target/release/tinfoil-tui",
-		"crates/tinfoil-tui/target/debug/tinfoil-tui",
+		filepath.Join(binDir, "archy"),
+		filepath.Join(binDir, "..", "crates", "archy", "target", "release", "archy"),
+		filepath.Join(binDir, "..", "crates", "archy", "target", "debug", "archy"),
+		"crates/archy/target/release/archy",
+		"crates/archy/target/debug/archy",
 	} {
 		if fileExists(rel) {
 			if abs, err := filepath.Abs(rel); err == nil {
@@ -309,7 +328,7 @@ func runRustTui(extra []string) bool {
 				return true
 			}
 		}
-		fmt.Fprintf(os.Stderr, "❌ tinfoil-tui failed: %v (falling back to gum if available)\n", err)
+		fmt.Fprintf(os.Stderr, "❌ archy failed: %v (falling back to gum if available)\n", err)
 		return false
 	}
 	return true
@@ -437,9 +456,14 @@ func printGoodbye() {
 }
 
 // handleInventory dispatches to maintenance/inventory.sh (read-only).
-// Complex UI lives outside Go (Grok plugin / future Rust TUI).
+// Complex UI lives outside Go (Grok plugin / archy).
 func handleInventory(args []string) {
-	scriptPath := findScript("maintenance/inventory.sh")
+	handleShellScript("maintenance/inventory.sh", "inventory", args)
+}
+
+// handleShellScript runs a repo maintenance/*.sh backend with args (thin dispatch only).
+func handleShellScript(relPath, label string, args []string) {
+	scriptPath := findScript(relPath)
 	cmd := exec.Command("bash", scriptPath)
 	cmd.Args = append(cmd.Args, args...)
 	cmd.Stdout = os.Stdout
@@ -455,7 +479,7 @@ func handleInventory(args []string) {
 			}
 			os.Exit(code)
 		}
-		fmt.Fprintf(os.Stderr, "❌ tinfoil inventory failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "❌ tinfoil %s failed: %v\n", label, err)
 		os.Exit(1)
 	}
 }

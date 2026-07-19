@@ -10,10 +10,13 @@ use std::time::Instant;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JobKind {
     Inventory,
+    Catalog,
+    OmarchyStatus,
     AuditGlobal,
     AuditProject,
     InstallDryRun,
     Evidence,
+    ActuateDry,
     #[allow(dead_code)]
     Custom,
 }
@@ -22,10 +25,13 @@ impl JobKind {
     pub fn label(self) -> &'static str {
         match self {
             JobKind::Inventory => "inventory",
+            JobKind::Catalog => "catalog",
+            JobKind::OmarchyStatus => "omarchy status",
             JobKind::AuditGlobal => "audit (global)",
             JobKind::AuditProject => "audit (project)",
             JobKind::InstallDryRun => "install --dry-run",
             JobKind::Evidence => "evidence",
+            JobKind::ActuateDry => "pkg dry-run",
             JobKind::Custom => "job",
         }
     }
@@ -143,6 +149,40 @@ impl RunningJob {
 pub fn build_inventory(root: &PathBuf) -> Command {
     let mut c = Command::new("bash");
     c.arg(root.join("maintenance/inventory.sh"));
+    c.arg("--text");
+    c.env("TINFOIL_ROOT", root);
+    c.current_dir(root);
+    c
+}
+
+pub fn build_catalog(root: &PathBuf, query: &str) -> Command {
+    let mut c = Command::new("bash");
+    c.arg(root.join("maintenance/catalog.sh"));
+    c.arg("--text");
+    if !query.is_empty() {
+        c.arg(query);
+    }
+    c.env("TINFOIL_ROOT", root);
+    c.current_dir(root);
+    c
+}
+
+/// Dry-run update plan for a single package name (default safe actuate).
+pub fn build_actuate_update_dry(root: &PathBuf, pkg: &str) -> Command {
+    let mut c = Command::new("bash");
+    c.arg(root.join("maintenance/package-actuate.sh"));
+    c.arg("--update");
+    c.arg(pkg);
+    c.arg("--dry-run");
+    c.env("TINFOIL_ROOT", root);
+    c.current_dir(root);
+    c
+}
+
+/// Read-only Omarchy host status (version, theme, pkg probes).
+pub fn build_omarchy_status(root: &PathBuf) -> Command {
+    let mut c = Command::new("bash");
+    c.arg(root.join("maintenance/omarchy-status.sh"));
     c.arg("--text");
     c.env("TINFOIL_ROOT", root);
     c.current_dir(root);

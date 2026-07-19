@@ -51,6 +51,8 @@ See:
 - [docs/PROFILES.md](PROFILES.md) — How profiles are validated and composed.
 - [docs/LEGACY.md](LEGACY.md) — What was killed and why (policy application proof).
 - [docs/SECRETS-EVERYDAY.md](SECRETS-EVERYDAY.md) — Developer everyday secrets: central recovery, runtime inject, API-key sprawl.
+- [docs/omarchy.md](omarchy.md) — Day-1 Omarchy + arch-machine playbook (ownership, command map).
+- [docs/omarchy-commands.md](omarchy-commands.md) — Full Omarchy CLI reference (host `omarchy` binaries).
 - [AUTHORS-MOTTO.md](../AUTHORS-MOTTO.md) — Philosophy ("Solve your own machine first...").
 
 ## Evidence — The Differentiator (Phase 5 Amplified)

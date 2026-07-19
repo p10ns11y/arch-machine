@@ -289,7 +289,7 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_help(f: &mut Frame, area: Rect, _app: &App) {
     let text = "\
-tinfoil-tui — main entry & loop controller\n\
+archy — main entry & loop controller\n\
 \n\
 You always stand on:  Home › Job › Output → Next actions\n\
 Shell/Go do the work; this UI only steers and shows stdio cleanly.\n\

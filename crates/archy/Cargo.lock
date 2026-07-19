@@ -59,6 +59,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "archy"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "crossterm",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "which",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -634,19 +647,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "tinfoil-tui"
-version = "0.1.0"
-dependencies = [
- "clap",
- "crossterm",
- "ratatui",
- "serde",
- "serde_json",
- "thiserror",
- "which",
 ]
 
 [[package]]

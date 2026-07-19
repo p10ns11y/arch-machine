@@ -74,6 +74,18 @@ pub fn suggest(kind: JobKind, exit_code: i32) -> Vec<NextAction> {
                 id: ActionId::OpenInventory,
             });
         }
+        JobKind::Catalog | JobKind::ActuateDry | JobKind::OmarchyStatus => {
+            v.push(NextAction {
+                key: 'n',
+                label: "Inventory".into(),
+                id: ActionId::OpenInventory,
+            });
+            v.push(NextAction {
+                key: 'i',
+                label: "Install dry-run".into(),
+                id: ActionId::InstallDry,
+            });
+        }
         JobKind::Evidence | JobKind::Custom => {}
     }
 

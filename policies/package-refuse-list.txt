@@ -1,0 +1,42 @@
+# Critical packages never removed by package-actuate.sh (SN-INV-2).
+# One name per line. Comments and blanks ignored.
+# These keep the machine bootable and the package manager honest.
+
+# Core OS
+base
+base-devel
+linux
+linux-lts
+linux-zen
+linux-firmware
+linux-headers
+linux-lts-headers
+linux-zen-headers
+
+# Boot / firmware
+efibootmgr
+grub
+limine
+systemd
+systemd-sysvcompat
+mkinitcpio
+
+# Package manager + deps
+pacman
+pacman-contrib
+archlinux-keyring
+glibc
+bash
+coreutils
+util-linux
+filesystem
+shadow
+sudo
+
+# Network (minimal)
+iwd
+networkmanager
+openssh
+
+# Omarchy / desktop kernel path often required
+hyprland

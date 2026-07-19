@@ -1,4 +1,4 @@
-# tinfoil-tui — Ratatui control plane
+# archy — Ratatui control plane
 
 **Main entry and loop controller** for arch-machine on Omarchy (and any Arch host).
 
@@ -9,15 +9,15 @@ Heavy work stays in **shell scripts**, **Go `tinfoil`**, and **`install.sh`**.
 ## Build
 
 ```bash
-cargo build --release --manifest-path crates/tinfoil-tui/Cargo.toml
-# binary: crates/tinfoil-tui/target/release/tinfoil-tui
-# or:     target/release/tinfoil-tui if using a workspace later
+cargo build --release --manifest-path crates/archy/Cargo.toml
+# binary: crates/archy/target/release/archy
+# or:     target/release/archy if using a workspace later
 ```
 
 ```bash
-cargo run --manifest-path crates/tinfoil-tui/Cargo.toml
+cargo run --manifest-path crates/archy/Cargo.toml
 # with explicit root:
-TINFOIL_ROOT=$PWD cargo run --manifest-path crates/tinfoil-tui/Cargo.toml
+TINFOIL_ROOT=$PWD cargo run --manifest-path crates/archy/Cargo.toml
 ```
 
 ## Keys
@@ -47,7 +47,7 @@ TINFOIL_ROOT=$PWD cargo run --manifest-path crates/tinfoil-tui/Cargo.toml
 ## Architecture
 
 ```
-tinfoil-tui (ratatui)     ← entry + loop + chrome + stdio beauty
+archy (ratatui)           ← entry + loop + chrome + stdio beauty
     ├── jobs.rs           → spawn bash / tinfoil / install.sh
     ├── actions.rs        → next fix steps after exit
     └── Grok dock         → context file + suspend → `grok` → resume
@@ -57,4 +57,4 @@ tinfoil-tui (ratatui)     ← entry + loop + chrome + stdio beauty
 
 ## Wire as default `tinfoil tui`
 
-When the release binary is on `PATH` as `tinfoil-tui`, the Go dispatcher can exec it first (see `bin/tinfoil.go`). Gum remains fallback.
+When the release binary is on `PATH` as `archy`, the Go dispatcher can exec it first (see `bin/tinfoil.go`). Gum remains fallback.

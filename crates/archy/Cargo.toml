@@ -1,5 +1,5 @@
 [package]
-name = "tinfoil-tui"
+name = "archy"
 version = "0.1.0"
 edition = "2021"
 description = "Ratatui control plane for arch-machine — entry, loop, shell/Go backends, Grok dock"
@@ -7,7 +7,7 @@ license = "MIT"
 publish = false
 
 [[bin]]
-name = "tinfoil-tui"
+name = "archy"
 path = "src/main.rs"
 
 [dependencies]

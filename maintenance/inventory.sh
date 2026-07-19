@@ -29,6 +29,8 @@ get_logs_dir() {
 
 LOGS_DIR="$(get_logs_dir)"
 SCHEMA_VERSION="tinfoil.inventory.v1"
+BASELINES_DIR="$CONFIG_DIR/baselines"
+OMARCHY_BASELINE_YAML="$BASELINES_DIR/omarchy.yaml"
 
 MODE_JSON=false
 MODE_TEXT=false
@@ -36,6 +38,7 @@ DO_WRITE=true
 EXPLICIT_ONLY=false
 INCLUDE_MISE=true
 INCLUDE_UPGRADABLE=true
+INCLUDE_OWNERSHIP=true
 
 usage() {
     cat <<'EOF'
@@ -53,6 +56,7 @@ OPTIONS:
   --explicit-only    Only pacman explicit packages (skip tools.yaml / mise / upgrades)
   --no-mise          Skip mise runtime list
   --no-upgradable    Skip pacman -Qu
+  --no-ownership     Skip omarchy/arch-machine ownership tags
   -h, --help         Show this help
 
 OUTPUT:
@@ -72,6 +76,7 @@ while [[ $# -gt 0 ]]; do
         --explicit-only) EXPLICIT_ONLY=true; shift ;;
         --no-mise) INCLUDE_MISE=false; shift ;;
         --no-upgradable) INCLUDE_UPGRADABLE=false; shift ;;
+        --no-ownership) INCLUDE_OWNERSHIP=false; shift ;;
         -h|--help) usage; exit 0 ;;
         *)
             echo "Unknown option: $1" >&2
@@ -191,6 +196,53 @@ fi
 TOOLS_NAMES_FILE="$TMPDIR_INV/tools_names.txt"
 cut -f1 "$TOOLS_TSV" 2>/dev/null | sort -u >"$TOOLS_NAMES_FILE" || : >"$TOOLS_NAMES_FILE"
 
+# Omarchy baseline names (repo snapshot + live Omarchy install lists when present)
+OMARCHY_NAMES_FILE="$TMPDIR_INV/omarchy_names.txt"
+: >"$OMARCHY_NAMES_FILE"
+
+load_omarchy_baseline() {
+    if [[ "$INCLUDE_OWNERSHIP" != true ]]; then
+        return 0
+    fi
+    if [[ -f "$OMARCHY_BASELINE_YAML" ]]; then
+        if need_cmd yq; then
+            yq -r '.packages[]? // empty' "$OMARCHY_BASELINE_YAML" 2>/dev/null \
+                | grep -v '^$' >>"$OMARCHY_NAMES_FILE" || true
+        else
+            grep -E '^\s*-\s+' "$OMARCHY_BASELINE_YAML" \
+                | sed -E 's/^\s*-\s+//; s/#.*//; s/[[:space:]]+$//' \
+                | grep -v '^$' >>"$OMARCHY_NAMES_FILE" || true
+        fi
+    fi
+    # Live overlay from Omarchy checkout (preferred when present)
+    local om_root="${OMARCHY_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/omarchy}"
+    local f
+    for f in \
+        "$om_root/install/omarchy-base.packages" \
+        "$om_root/install/omarchy-other.packages"; do
+        if [[ -f "$f" ]]; then
+            grep -vE '^\s*#|^\s*$' "$f" >>"$OMARCHY_NAMES_FILE" || true
+        fi
+    done
+    if [[ -s "$OMARCHY_NAMES_FILE" ]]; then
+        sort -u "$OMARCHY_NAMES_FILE" -o "$OMARCHY_NAMES_FILE"
+    fi
+}
+
+# ownership: arch-machine > omarchy-baseline > user-explicit
+ownership_for() {
+    local name="$1"
+    if grep -qxF "$name" "$TOOLS_NAMES_FILE" 2>/dev/null; then
+        echo "arch-machine"
+    elif grep -qxF "$name" "$OMARCHY_NAMES_FILE" 2>/dev/null; then
+        echo "omarchy-baseline"
+    else
+        echo "user-explicit"
+    fi
+}
+
+load_omarchy_baseline
+
 build_json() {
     local ts hostname
     ts="$(date -Iseconds)"
@@ -208,11 +260,16 @@ build_json() {
                 if grep -qxF "$name" "$TOOLS_NAMES_FILE" 2>/dev/null; then
                     in_tools="true"
                 fi
+                local ownership="user-explicit"
+                if [[ "$INCLUDE_OWNERSHIP" == true ]]; then
+                    ownership="$(ownership_for "$name")"
+                fi
                 jq -nc \
                     --arg n "$name" \
                     --arg v "${ver:-}" \
                     --argjson it "$in_tools" \
-                    '{name:$n, version:$v, source:"pacman-explicit", in_tools_yaml:$it}'
+                    --arg own "$ownership" \
+                    '{name:$n, version:$v, source:"pacman-explicit", in_tools_yaml:$it, ownership:$own}'
             done <"$PKG_TSV" | jq -s '.'
         fi
     )
@@ -268,6 +325,11 @@ build_json() {
     upg_count=$(wc -l <"$UPG_TSV" | tr -d ' ')
     mise_count=$(wc -l <"$MISE_TSV" | tr -d ' ')
 
+    local own_arch own_om own_user
+    own_arch=$(printf '%s' "$packages_json" | jq '[.[] | select(.ownership=="arch-machine")] | length')
+    own_om=$(printf '%s' "$packages_json" | jq '[.[] | select(.ownership=="omarchy-baseline")] | length')
+    own_user=$(printf '%s' "$packages_json" | jq '[.[] | select(.ownership=="user-explicit")] | length')
+
     jq -n \
         --arg schema "$SCHEMA_VERSION" \
         --arg ts "$ts" \
@@ -282,6 +344,9 @@ build_json() {
         --argjson tools_miss "$tools_miss" \
         --argjson upg_count "$upg_count" \
         --argjson mise_count "$mise_count" \
+        --argjson own_arch "$own_arch" \
+        --argjson own_om "$own_om" \
+        --argjson own_user "$own_user" \
         '{
           schema: $schema,
           timestamp: $ts,
@@ -292,7 +357,12 @@ build_json() {
             tools_yaml_installed: $tools_hit,
             tools_yaml_missing: $tools_miss,
             upgradable: $upg_count,
-            mise_runtimes: $mise_count
+            mise_runtimes: $mise_count,
+            ownership: {
+              arch_machine: $own_arch,
+              omarchy_baseline: $own_om,
+              user_explicit: $own_user
+            }
           },
           packages: $packages,
           tools_yaml: $tools_yaml,
@@ -317,9 +387,11 @@ fi
 print_text() {
     local s
     s=$(printf '%s' "$INVENTORY_JSON" | jq -r '.summary | "explicit=\(.explicit_packages) tools_yaml_ok=\(.tools_yaml_installed) tools_yaml_miss=\(.tools_yaml_missing) upgradable=\(.upgradable) mise=\(.mise_runtimes)"')
+    own=$(printf '%s' "$INVENTORY_JSON" | jq -r '.summary.ownership // empty | if . then "ownership: arch-machine=\(.arch_machine) omarchy=\(.omarchy_baseline) user=\(.user_explicit)" else empty end')
     echo "tinfoil inventory ($SCHEMA_VERSION)"
     echo "host: $(printf '%s' "$INVENTORY_JSON" | jq -r .hostname)  time: $(printf '%s' "$INVENTORY_JSON" | jq -r .timestamp)"
     echo "summary: $s"
+    [[ -n "$own" ]] && echo "$own"
     if [[ "$DO_WRITE" == true && -f "$OUT_JSON" ]]; then
         echo "wrote: $OUT_JSON"
         echo "latest: $LOGS_DIR/inventory-latest.json"
@@ -328,7 +400,7 @@ print_text() {
     echo "=== Explicit packages (pacman -Qe) — first 40 ==="
     printf '%s' "$INVENTORY_JSON" | jq -r '
       .packages[:40][] |
-      "\(.name)  \(.version)\(if .in_tools_yaml then "  [tools.yaml]" else "" end)"
+      "\(.name)  \(.version)\(if .in_tools_yaml then "  [tools.yaml]" else "" end)  [\(.ownership // "user-explicit")]"
     ' 2>/dev/null || true
     local total
     total=$(printf '%s' "$INVENTORY_JSON" | jq -r '.summary.explicit_packages')

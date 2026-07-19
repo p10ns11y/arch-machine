@@ -1,4 +1,4 @@
-.PHONY: lint validate-profiles evidence-smoke eye-comfort-test eye-comfort-generate-check ci-help tinfoil-tui tinfoil-tui-release
+.PHONY: lint validate-profiles evidence-smoke eye-comfort-test eye-comfort-generate-check ci-help archy archy-release
 
 lint:
 	@shellcheck --severity=warning $$(find . -name '*.sh' -not -path './.grok/*' -not -path './logs/*' -not -path './systemd/*' 2>/dev/null) || true
@@ -20,18 +20,18 @@ eye-comfort-test:
 eye-comfort-generate-check:
 	@cd modules/productivity/eye-comfort && PYTHONPATH=lib python3 lib/generate_packages.py --check
 
-# Ratatui control plane (main entry / loop)
-tinfoil-tui:
-	cargo build --manifest-path crates/tinfoil-tui/Cargo.toml
+# Ratatui control plane (main entry / loop) — binary: archy
+archy:
+	cargo build --manifest-path crates/archy/Cargo.toml
 
-tinfoil-tui-release:
-	cargo build --release --manifest-path crates/tinfoil-tui/Cargo.toml
-	@echo "binary: crates/tinfoil-tui/target/release/tinfoil-tui"
-	@echo "run:    ./crates/tinfoil-tui/target/release/tinfoil-tui"
+archy-release:
+	cargo build --release --manifest-path crates/archy/Cargo.toml
+	@echo "binary: crates/archy/target/release/archy"
+	@echo "run:    ./crates/archy/target/release/archy"
 	@echo "or:     tinfoil tui  (after install to PATH or from repo with binary present)"
 
 ci-help:
-	@echo "make lint | validate-profiles | evidence-smoke | eye-comfort-test | eye-comfort-generate-check | tinfoil-tui"
+	@echo "make lint | validate-profiles | evidence-smoke | eye-comfort-test | eye-comfort-generate-check | archy"
 
 # Keeper threshold vault tests (also intended for CI — see PR #28 if workflow scope blocks push)
 .PHONY: keeper-test

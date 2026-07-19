@@ -50,14 +50,14 @@ flowchart LR
 |------|-------|----------|----------|
 | Thin install | A- | Default `--thin` ships sentinel only | `install.sh`, README |
 | tinfoil CLI (Go) | B+ | Thin dispatcher; inventory added; TUI de-emphasized | `bin/tinfoil.go` |
-| **Inventory backend** | **B** | Read-only snapshot schema v1; shell-first | `maintenance/inventory.sh`, `logs/inventory-*.json` |
+| **Inventory backend** | **B+** | Schema v1 + ownership tags (omarchy/arch-machine/user) | `maintenance/inventory.sh`, `config/baselines/omarchy.yaml` |
 | TUI (gum legacy) | C+ | Works; freeze feature growth — bridge only | `lib/tui/*.sh`, Issue #7 |
 | **Grok agent TUI** | **B+** | Slash status/init/audit/expand; fail closed | `plugins/arch-machine`, BOUNDARY.md |
-| **Rust TUI** | **B** | Entry + loop controller; stdio + next actions + Grok dock | `crates/tinfoil-tui` |
+| **Rust TUI (archy)** | **B** | Entry + loop; inventory/catalog/actuate dry-run menu | `crates/archy` |
 | **Keeper (MFA vault)** | **A-** | k=3 n=4 + PQ seal + drill; PR open | `modules/security/keeper`, PR #28 |
-| Profiles | B | YAML compose modules | `config/profiles/*.yaml` |
-| Catalog search UI | D | tools.yaml exists; no Software Center search yet | SN-CAT-1 |
-| Select update/remove | F | Scripts partial; no multi-select actuate | SN-INV-2 |
+| Profiles | B+ | YAML compose; harness asserts module.category | `config/profiles/*.yaml`, SN-3 harness |
+| Catalog search | **B** | Shell backend + `tinfoil search` + archy menu | `maintenance/catalog.sh`, SN-CAT-1 |
+| Select update/remove | **C** | Dry-run actuate + refuse-list; multi-select UX later | `maintenance/package-actuate.sh`, SN-INV-2 |
 | Evidence | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
 | Remediation policy | A | Repo applies own 6-step policy | `policies/security-remediation.md` |
 | CI | B+ | shellcheck, go, yaml, evidence smoke | `.github/workflows/ci.yml` |
@@ -120,18 +120,18 @@ flowchart LR
 | `lib/tui/*` | freeze; bugfix only |
 | backends | all new capability lands in `maintenance/*.sh` first |
 
-### SN-3 · Real profile validation harness
+### SN-3 · Real profile validation harness — **landing**
 
 **Problem:** CI echoes stub; `includes[]` ↔ `install_<module>` not fully enforced.
 
 | File | Work |
 |------|------|
-| `scripts/profile-validation-harness.sh` | assert symbols + module dirs |
-| `.github/workflows/ci.yml` | fail job on harness failure |
+| `scripts/profile-validation-harness.sh` | Parse `module.category`; assert `modules/<module>/install.sh` + `install_<module>()` |
+| `.github/workflows/ci.yml` | fail job on harness failure (already via `make validate-profiles`) |
 
 **Done when:** CI fails on broken profile reference.
 
-**Verify:** `make validate-profiles` in CI locally
+**Verify:** `make validate-profiles` — all three profiles OK.
 
 ### SN-4 · Evidence screen in TUI — **redirect**
 
@@ -165,41 +165,47 @@ flowchart LR
 
 **Verify:** `./maintenance/inventory.sh --json --no-write \| jq .summary`; compare count to `pacman -Qe \| wc -l`.
 
-### SN-INV-2 · Multi-select update / remove (consent-gated)
+### SN-INV-2 · Multi-select update / remove (consent-gated) — **backend landing**
 
 **Problem:** Inventory without actuate cannot “control for taste.”
 
 | File | Work |
 |------|------|
-| `maintenance/package-actuate.sh` (new) | `--remove` / `--update`; dry-run default; double confirm |
-| `policies/` | critical refuse-list |
-| Grok `/arch-pkg` | only with `--yes` |
-| Rust TUI | multi-select UX |
+| `maintenance/package-actuate.sh` | `--remove` / `--update`; dry-run default; double confirm |
+| `policies/package-refuse-list.txt` | critical refuse-list |
+| `tinfoil pkg` | thin dispatch |
+| Grok `/arch-pkg` | only with `--yes` (next) |
+| archy | dry-run demo menu item; multi-select UX next |
 
-**Done when:** Select 1–N → dry-run plan → confirm → evidence line.
+**Done when (backend):** Select 1–N → dry-run plan JSON → refuse-list blocks critical removes → plan under `logs/actuate-*.json`.
 
-**Verify:** dry-run only in CI; manual disposable package dogfood.
+**Verify:** `./maintenance/package-actuate.sh --update jq --dry-run --json`; `--remove base --dry-run` → blocked.
 
-### SN-CAT-1 · Searchable install catalog
+### SN-CAT-1 · Searchable install catalog — **landing**
 
 **Problem:** Profile install is batch, not browse/search (Ubuntu Software feel).
 
 | File | Work |
 |------|------|
-| `lib/catalog.sh` (new) | tools.yaml + profile labels + optional `pacman -Ss` |
-| thin CLI / Grok / Rust | `search` → install one tool or whole profile dry-run |
+| `maintenance/catalog.sh` | tools.yaml + profile labels; schema `tinfoil.catalog.v1` |
+| `tinfoil search` / `catalog` | thin dispatch |
+| archy | Catalog search menu item |
 
 **Done when:** Search “docker” or “rocm” shows entry + which profile includes it.
 
-### SN-OM-1 · Omarchy baseline map
+**Verify:** `./maintenance/catalog.sh --json docker \| jq .results`
+
+### SN-OM-1 · Omarchy baseline map — **landing**
 
 **Problem:** Omarchy preinstalls many tools; blind profile install muddies ownership.
 
 | File | Work |
 |------|------|
-| `config/baselines/omarchy.yaml` | Maintained expected set |
-| `inventory.sh` | Tag `omarchy-baseline` / `arch-machine` / `user-explicit` / `unknown` |
-| docs | Day-1 Omarchy + thin tinfoil playbook |
+| `config/baselines/omarchy.yaml` | Snapshot of omarchy-base + other package lists |
+| `inventory.sh` | Tag `omarchy-baseline` / `arch-machine` / `user-explicit` |
+| live overlay | `$OMARCHY_PATH/install/omarchy-*.packages` when present |
+| docs | `docs/omarchy.md` playbook + `docs/omarchy-commands.md` full CLI ref |
+| status | `maintenance/omarchy-status.sh` → `tinfoil omarchy` / archy menu |
 
 ### SN-SCAN-1 · Scan UX polish
 
@@ -226,7 +232,7 @@ Wire after SN-INV-1/2 backends exist. Plugin calls **shell**, not Go internals.
 
 ```mermaid
 flowchart TB
-  subgraph rust [tinfoil-tui ratatui]
+  subgraph rust [archy ratatui]
     Loop[event loop controller]
     Crumb[breadcrumb Home job]
     Out[stdio pane]
@@ -250,13 +256,13 @@ flowchart TB
 
 | File | Work |
 |------|------|
-| `crates/tinfoil-tui/` | MVP: menu, jobs, scrollable stdio, actions, Grok dock |
-| `bin/tinfoil.go` | `tui` prefers `tinfoil-tui` then gum |
+| `crates/archy/` | MVP: menu, jobs, scrollable stdio, actions, Grok dock (binary: `archy`) |
+| `bin/tinfoil.go` | `tui` prefers `archy` then gum |
 | Next | Inventory list widget from JSON; live package multi-select; real install confirm |
 
 **Done when (MVP):** `cargo build` + run shows Home; Inventory/Audit dry jobs stream stdio; next-action bar appears; `G` suspends and launches `grok`; Esc returns Home.
 
-**Verify:** `make tinfoil-tui` · `./crates/tinfoil-tui/target/debug/tinfoil-tui --print-root` · manual interactive dogfood.
+**Verify:** `make archy` · `./crates/archy/target/debug/archy --print-root` · manual interactive dogfood.
 
 **Guardrails:** No business logic in Rust that duplicates shell. Grok embed is suspend/split-context (not fake live PTY yet).
 
@@ -415,7 +421,12 @@ gantt
 | UWSM graphical-session race | PR #25 merge |
 | Inventory v1 (shell backend) | `maintenance/inventory.sh` + `tinfoil inventory` |
 | Surface pivot: gum freeze; Rust+Grok | `coming-next` SN-TUI-RUST / SN-GO-THIN |
-| Ratatui control plane MVP | `crates/tinfoil-tui` + `tinfoil tui` prefers it |
+| Ratatui control plane MVP | `crates/archy` (`archy` binary) + `tinfoil tui` prefers it |
+| SN-CAT-1 catalog search | `maintenance/catalog.sh` + `tinfoil search` |
+| SN-OM-1 ownership tags | `config/baselines/omarchy.yaml` + inventory `ownership` |
+| SN-INV-2 actuate dry-run | `maintenance/package-actuate.sh` + refuse-list |
+| SN-3 profile harness | `scripts/profile-validation-harness.sh` (module.category) |
+| Loop controller rename | `archy` (was tinfoil-tui) |
 
 ## §13 References
 

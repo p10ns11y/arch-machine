@@ -52,10 +52,13 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | TUI (Elm/gum) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
-| **Control plane TUI** | `crates/tinfoil-tui` (Ratatui entry + loop) · `tinfoil tui` |
-| Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / JSON schema v1 |
+| **Control plane TUI** | `crates/archy` (Ratatui entry + loop controller) · `tinfoil tui` / `archy` |
+| Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / schema v1 + ownership tags |
+| Catalog | `maintenance/catalog.sh` → `tinfoil search` / schema `tinfoil.catalog.v1` |
+| Package actuate | `maintenance/package-actuate.sh` → `tinfoil pkg` (dry-run default) |
+| Omarchy | `docs/omarchy.md` + `docs/omarchy-commands.md` · `tinfoil omarchy` status |
 | Evidence | `maintenance/extract-evidence.sh`, `lib/evidence.sh` |
-| Surfaces | **tinfoil-tui** (main) · Grok plugin / dock · gum legacy |
+| Surfaces | **archy** (main) · Grok plugin / dock · gum legacy |
 
 ## Expand commands
 

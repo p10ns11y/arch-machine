@@ -60,6 +60,10 @@ pub struct App {
     pub grok_prompt: String,
     pub project_path: String,
     pub install_profile: String,
+    /// Default catalog search query (menu entry; agents can extend later)
+    pub catalog_query: String,
+    /// Default package for actuate dry-run demo
+    pub actuate_pkg: String,
 
     /// Request outer main to suspend ratatui and run grok
     pub pending_grok_launch: bool,
@@ -67,10 +71,13 @@ pub struct App {
 
 const MENU: &[&str] = &[
     "📦  Inventory — list installed tools",
+    "🔎  Catalog search — tools.yaml + profiles",
+    "🏛  Omarchy status — version / theme / pkg probes",
     "🔍  Audit system (global)",
     "📁  Audit project (cwd / path)",
     "📋  Install profile dry-run",
     "📜  Evidence extract (dry-run)",
+    "🛠  Package actuate dry-run (update jq)",
     "🤖  Grok dock — toggle split",
     "⛶   Grok fullscreen launch",
     "❓  Help / key map",
@@ -101,10 +108,12 @@ impl App {
             grok_prompt: default_grok_prompt(),
             project_path: ".".into(),
             install_profile: "minimal".into(),
+            catalog_query: "docker".into(),
+            actuate_pkg: "jq".into(),
             pending_grok_launch: false,
         };
         app.push_line(format!(
-            "tinfoil control plane · root={}",
+            "archy control plane · root={}",
             app.root.display()
         ));
         app.push_line("↑↓ select · Enter run · g Grok split · G full Grok · ? help · q quit".into());
@@ -306,38 +315,53 @@ impl App {
         match self.menu_idx {
             0 => self.start_job(JobKind::Inventory, "Inventory", jobs::build_inventory(&self.root)),
             1 => self.start_job(
+                JobKind::Catalog,
+                &format!("Catalog search '{}'", self.catalog_query),
+                jobs::build_catalog(&self.root, &self.catalog_query),
+            ),
+            2 => self.start_job(
+                JobKind::OmarchyStatus,
+                "Omarchy status",
+                jobs::build_omarchy_status(&self.root),
+            ),
+            3 => self.start_job(
                 JobKind::AuditGlobal,
                 "Audit global",
                 jobs::build_audit_global(&self.root),
             ),
-            2 => self.start_job(
+            4 => self.start_job(
                 JobKind::AuditProject,
                 &format!("Audit {}", self.project_path),
                 jobs::build_audit_project(&self.root, &self.project_path),
             ),
-            3 => self.start_job(
+            5 => self.start_job(
                 JobKind::InstallDryRun,
                 &format!("Install {} --dry-run", self.install_profile),
                 jobs::build_install_dry(&self.root, &self.install_profile),
             ),
-            4 => self.start_job(
+            6 => self.start_job(
                 JobKind::Evidence,
                 "Evidence dry-run",
                 jobs::build_evidence(&self.root),
             ),
-            5 => {
+            7 => self.start_job(
+                JobKind::ActuateDry,
+                &format!("Actuate update {} --dry-run", self.actuate_pkg),
+                jobs::build_actuate_update_dry(&self.root, &self.actuate_pkg),
+            ),
+            8 => {
                 self.grok_mode = match self.grok_mode {
                     GrokMode::Hidden => GrokMode::Split,
                     _ => GrokMode::Hidden,
                 };
                 self.status = format!("Grok dock: {:?}", self.grok_mode);
             }
-            6 => self.prepare_grok_launch(true),
-            7 => {
+            9 => self.prepare_grok_launch(true),
+            10 => {
                 self.screen = Screen::Help;
                 self.set_breadcrumb(&["Home", "Help"]);
             }
-            8 => self.should_quit = true,
+            11 => self.should_quit = true,
             _ => {}
         }
     }
@@ -468,18 +492,21 @@ impl App {
                 if let Some(kind) = self.last_kind {
                     match kind {
                         JobKind::Inventory => self.activate_menu_index(0),
-                        JobKind::AuditGlobal => self.activate_menu_index(1),
-                        JobKind::AuditProject => self.activate_menu_index(2),
-                        JobKind::InstallDryRun => self.activate_menu_index(3),
-                        JobKind::Evidence => self.activate_menu_index(4),
+                        JobKind::Catalog => self.activate_menu_index(1),
+                        JobKind::OmarchyStatus => self.activate_menu_index(2),
+                        JobKind::AuditGlobal => self.activate_menu_index(3),
+                        JobKind::AuditProject => self.activate_menu_index(4),
+                        JobKind::InstallDryRun => self.activate_menu_index(5),
+                        JobKind::Evidence => self.activate_menu_index(6),
+                        JobKind::ActuateDry => self.activate_menu_index(7),
                         JobKind::Custom => {}
                     }
                 }
             }
             ActionId::OpenInventory => self.activate_menu_index(0),
-            ActionId::RunAudit => self.activate_menu_index(1),
-            ActionId::RunEvidence => self.activate_menu_index(4),
-            ActionId::InstallDry => self.activate_menu_index(3),
+            ActionId::RunAudit => self.activate_menu_index(3),
+            ActionId::RunEvidence => self.activate_menu_index(6),
+            ActionId::InstallDry => self.activate_menu_index(5),
             ActionId::LaunchGrok => self.prepare_grok_launch(false),
             ActionId::ScrollTop => {
                 self.scroll = 0;
@@ -493,10 +520,7 @@ impl App {
         // Don't change home selection permanently for re-run from output
         let saved_screen = self.screen;
         self.activate_menu();
-        if matches!(
-            idx,
-            0 | 1 | 2 | 3 | 4
-        ) {
+        if matches!(idx, 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7) {
             // job started
             let _ = saved_screen;
         }
@@ -517,7 +541,7 @@ impl App {
 }
 
 fn default_grok_prompt() -> String {
-    "You are co-piloting arch-machine/tinfoil on Omarchy. \
+    "You are co-piloting arch-machine via archy on Omarchy. \
      Use inventory, audit reports, and evidence. Prefer dry-run. \
      Suggest next fix actions; do not invent package state."
         .into()
