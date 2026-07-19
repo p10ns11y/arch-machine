@@ -1,63 +1,68 @@
 # coming-next — arch-machine architecture backlog
 
 **Keeper deep-dive:** [keeper.md](./keeper.md) · [coming-next-keeper.md](./coming-next-keeper.md) (SN-KEEP-*)  
-**Grok agent-as-TUI:** [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` (prefer over gum `tinfoil tui` for ops)
+**Main control plane:** [`crates/archy`](../crates/archy/) (`archy` binary — entry + loop)  
+**Agent orchestration:** [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` (Grok slash)  
+**Legacy:** gum `lib/tui/` · optional Go shim `bin/tinfoil.go` (dispatch only; not the product)
 
 ## §0 Mission
 
-Ship and maintain a **thin-first, evidence-always, self-remediating** Arch Linux workstation guardian (`tinfoil`) with profile-driven ML/security modules — and a **threshold multi-factor keeper** for secrets that outlive passphrase loss.
+Ship and maintain a **thin-first, evidence-always, self-remediating** Arch Linux workstation platform steered by **`archy`** (Ratatui entry + loop), with shell backends as the iron peak, profile-driven ML/security modules, and a **threshold multi-factor keeper** for secrets that outlive passphrase loss.
 
 ## §0b Ten-year thrive picture
 
 ```mermaid
 flowchart LR
   subgraph surfaces [OperatorSurfaces]
-    Grok[Grok plugin slash — complex orchestrator]
-    RustTUI[Rust TUI — interactive bridge]
-    ThinCLI[Thin CLI dispatcher]
+    Archy[archy — entry + loop controller]
+    Grok[Grok plugin — complex orchestrator]
+    Shim[Optional thin CLI shim]
   end
   subgraph backends [ShellBackends iron peak]
     Inv[inventory.sh]
     Audit[security-audit.sh]
     Install[install.sh + profiles]
-    Actuate[package-actuate future]
+    Actuate[package-actuate.sh]
+    Catalog[catalog.sh]
   end
   subgraph loop [EvidenceReactor]
     Extract[extract-evidence]
     Bundles[JSON/TOON + inventory schema]
   end
+  Archy --> backends
   Grok --> backends
-  RustTUI --> backends
-  ThinCLI --> backends
+  Shim --> backends
   backends --> Extract
   Extract --> Bundles
+  Bundles --> Archy
   Bundles --> Grok
-  Bundles --> RustTUI
 ```
 
 | Horizon | Outcome | Signal |
 |---------|---------|--------|
-| 2026 | Shell backends + inventory schema; Grok expand; gum freeze; Rust TUI spike | SN-INV-1 landed; SN-TUI-RUST |
+| 2026 | **archy** on PATH from thin install; shell backends + inventory; Grok expand; gum frozen | SN-ARCHY-1; SN-INV-1 landed |
 | 2028 | Autonomous weekly sentinel on fleet machines | systemd timer + evidence drift alerts |
 | 2030 | Portable profile packs beyond Arch | adapter modules per distro |
 | 2036 | Agent-native ops: bundles + keeper under policy | LLM consumes TOON; drill-proven vault |
 
-**Surface bet (2026-07):** Drop Go as the interactive TUI home. **Complex orchestration → Grok plugin.** **Rich interactive UI → new Rust TUI** (ratatui-class; harvest patterns from open-sourced Grok Build where useful). **Go (if kept) = thin subcommand dispatcher only** — or exit once shell/`tinfoil` shim covers audit/install/inventory. Gum `lib/tui/` is a **legacy bridge**, not the iron peak.
+**Surface bet (locked):** **`archy` is the main interactive controller** (entry + event loop + next actions + Grok dock). **Complex orchestration → Grok plugin.** **Iron peak → `maintenance/*.sh` + `install.sh`.** Optional Go/`tinfoil` = thin subcommand shim only — shrink or exit once PATH/`archy` + shell cover day-1 jobs. Gum `lib/tui/` is a **legacy bridge**, not the product.
 
 ## §1 Scorecard
 
 | Area | Grade | One line | Evidence |
 |------|-------|----------|----------|
-| Thin install | A- | Default `--thin` ships sentinel only | `install.sh`, README |
-| tinfoil CLI (Go) | B+ | Thin dispatcher; inventory added; TUI de-emphasized | `bin/tinfoil.go` |
-| **Inventory backend** | **B+** | Schema v1 + ownership tags (omarchy/arch-machine/user) | `maintenance/inventory.sh`, `config/baselines/omarchy.yaml` |
-| TUI (gum legacy) | C+ | Works; freeze feature growth — bridge only | `lib/tui/*.sh`, Issue #7 |
-| **Grok agent TUI** | **B+** | Slash status/init/audit/expand; fail closed | `plugins/arch-machine`, BOUNDARY.md |
-| **Rust TUI (archy)** | **B** | Entry + loop; inventory/catalog/actuate dry-run menu | `crates/archy` |
-| **Keeper (MFA vault)** | **A-** | k=3 n=4 + PQ seal + drill; PR open | `modules/security/keeper`, PR #28 |
+| **archy control plane** | **B+** | Entry + loop MVP; menus steer shell backends | `crates/archy`, `make archy` |
+| **archy on thin PATH** | **D** | MVP builds in-repo; thin install still ships Go shim only | `install.sh` → `/usr/local/bin/tinfoil`; no `archy` install yet |
+| Thin install | A- | Default `--thin` ships sentinel runtime tree | `install.sh`, README |
+| Shell backends | A- | Inventory/catalog/actuate/audit/evidence | `maintenance/*.sh` |
+| Inventory backend | **B+** | Schema v1 + ownership tags | `maintenance/inventory.sh`, `config/baselines/omarchy.yaml` |
+| Catalog search | **B** | Shell backend + archy menu | `maintenance/catalog.sh`, SN-CAT-1 |
+| Select update/remove | **C** | Dry-run actuate + refuse-list; multi-select UX in archy next | `maintenance/package-actuate.sh`, SN-INV-2 |
+| Grok agent TUI | **B+** | Slash status/init/audit/expand; fail closed | `plugins/arch-machine`, BOUNDARY.md |
+| Gum TUI (legacy) | C+ | Works; freeze feature growth | `lib/tui/*.sh`, Issue #7 |
+| Go shim (optional) | C+ | Dispatcher only; not the control plane | `bin/tinfoil.go` |
+| Keeper (MFA vault) | **A-** | k=3 n=4 + PQ seal + drill; PR open | `modules/security/keeper`, PR #28 |
 | Profiles | B+ | YAML compose; harness asserts module.category | `config/profiles/*.yaml`, SN-3 harness |
-| Catalog search | **B** | Shell backend + `tinfoil search` + archy menu | `maintenance/catalog.sh`, SN-CAT-1 |
-| Select update/remove | **C** | Dry-run actuate + refuse-list; multi-select UX later | `maintenance/package-actuate.sh`, SN-INV-2 |
 | Evidence | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
 | Remediation policy | A | Repo applies own 6-step policy | `policies/security-remediation.md` |
 | CI | B+ | shellcheck, go, yaml, evidence smoke | `.github/workflows/ci.yml` |
@@ -65,15 +70,25 @@ flowchart LR
 
 ## §2 System map today
 
-See `docs/INDEX.md` mermaid. Runtime: `/usr/local/bin/tinfoil` + `/usr/share/tinfoil` copy of repo lib/modules/maintenance.
+```mermaid
+flowchart TD
+  A[archy — main entry + loop] -->|spawn| B[maintenance/*.sh + install.sh]
+  A -->|optional dock| G[grok]
+  S[Optional Go shim] -->|dispatch| B
+  Gum[gum lib/tui — legacy] -->|bridge| B
+  B --> E[extract-evidence → logs/]
+  E --> A
+```
+
+Runtime today: thin install copies repo under `/usr/share/tinfoil/` and installs the **optional Go shim** at `/usr/local/bin/tinfoil`. **`archy` is the intended day-1 controller** but is not yet installed to PATH by `--thin` (gap = SN-ARCHY-1). Until then: `make archy` and run `./crates/archy/target/debug/archy` with `TINFOIL_ROOT` set to the checkout (or `/usr/share/tinfoil`).
 
 ## §4 Musk 5-step on backlog
 
-1. **Question** — CI profile validation still stubbed
-2. **Delete** — root duplicate scripts (done per LEGACY)
-3. **Simplify** — single module registry from `config/tools.yaml`
-4. **Accelerate** — dogfood `make lint` in verification cockpit
-5. **Automate** — weekly timer generates evidence without human
+1. **Question** — Why install a Go shim by default when archy is the product surface?
+2. **Delete** — Stop documenting gum/`tinfoil tui` as the primary path
+3. **Simplify** — Thin install ships **`archy` on PATH**; shell backends stay the contract
+4. **Accelerate** — Dogfood `make archy` + `make lint` in verification cockpit
+5. **Automate** — Weekly timer generates evidence without human
 
 ## §6 Guardrails
 
@@ -82,11 +97,36 @@ See `docs/INDEX.md` mermaid. Runtime: `/usr/local/bin/tinfoil` + `/usr/share/tin
 | Heavy install on `--thin` | Explicit `--profile` for ML/security |
 | Destructive maintenance without confirm | consent + policy steps (any surface) |
 | Agent edits skill bodies in symlink target | Use `.agents/overlays/` |
-| Grow gum/Go TUI as primary product | Shell backends + Grok orchestrator + Rust TUI |
+| Grow gum or Go as primary UI | **archy** + shell backends + Grok orchestrator |
 | Silent bulk uninstall | dry-run default + refuse-list for critical pkgs |
 | Full Ubuntu Software / Electron store | Searchable catalog over tools.yaml + pacman |
+| New business logic in Rust duplicating shell | archy steers; scripts execute |
 
 ## §7 Blueprint cards
+
+### SN-ARCHY-1 · Thin install ships `archy` on PATH — **next**
+
+**Problem:** Docs and design call archy the main controller, but `--thin` only installs the Go shim. Operators fall through to gum.
+
+```mermaid
+flowchart LR
+  Thin[./install.sh --thin] --> Build[cargo build --release archy]
+  Build --> Path["/usr/local/bin/archy"]
+  Thin --> Runtime["/usr/share/tinfoil runtime"]
+  Path --> Loop[archy event loop]
+  Loop --> BE[maintenance/*.sh]
+```
+
+| File | Work |
+|------|------|
+| `install.sh` / thin path | Build + `install` release `archy` to `/usr/local/bin/archy` (Rust/cargo prerequisite or fetch) |
+| post-install message | Lead with `archy`, not shim help |
+| README / INSTALLATION | Day-1 = `archy` |
+| Optional | Keep Go shim install behind flag or secondary |
+
+**Done when:** Fresh `--thin` leaves `archy` on PATH; `archy --print-root` works against installed runtime; gum only if `archy` missing.
+
+**Verify:** `./install.sh --thin` (VM/dogfood) · `command -v archy` · `archy --print-root`
 
 ### SN-1 · Dogfood verify gate (no new code)
 
@@ -96,24 +136,24 @@ See `docs/INDEX.md` mermaid. Runtime: `/usr/local/bin/tinfoil` + `/usr/share/tin
 flowchart LR
   dev[Agent edit] --> lint[make lint]
   lint --> prof[make validate-profiles]
-  prof --> go[go build/vet]
-  go --> thin[install.sh --thin --validate]
+  prof --> archy[make archy]
+  archy --> thin[install.sh --validate]
 ```
 
 | File | Work |
 |------|------|
-| `AGENTS.md` | document verify block |
-| `Makefile` | keep targets stable |
+| `AGENTS.md` | document verify block with `make archy` |
+| `Makefile` | keep `archy` / `archy-release` stable |
 
-**Done when:** All five commands exit 0 on sentinel branch.
+**Done when:** lint + profiles + archy build + install validate exit 0 on sentinel.
 
-**Verify:** `make lint && make validate-profiles && go build -o /tmp/tinfoil ./bin/tinfoil.go && ./install.sh --thin --validate`
+**Verify:** `make lint && make validate-profiles && make archy && ./crates/archy/target/debug/archy --print-root && ./install.sh --validate`
 
-### SN-2 · Complete TUI interactive flows — **SUPERSEDED / freeze**
+### SN-2 · gum TUI — **SUPERSEDED / freeze**
 
 **Problem (historical):** Issue #7 gum menus.
 
-**Decision (2026-07):** Do **not** invest further in gum as primary UI. Keep existing flows working as **legacy bridge**. Interactive future = **SN-TUI-RUST**; complex orchestration = **Grok plugin**. Backend scripts remain the contract.
+**Decision:** Do **not** invest further in gum as primary UI. Legacy bridge only. Interactive product = **archy** (SN-TUI-RUST / SN-ARCHY-1). Complex orchestration = **Grok plugin**. Backend scripts remain the contract.
 
 | File | Work |
 |------|------|
@@ -133,15 +173,15 @@ flowchart LR
 
 **Verify:** `make validate-profiles` — all three profiles OK.
 
-### SN-4 · Evidence screen in TUI — **redirect**
+### SN-4 · Evidence screen in control plane — **redirect**
 
 **Problem:** Evidence UX parity.
 
-**Redirect:** Prefer Grok `/arch-status` + evidence list in **Rust TUI** (SN-TUI-RUST). Optional gum polish only if zero-cost. Attach inventory snapshot into `extract-evidence.sh` (see SN-INV-1).
+**Redirect:** Prefer Grok `/arch-status` + evidence list in **archy**. Optional gum polish only if zero-cost. Attach inventory snapshot into `extract-evidence.sh` (see SN-INV-1).
 
 ### SN-INV-1 · Inventory surface (read-only) — **landing**
 
-**Problem:** Operator cannot browse installed tools from tinfoil (Omarchy Software Center story).
+**Problem:** Operator cannot browse installed tools from the control plane (Omarchy Software Center story).
 
 ```mermaid
 flowchart LR
@@ -149,19 +189,18 @@ flowchart LR
   Collect --> Tools[tools.yaml match]
   Collect --> Mise[mise list]
   Collect --> Bundle[inventory-v1 JSON]
-  Bundle --> CLI[tinfoil inventory]
+  Bundle --> Archy[archy Inventory menu]
   Bundle --> Grok[Grok /arch-inventory future]
-  Bundle --> Rust[Rust TUI future]
   Bundle --> Ev[logs/inventory-latest.json]
 ```
 
 | File | Work |
 |------|------|
 | `maintenance/inventory.sh` | Collect explicit pkgs + tools.yaml + mise + upgradable |
-| `bin/tinfoil.go` | Thin `inventory` dispatch only |
+| `crates/archy` | Inventory job (already); richer list widget next |
 | `logs/inventory-*.json` | Snapshots + `inventory-latest.json` |
 
-**Done when:** `tinfoil inventory` / `./maintenance/inventory.sh` prints summary; `--json` is schema `tinfoil.inventory.v1`; write path works.
+**Done when:** `./maintenance/inventory.sh` prints summary; `--json` is schema `tinfoil.inventory.v1`; archy menu streams it; write path works.
 
 **Verify:** `./maintenance/inventory.sh --json --no-write \| jq .summary`; compare count to `pacman -Qe \| wc -l`.
 
@@ -173,9 +212,8 @@ flowchart LR
 |------|------|
 | `maintenance/package-actuate.sh` | `--remove` / `--update`; dry-run default; double confirm |
 | `policies/package-refuse-list.txt` | critical refuse-list |
-| `tinfoil pkg` | thin dispatch |
+| archy | dry-run demo menu item; **multi-select UX next** |
 | Grok `/arch-pkg` | only with `--yes` (next) |
-| archy | dry-run demo menu item; multi-select UX next |
 
 **Done when (backend):** Select 1–N → dry-run plan JSON → refuse-list blocks critical removes → plan under `logs/actuate-*.json`.
 
@@ -188,10 +226,9 @@ flowchart LR
 | File | Work |
 |------|------|
 | `maintenance/catalog.sh` | tools.yaml + profile labels; schema `tinfoil.catalog.v1` |
-| `tinfoil search` / `catalog` | thin dispatch |
 | archy | Catalog search menu item |
 
-**Done when:** Search “docker” or “rocm” shows entry + which profile includes it.
+**Done when:** Search “docker” or “rocm” shows entry + which profile includes it (shell + archy).
 
 **Verify:** `./maintenance/catalog.sh --json docker \| jq .results`
 
@@ -205,7 +242,7 @@ flowchart LR
 | `inventory.sh` | Tag `omarchy-baseline` / `arch-machine` / `user-explicit` |
 | live overlay | `$OMARCHY_PATH/install/omarchy-*.packages` when present |
 | docs | `docs/omarchy.md` playbook + `docs/omarchy-commands.md` full CLI ref |
-| status | `maintenance/omarchy-status.sh` → `tinfoil omarchy` / archy menu |
+| status | `maintenance/omarchy-status.sh` → archy Omarchy menu |
 
 ### SN-SCAN-1 · Scan UX polish
 
@@ -213,7 +250,7 @@ flowchart LR
 
 | File | Work |
 |------|------|
-| post-audit summary | high/crit counts + report path for Grok/Rust |
+| post-audit summary | high/crit counts + report path for Grok/archy |
 | optional path clamav | project mode flag |
 
 ### SN-AGENT-1 · Grok inventory + catalog commands
@@ -226,14 +263,14 @@ flowchart LR
 
 Wire after SN-INV-1/2 backends exist. Plugin calls **shell**, not Go internals.
 
-### SN-TUI-RUST · Ratatui entry + loop controller — **landing (MVP)**
+### SN-TUI-RUST · Ratatui entry + loop controller — **MVP landed**
 
-**Problem:** Operator needs one home: steer shell/Go, read stdio beautifully, take next fix actions, open Grok without getting lost.
+**Problem:** Operator needs one home: steer shell backends, read stdio beautifully, take next fix actions, open Grok without getting lost.
 
 ```mermaid
 flowchart TB
-  subgraph rust [archy ratatui]
-    Loop[event loop controller]
+  subgraph rust [archy ratatui — MAIN CONTROLLER]
+    Loop[event loop]
     Crumb[breadcrumb Home job]
     Out[stdio pane]
     Next[next-action bar]
@@ -241,9 +278,12 @@ flowchart TB
   end
   subgraph be [Backends]
     inv[inventory.sh]
-    audit[tinfoil audit / security-audit]
+    audit[security-audit.sh]
     install[install.sh dry-run]
     evidence[extract-evidence]
+    catalog[catalog.sh]
+    omarchy[omarchy-status.sh]
+    actuate[package-actuate.sh]
     grokBin[grok binary]
   end
   Loop --> Out
@@ -256,26 +296,25 @@ flowchart TB
 
 | File | Work |
 |------|------|
-| `crates/archy/` | MVP: menu, jobs, scrollable stdio, actions, Grok dock (binary: `archy`) |
-| `bin/tinfoil.go` | `tui` prefers `archy` then gum |
-| Next | Inventory list widget from JSON; live package multi-select; real install confirm |
+| `crates/archy/` | MVP done: menu, jobs, scrollable stdio, actions, Grok dock |
+| Next | SN-ARCHY-1 PATH install; inventory list widget from JSON; live package multi-select; real install confirm |
 
-**Done when (MVP):** `cargo build` + run shows Home; Inventory/Audit dry jobs stream stdio; next-action bar appears; `G` suspends and launches `grok`; Esc returns Home.
+**Done when (MVP):** `cargo build` + run shows Home; Inventory/Audit dry jobs stream stdio; next-action bar appears; `G` suspends and launches `grok`; Esc returns Home. **(Met for in-repo builds.)**
 
 **Verify:** `make archy` · `./crates/archy/target/debug/archy --print-root` · manual interactive dogfood.
 
 **Guardrails:** No business logic in Rust that duplicates shell. Grok embed is suspend/split-context (not fake live PTY yet).
 
-### SN-GO-THIN · Shrink or exit Go entrypoint
+### SN-GO-THIN · Shrink or exit Go shim
 
-**Problem:** Go is only a dispatcher today; maintenance cost for little value.
+**Problem:** Go dispatcher is not the control plane; keeping it as the thin-install default confuses the product story.
 
 | Option | When |
 |--------|------|
-| Keep thin Go | While `/usr/local/bin/tinfoil` is the install contract |
-| Replace with shell shim + Rust | After Rust TUI + plugin cover all subcommands |
+| Demote | After SN-ARCHY-1: thin leads with `archy`; Go optional |
+| Exit | When archy + shell + Grok cover all day-1 jobs |
 
-**Done when:** Documented decision; CI still green; no new Go feature beyond dispatch.
+**Done when:** Documented decision; CI green; no new Go feature beyond optional dispatch.
 
 ### SN-EC-CAL · Eye-comfort calendar plugin seam
 
@@ -383,14 +422,15 @@ gantt
   section Gate
   SN-1 Dogfood verify     :sn1, 2026-06-22, 3d
   section Control plane
+  SN-ARCHY-1 thin PATH    :a1, 2026-07-19, 5d
   SN-INV-1 inventory      :inv1, 2026-07-18, 3d
   SN-CAT-1 catalog search :cat1, after inv1, 5d
   SN-INV-2 update remove  :inv2, after cat1, 7d
   SN-OM-1 Omarchy baseline:om1, after inv1, 4d
   SN-AGENT-1 Grok slash   :ag1, after inv2, 4d
   section Surfaces
-  SN-TUI-RUST spike       :rust, after inv1, 10d
-  SN-GO-THIN decision     :go, after rust, 3d
+  SN-TUI-RUST MVP         :rust, 2026-07-18, 1d
+  SN-GO-THIN demote shim  :go, after a1, 3d
   SN-2 gum freeze         :sn2, 2026-07-18, 1d
   section Keeper
   SN-KEEP-1 dogfood drill :k1, 2026-07-18, 3d
@@ -405,13 +445,13 @@ gantt
 
 - CI red on `sentinel` branch
 - `logs/evidence-bundle-*.json` age > 7d on active machines
-- `tinfoil` version drift vs repo tag
+- `archy` missing from PATH after thin install (SN-ARCHY-1 regression)
+- Control-plane build drift: `crates/archy` vs installed binary
 
 ## §11 Done log
 
 | Item | Evidence |
 |------|----------|
-| tinfoil CLI shipped | PR #3 merge `2504e39` |
 | Remediation policy | PR #4 merge `cb088cd` |
 | Agent skills wired | `AGENTS.md`, `.agents/skills` symlinks |
 | INDEX architecture doc | `docs/INDEX.md` |
@@ -419,19 +459,20 @@ gantt
 | Grok arch-machine plugin | [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` |
 | Module `--agent-expand` hooks | PR #28 `e9c264a` |
 | UWSM graphical-session race | PR #25 merge |
-| Inventory v1 (shell backend) | `maintenance/inventory.sh` + `tinfoil inventory` |
-| Surface pivot: gum freeze; Rust+Grok | `coming-next` SN-TUI-RUST / SN-GO-THIN |
-| Ratatui control plane MVP | `crates/archy` (`archy` binary) + `tinfoil tui` prefers it |
-| SN-CAT-1 catalog search | `maintenance/catalog.sh` + `tinfoil search` |
+| Inventory v1 (shell backend) | `maintenance/inventory.sh` |
+| Surface pivot: gum freeze; **archy = main controller** | SN-TUI-RUST / SN-ARCHY-1 / SN-GO-THIN |
+| Ratatui control plane MVP | `crates/archy` (`archy` binary) |
+| SN-CAT-1 catalog search | `maintenance/catalog.sh` + archy menu |
 | SN-OM-1 ownership tags | `config/baselines/omarchy.yaml` + inventory `ownership` |
 | SN-INV-2 actuate dry-run | `maintenance/package-actuate.sh` + refuse-list |
 | SN-3 profile harness | `scripts/profile-validation-harness.sh` (module.category) |
-| Loop controller rename | `archy` (was tinfoil-tui) |
+| Loop controller name | `archy` (was tinfoil-tui) |
 
 ## §13 References
 
 | Source | Use |
 |--------|-----|
+| `crates/archy/README.md` | Control plane keys + backends |
 | `docs/INDEX.md` | System map |
 | `arch-design/keeper.md` | Keeper architecture + mermaid |
 | `arch-design/coming-next-keeper.md` | SN-KEEP-* backlog |
@@ -443,4 +484,4 @@ gantt
 
 ---
 
-**Plain rule:** Thin install, loud evidence, ruthless remediation — the sentinel must pass its own audit before it audits your machine. Offline escrow off-box, or the keeper is theater.
+**Plain rule:** **archy** steers; shell backends work; evidence stays loud — the platform must pass its own audit before it audits your machine. Offline escrow off-box, or the keeper is theater.
