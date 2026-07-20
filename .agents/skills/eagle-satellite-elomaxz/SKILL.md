@@ -3,7 +3,7 @@ name: eagle-satellite-elomaxz
 description: >-
   Architecture skill for arch-machine control flow: Eagle + Satellites (thin top
   orchestrator + domain jobs), xstate-style state machines / DAGs, and Elomaxz /
-  Elm TEA message passing (Msg → update → Cmd). Use when editing crates/archy,
+  Elm TEA message passing (Msg → update → Cmd). Use when editing tools/archy,
   lib/tui TEA, designing agent loops, control-plane UI, job runners, or when the
   user says Eagle, satellite, Elomaxz, TEA, state machine, machine graph, or
   "how does archy route work". Slash: /eagle-satellite-elomaxz.
@@ -13,7 +13,7 @@ description: >-
 
 **One sentence:** A thin **Eagle** routes **messages**; **Satellites** own domain work; jobs are **offline** (fire → work → verify exit). The UI loop is **Elm/TEA** (Elomaxz discipline), not a spaghetti `match` in one file.
 
-**In this repo the live implementation is** `crates/archy/`.  
+**In this repo the live implementation is** `tools/archy/`.  
 Gum legacy mirrors the same idea in bash: `lib/tui/{messages,model,update,view}.sh`.
 
 Deep diagrams: [references/machine-graph.md](references/machine-graph.md) · Human doc: [docs/archy.md](../../../docs/archy.md).
@@ -24,7 +24,7 @@ Deep diagrams: [references/machine-graph.md](references/machine-graph.md) · Hum
 
 | Signal | Load this skill |
 |--------|-----------------|
-| Edit `crates/archy/**` | **Yes** |
+| Edit `tools/archy/**` | **Yes** |
 | New menu job / backend wire-up | **Yes** |
 | “Where should this control flow live?” | **Yes** |
 | Gum TEA (`lib/tui`) redesign | **Yes** (same pattern) |
@@ -166,11 +166,11 @@ Co-pilot is **not** a chat pane: brief is layout only; real Grok is `Cmd::Launch
 ## Adding a new job (agent checklist)
 
 1. Add backend under `maintenance/` if needed (dry-run by default).
-2. Add `SatelliteId` + `MenuEntry` in `crates/archy/src/satellites/mod.rs`.
+2. Add `SatelliteId` + `MenuEntry` in `tools/archy/src/satellites/mod.rs`.
 3. Implement `build` / `title` / finish path (reuse `actions::suggest_with_hints` or extend).
 4. Map any new `ActionId` in `action_to_satellite` if NEXT should re-fire it.
 5. Unit test: menu len / finish primary for the happy path.
-6. `cargo test --manifest-path crates/archy/Cargo.toml`
+6. `cargo test --manifest-path tools/archy/Cargo.toml`
 7. Do **not** grow `eagle.rs` with domain strings.
 
 ---
@@ -203,8 +203,8 @@ Prefer archy for new operator surfaces; keep gum as fallback.
 ## Verify after architecture edits
 
 ```bash
-cargo test --manifest-path crates/archy/Cargo.toml
-cargo build --release --manifest-path crates/archy/Cargo.toml
+cargo test --manifest-path tools/archy/Cargo.toml
+cargo build --release --manifest-path tools/archy/Cargo.toml
 # optional: run inventory from TUI; NEXT primary should match summary hints
 ```
 

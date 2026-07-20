@@ -10,7 +10,7 @@ Thin-first Arch Linux toolkit: **archy** steers, shell backends work, evidence c
 
    ```bash
    make archy
-   TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
+   TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
    ```
 
 4. Optional full workstation: `./install.sh --profile minimal|ml-dev|security-dev` (try `--dry-run` first).
@@ -35,13 +35,15 @@ flowchart TD
 
 | Layer | What it does | Where |
 |-------|----------------|-------|
-| **Control plane** | Menu, live output, next steps | `crates/archy` |
+| **Control plane** | Menu, live output, next steps | `tools/archy` |
 | **Backends** | Real inventory, audit, install | `maintenance/`, `install.sh` |
 | **Profiles / modules** | What a full install may add | `config/profiles/`, `modules/` |
 | **Evidence** | JSON/TOON for agents | `logs/`, `lib/evidence.sh` |
 
 How archy routes work (simple English + diagrams): **[archy.md](archy.md)**.  
 Agent skill: **eagle-satellite-elomaxz** (`.agents/skills/eagle-satellite-elomaxz/`).
+
+**Remote surfaces:** **[groxy.md](groxy.md)** (`tools/groxy`) — **inject** (host→XChat) + **acp serve** (ACP remote Grok); no live DM→host poll.
 
 **Grok plugin ↔ archy:** from Grok use `/arch-*`; from archy use `G`/`p` to reopen Grok with preload. See [archy.md § Grok plugin](archy.md) and the plugin’s `docs/CROSS-REF.md` (`~/Work/personal/plugins/arch-machine` or [p10ns11y/plugins](https://github.com/p10ns11y/plugins)).
 
@@ -63,7 +65,8 @@ Eagle receives **messages** (keys, job lines, job done). Satellites own each dom
 
 | Topic | Doc |
 |-------|-----|
-| Control plane | [archy.md](archy.md) · [crates/archy/README.md](../crates/archy/README.md) |
+| Control plane | [archy.md](archy.md) · [tools/archy/README.md](../tools/archy/README.md) |
+| Remote surfaces (inject + ACP; **Neovim ACP setup**) | [groxy.md](groxy.md) |
 | Install | [INSTALLATION.md](INSTALLATION.md) |
 | Maintenance | [MAINTENANCE.md](MAINTENANCE.md) |
 | Modules / profiles | [MODULES.md](MODULES.md) · profiles under `config/profiles/` |
@@ -78,7 +81,8 @@ Eagle receives **messages** (keys, job lines, job done). Satellites own each dom
 
 ## Directories
 
-- `crates/archy/` — **main** operator UI (Ratatui, Eagle FSM, satellites)
+- `tools/archy/` — **main** operator UI (Ratatui, Eagle FSM, satellites)
+- `tools/groxy/` — XChat DM remote control (binary `groxy`)
 - `maintenance/` — shell backends (iron peak)
 - `install.sh` + `lib/` — thin default; `--profile` for full
 - `modules/` — installable capabilities (`install_<name>()`)
@@ -104,7 +108,7 @@ Runs should leave token-friendly bundles for agents:
 ```bash
 make lint
 make validate-profiles
-cargo test --manifest-path crates/archy/Cargo.toml
+cargo test --manifest-path tools/archy/Cargo.toml
 ./install.sh --thin --validate   # or --dry-run with a profile
 ./maintenance/extract-evidence.sh --dry-run
 ```

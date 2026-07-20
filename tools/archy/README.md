@@ -124,11 +124,11 @@ ui.rs          → draw only
 ## Build
 
 ```bash
-cargo build --release --manifest-path crates/archy/Cargo.toml
-# binary: crates/archy/target/release/archy
+cargo build --release --manifest-path tools/archy/Cargo.toml
+# binary: tools/archy/target/release/archy
 
-TINFOIL_ROOT=$PWD cargo run --release --manifest-path crates/archy/Cargo.toml
-TINFOIL_ROOT=$PWD cargo run --manifest-path crates/archy/Cargo.toml -- --grok-split
+TINFOIL_ROOT=$PWD cargo run --release --manifest-path tools/archy/Cargo.toml
+TINFOIL_ROOT=$PWD cargo run --manifest-path tools/archy/Cargo.toml -- --grok-split
 ```
 
 ## Keys
@@ -189,5 +189,5 @@ When `archy` is on `PATH`, the Go dispatcher can start it first (`bin/tinfoil.go
 ## Tests
 
 ```bash
-cargo test --manifest-path crates/archy/Cargo.toml
+cargo test --manifest-path tools/archy/Cargo.toml
 ```

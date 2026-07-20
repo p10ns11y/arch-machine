@@ -294,8 +294,8 @@ func runRustTui(extra []string) bool {
 		filepath.Join(binDir, "archy"),
 		filepath.Join(binDir, "..", "crates", "archy", "target", "release", "archy"),
 		filepath.Join(binDir, "..", "crates", "archy", "target", "debug", "archy"),
-		"crates/archy/target/release/archy",
-		"crates/archy/target/debug/archy",
+		"tools/archy/target/release/archy",
+		"tools/archy/target/debug/archy",
 	} {
 		if fileExists(rel) {
 			if abs, err := filepath.Abs(rel); err == nil {

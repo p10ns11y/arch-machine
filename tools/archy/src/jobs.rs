@@ -221,7 +221,7 @@ mod tests {
     use std::process::Stdio;
 
     fn repo_root() -> PathBuf {
-        // crates/archy → repo root
+        // tools/archy → repository root
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .and_then(|p| p.parent())

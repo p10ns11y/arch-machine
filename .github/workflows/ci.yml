@@ -89,5 +89,15 @@ jobs:
     steps:
       - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
       - uses: dtolnay/rust-toolchain@stable
-      - name: cargo test (crates/archy)
+      - name: cargo test (tools/archy)
         run: make archy-test
+
+  # groxy satellite — inject/ACP policy + packages (SN-GROXY-2)
+  # Host-only test resolve_grok_binary_finds_real_executable skips when grok is absent.
+  groxy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test (tools/groxy)
+        run: make groxy-test

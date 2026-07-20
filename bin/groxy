@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# groxy — XChat DM remote control (Rust only: tools/groxy).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export GROXY_ROOT="${GROXY_ROOT:-$ROOT}"
+
+RUST_RELEASE="$ROOT/tools/groxy/target/release/groxy"
+RUST_DEBUG="$ROOT/tools/groxy/target/debug/groxy"
+
+if [[ -x "$RUST_RELEASE" ]]; then
+  exec "$RUST_RELEASE" "$@"
+fi
+if [[ -x "$RUST_DEBUG" ]]; then
+  exec "$RUST_DEBUG" "$@"
+fi
+
+if command -v cargo >/dev/null 2>&1 && [[ -f "$ROOT/tools/groxy/Cargo.toml" ]]; then
+  cargo build --manifest-path "$ROOT/tools/groxy/Cargo.toml" --quiet
+  if [[ -x "$RUST_DEBUG" ]]; then
+    exec "$RUST_DEBUG" "$@"
+  fi
+fi
+
+echo "error: groxy binary not found. Build with:" >&2
+echo "  cargo build --manifest-path tools/groxy/Cargo.toml" >&2
+exit 127

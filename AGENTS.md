@@ -9,7 +9,7 @@ Profile-based Arch Linux bootstrap + **archy** control plane (Ratatui) + thin **
                               (phase FSM)
 ```
 
-Skill: **eagle-satellite-elomaxz** · Doc: `docs/archy.md` · Code: `crates/archy/`
+Skill: **eagle-satellite-elomaxz** · Doc: `docs/archy.md` · Code: `tools/archy/`
 
 ## Grok plugin ↔ archy (cyclic)
 
@@ -43,14 +43,15 @@ archy (Eagle + satellites)  →  maintenance/*.sh / install.sh  →  evidence bu
 tinfoil.go / gum TUI          (optional shim / legacy)
 ```
 
-**Sentinel surface** (`crates/archy`, optional `bin/tinfoil.go`, `lib/tui.sh`) → **profile installer** (`install.sh`, `lib/installer.sh`, `modules/*/`) → **maintenance heart** (`maintenance/*`, `policies/security-remediation.md`) → **evidence loop** (`lib/evidence.sh`, `logs/evidence-bundle-*.{json,toon}`).
+**Sentinel surface** (`tools/archy`, optional `bin/tinfoil.go`, `lib/tui.sh`) → **profile installer** (`install.sh`, `lib/installer.sh`, `modules/*/`) → **maintenance heart** (`maintenance/*`, `policies/security-remediation.md`) → **evidence loop** (`lib/evidence.sh`, `logs/evidence-bundle-*.{json,toon}`).
 
 ## Verify before done
 
 ```bash
 make lint                    # shellcheck + yamllint + markdownlint
 make validate-profiles       # profile-validation-harness.sh
-cargo test --manifest-path crates/archy/Cargo.toml
+cargo test --manifest-path tools/archy/Cargo.toml
+cargo test --manifest-path tools/groxy/Cargo.toml
 go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 ./install.sh --thin --validate
 ./maintenance/extract-evidence.sh --dry-run
@@ -77,7 +78,8 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Keeper backlog | `arch-design/coming-next-keeper.md` (SN-KEEP-*) |
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
-| **Control plane (main)** | `crates/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
+| **Control plane (main)** | `tools/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
+| **Remote surfaces** | `tools/groxy`: `inject` (XChat notify) · `acp serve` (ACP control) · `docs/groxy.md` |
 | TUI (Elm/gum legacy) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI shim | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
 | Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / schema v1 + ownership tags |
@@ -90,6 +92,6 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 
 ## Expand commands
 
-- `expand tui` / `expand archy` — Eagle+Satellites TEA control plane (`crates/archy`, `docs/archy.md`)
+- `expand tui` / `expand archy` — Eagle+Satellites TEA control plane (`tools/archy`, `docs/archy.md`)
 - `expand profiles` — YAML profile composition
 - `expand evidence` — bundle schema + extraction pipeline
