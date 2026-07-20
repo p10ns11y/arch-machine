@@ -241,4 +241,61 @@ mod tests {
         assert_eq!(secret_one, secret_two);
         assert!(!secret_one.is_empty());
     }
+
+    /// Drives shipped `resolve_grok_binary` against the real host install
+    /// (PATH / GROK_BIN / ~/.grok/bin/grok) — same binary avante spawns for ACP stdio.
+    #[test]
+    fn resolve_grok_binary_finds_real_executable() {
+        let path = resolve_grok_binary().expect(
+            "grok binary must resolve via PATH, GROK_BIN, or ~/.grok/bin/grok for ACP clients",
+        );
+        assert!(
+            path.is_file(),
+            "resolved path is not a file: {}",
+            path.display()
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path)
+                .expect("metadata")
+                .permissions()
+                .mode();
+            assert_ne!(mode & 0o111, 0, "grok is not executable: {}", path.display());
+        }
+        // Agent surface used by Neovim avante acp_providers args
+        let help = std::process::Command::new(&path)
+            .args(["agent", "stdio", "--help"])
+            .output()
+            .expect("spawn grok agent stdio --help");
+        assert!(
+            help.status.success(),
+            "grok agent stdio --help failed: {}",
+            String::from_utf8_lossy(&help.stderr)
+        );
+        let stdout = String::from_utf8_lossy(&help.stdout);
+        assert!(
+            stdout.to_lowercase().contains("stdio") || stdout.to_lowercase().contains("agent"),
+            "unexpected help output: {stdout}"
+        );
+    }
+
+    #[test]
+    fn resolve_grok_binary_respects_grok_bin_env() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = dir.path().join("grok");
+        std::fs::write(&fake, b"#!/bin/sh\necho fake\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&fake).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&fake, perms).unwrap();
+        }
+        // SAFETY: test-only env override; single-threaded cargo test default for this unit
+        unsafe { std::env::set_var("GROK_BIN", &fake) };
+        let resolved = resolve_grok_binary().expect("GROK_BIN should win");
+        unsafe { std::env::remove_var("GROK_BIN") };
+        assert_eq!(resolved, fake);
+    }
 }
