@@ -127,6 +127,7 @@ cargo build --release --manifest-path crates/archy/Cargo.toml
 TINFOIL_ROOT="$PWD" cargo run --release --manifest-path crates/archy/Cargo.toml
 ```
 
-Keys: ↑↓ menu · Enter run · Tab focus · `g` co-pilot brief · `G`/`p` launch Grok · Esc home · `?` help · `q` quit.
+Keys: ↑↓ menu · Enter run · Tab focus · `g` co-pilot brief · `G`/`p` launch **Grok with preloaded ask** (interactive `grok --cwd … "prompt"`) · Esc home · `?` help · `q` quit.  
+Brief is not live ACP; full agent session is suspend-to-Grok with preload.
 
 More detail: [crates/archy/README.md](../crates/archy/README.md).

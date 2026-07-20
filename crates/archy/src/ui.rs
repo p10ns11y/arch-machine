@@ -272,7 +272,7 @@ fn draw_grok_dock(f: &mut Frame, area: Rect, app: &App, p: Palette) {
 
     let mut lines = vec![
         Line::from(Span::styled(
-            "brief · not chat",
+            "brief · not live ACP",
             p.style_bold(p.amber),
         )),
         Line::from(Span::styled(
@@ -285,9 +285,9 @@ fn draw_grok_dock(f: &mut Frame, area: Rect, app: &App, p: Palette) {
         )),
         Line::from(Span::styled(
             if focused {
-                "Enter launch · g hide"
+                "Enter → grok with preload · g hide"
             } else {
-                "Tab→brief · Enter launch · g hide"
+                "Tab→brief · Enter/G/p preload launch"
             },
             p.style_fg(p.fg_muted),
         )),
@@ -401,12 +401,16 @@ fn draw_help(f: &mut Frame, area: Rect, app: &App, p: Palette) {
             p.style_fg(p.fg),
         )),
         Line::from(Span::styled(
-            "  g      toggle co-pilot brief (not a chat)",
+            "  g      toggle co-pilot brief (not live ACP chat)",
             p.style_fg(p.fg),
         )),
         Line::from(Span::styled(
-            "  G / p  launch Grok (suspend TUI; context file written)",
+            "  G / p  launch Grok interactive with preloaded ask+context",
             p.style_fg(p.fg),
+        )),
+        Line::from(Span::styled(
+            "         (grok --cwd ROOT \"prompt\"; not bare grok; -p is not default)",
+            p.style_fg(p.fg_muted),
         )),
         Line::from(Span::styled(
             "  Esc    Home    Ctrl+C cancel/quit    q quit    ? help",

@@ -285,18 +285,25 @@ impl App {
         satellites::grok_ask(id, self.last_exit, &self.sat_context(), &tail)
     }
 
-    pub fn grok_launch_command(&self) -> Option<std::process::Command> {
+    /// Build interactive Grok launch with **preloaded** prompt (not bare `grok`).
+    /// `fullscreen` → `grok --fullscreen` (menu Launch / `G`).
+    pub fn grok_launch_plan(&self, fullscreen: bool) -> Option<crate::grok_launch::GrokLaunchPlan> {
         let grok = which::which("grok").ok()?;
-        let mut c = std::process::Command::new(grok);
-        c.current_dir(&self.root);
-        c.env("ARCHY_ROOT", &self.root);
-        c.env("TINFOIL_ROOT", &self.root);
-        c.env("ARCHY_GROK_ASK", self.suggested_grok_ask());
-        c.env(
-            "ARCHY_GROK_CONTEXT_FILE",
-            self.root.join("logs/archy-grok-context.txt"),
-        );
-        Some(c)
+        let ctx = crate::grok_launch::context_file_path(&self.root);
+        let ask = self.suggested_grok_ask();
+        Some(crate::grok_launch::plan_launch(
+            grok,
+            &self.root,
+            &ask,
+            &ctx,
+            &self.grok_prompt,
+            fullscreen,
+            crate::grok_launch::GrokLaunchMode::Interactive,
+        ))
+    }
+
+    pub fn grok_launch_command(&self, fullscreen: bool) -> Option<std::process::Command> {
+        Some(self.grok_launch_plan(fullscreen)?.to_command())
     }
 }
 

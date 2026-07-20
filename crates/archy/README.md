@@ -125,10 +125,12 @@ TINFOIL_ROOT=$PWD cargo run --manifest-path crates/archy/Cargo.toml -- --grok-sp
 
 | Mode | Meaning |
 |------|---------|
-| Brief (`g`) | Small side panel: job + suggested ask |
-| Launch (`G` / Enter in brief / `[p]`) | Writes `logs/archy-grok-context.txt`, runs `grok` |
+| Brief (`g`) | Side panel only — suggested ask. **Not** live ACP chat. |
+| Launch (`G` / Enter in brief / NEXT `[p]`) | Suspends archy; writes context + prompt files; runs **interactive** `grok --cwd <root> "<composed prompt>"` so the session is **preloaded** (not empty Build). `G` adds `--fullscreen`. |
 
-Env: `ARCHY_ROOT`, `ARCHY_GROK_ASK`, `ARCHY_GROK_CONTEXT_FILE`, `TINFOIL_ROOT`.
+Env: `ARCHY_ROOT`, `ARCHY_GROK_ASK`, `ARCHY_GROK_CONTEXT_FILE`, `TINFOIL_ROOT`.  
+Files: `logs/archy-grok-context.txt`, `logs/archy-grok-prompt.txt`.  
+Not default: bare `grok`, or headless `grok -p` (single-turn only). ACP-in-split is not shipped yet.
 
 ## Theme (startup only)
 
