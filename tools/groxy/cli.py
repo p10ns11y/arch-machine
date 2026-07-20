@@ -11,7 +11,7 @@ from pathlib import Path
 
 from . import __version__
 from .dispatch import process_event, run_once
-from .dm_io import DryRunDmIO, XurlDmIO, resolve_xurl
+from .dm_io import DryRunDmIO, RateLimitedError, XurlDmIO, resolve_xurl
 from .host import hostname, repo_root
 from .package import build_outbound_package
 from .policy import load_policy_file, load_policy_from_env
@@ -113,9 +113,15 @@ def build_parser() -> argparse.ArgumentParser:
     once.add_argument("--max", type=int, default=20, help="max events to fetch")
 
     poll = sub.add_parser("poll", help="poll DM events in a loop", parents=[sub_common])
-    poll.add_argument("--interval", type=float, default=45.0, help="seconds between polls")
+    # X dm_events is ~15 req/window — default 90s stays under the cap with one poller.
+    poll.add_argument(
+        "--interval",
+        type=float,
+        default=90.0,
+        help="seconds between polls (default 90; X DM list is ~15 req/window)",
+    )
     poll.add_argument("--fixture", type=Path, help="JSON fixture (re-read each loop; dry-run)")
-    poll.add_argument("--max", type=int, default=20)
+    poll.add_argument("--max", type=int, default=15, help="max events per fetch (default 15)")
     poll.add_argument("--count", type=int, default=0, help="stop after N loops (0=forever)")
 
     inj = sub.add_parser("inject", help="inject one synthetic DM command (local E2E)", parents=[sub_common])
@@ -281,9 +287,14 @@ def main(argv: list[str] | None = None) -> int:
             sender = io
 
         loops = 1 if args.cmd == "once" else (args.count or 10**9)
-        interval = getattr(args, "interval", 45.0)
+        interval = getattr(args, "interval", 90.0)
         print(BANNER)
-        print(f"mode={'dry-run' if dry or fixture else 'live'} work={work}")
+        print(f"mode={'dry-run' if dry or fixture else 'live'} work={work} interval={interval}s")
+        if not dry and not fixture and interval < 60:
+            print(
+                "warn: interval < 60s can hit X DM rate limits (~15 req/window); prefer 90+",
+                file=sys.stderr,
+            )
         for i in range(int(loops)):
             try:
                 report = run_once(
@@ -295,8 +306,19 @@ def main(argv: list[str] | None = None) -> int:
                     sender=sender,
                     reply_to=reply_to,
                     dry_run=dry or bool(fixture),
-                    max_results=getattr(args, "max", 20),
+                    max_results=getattr(args, "max", 15),
                 )
+            except RateLimitedError as exc:
+                wait = max(exc.sleep_sec, interval)
+                print(
+                    f"[{i+1}] rate limited — sleeping {int(wait)}s (one poller only; "
+                    f"default interval 90s). {exc}",
+                    file=sys.stderr,
+                )
+                if args.cmd == "once":
+                    return 1
+                time.sleep(wait)
+                continue
             except Exception as exc:  # keep poll alive through transient API errors
                 print(f"[{i+1}] poll error: {exc}", file=sys.stderr)
                 if args.cmd == "once":

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -19,6 +21,20 @@ class DmSender(Protocol):
     def send_text(self, recipient: str, text: str) -> dict[str, Any]: ...
 
     def send_with_media(self, recipient: str, text: str, media_path: Path | None) -> dict[str, Any]: ...
+
+
+class RateLimitedError(RuntimeError):
+    """X API rate limit (HTTP 429). sleep_sec is a recommended wait before retry."""
+
+    def __init__(self, message: str, *, sleep_sec: float = 90.0, reset_at: int | None = None):
+        super().__init__(message)
+        self.sleep_sec = max(5.0, float(sleep_sec))
+        self.reset_at = reset_at
+
+
+_RESET_RE = re.compile(r"X-Rate-Limit-Reset:\s*(\d+)", re.IGNORECASE)
+_REMAINING_RE = re.compile(r"X-Rate-Limit-Remaining:\s*(\d+)", re.IGNORECASE)
+_STATUS_RE = re.compile(r"<\s*(\d{3})\b")
 
 
 @dataclass
@@ -84,24 +100,71 @@ class XurlDmIO:
         return cmd
 
     def list_events(self, *, max_results: int = 20) -> list[dict[str, Any]]:
+        # Keep max_results modest; each poll costs 1 request against a low DM cap (~15/window).
+        n = max(1, min(max_results, 25))
         url = (
             f"/2/dm_events?dm_event.fields=id,text,event_type,created_at,"
-            f"sender_id,dm_conversation_id&max_results={max(1, min(max_results, 100))}"
+            f"sender_id,dm_conversation_id&max_results={n}"
         )
+        # -v so we can read rate-limit headers on failure (still JSON on stdout when OK)
         proc = subprocess.run(
-            self._base() + [url],
+            self._base() + ["-v", url],
             capture_output=True,
             text=True,
             timeout=60,
             check=False,
         )
+        out = (proc.stdout or "").strip()
+        err = (proc.stderr or "").strip()
+        combined = f"{err}\n{out}"
+
         if proc.returncode != 0:
-            raise RuntimeError(f"xurl dm_events failed: {proc.stderr or proc.stdout}")
-        raw = (proc.stdout or "").strip()
+            sleep_sec, reset_at = _rate_limit_wait(combined)
+            if sleep_sec is not None or "429" in combined or "Too Many Requests" in combined:
+                wait = sleep_sec if sleep_sec is not None else 90.0
+                raise RateLimitedError(
+                    f"xurl dm_events rate-limited (429); wait ~{int(wait)}s",
+                    sleep_sec=wait,
+                    reset_at=reset_at,
+                )
+            raise RuntimeError(f"xurl dm_events failed: {err or out or 'unknown error'}")
+
+        # Success body is JSON; -v may interleave diagnostics on stderr only
+        raw = out
+        # If stdout has request noise, take last JSON object
+        if raw and not raw.lstrip().startswith("{"):
+            idx = raw.rfind("\n{")
+            if idx >= 0:
+                raw = raw[idx + 1 :]
+            elif "{" in raw:
+                raw = raw[raw.index("{") :]
         if not raw:
             return []
-        data = json.loads(raw)
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"xurl dm_events bad JSON: {e}: {raw[:200]}") from e
         return list(data.get("data") or [])
+
+
+def _rate_limit_wait(blob: str) -> tuple[float | None, int | None]:
+    """Return (sleep_sec, reset_unix) if this looks like a 429 / exhausted limit."""
+    reset_m = _RESET_RE.search(blob or "")
+    remaining_m = _REMAINING_RE.search(blob or "")
+    status_m = _STATUS_RE.search(blob or "")
+    is_429 = "Too Many Requests" in (blob or "") or (status_m and status_m.group(1) == "429")
+    remaining = int(remaining_m.group(1)) if remaining_m else None
+    reset_at = int(reset_m.group(1)) if reset_m else None
+
+    if not is_429 and remaining != 0:
+        return None, reset_at
+
+    if reset_at:
+        sleep_sec = max(5.0, reset_at - time.time() + 3.0)
+        return sleep_sec, reset_at
+    if is_429 or remaining == 0:
+        return 90.0, reset_at
+    return None, reset_at
 
     def send_text(self, recipient: str, text: str) -> dict[str, Any]:
         recip = recipient if recipient.startswith("@") else recipient

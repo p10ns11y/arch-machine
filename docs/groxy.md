@@ -28,8 +28,16 @@ export GROXY_REPLY_TO=Peramanathan   # your X username (no @ required)
 export GROXY_PR_URL=https://github.com/p10ns11y/arch-machine/pull/31
 # Flags work before or after the subcommand:
 ./bin/groxy --live --reply-to Peramanathan once
-./bin/groxy --live poll --interval 60 --reply-to Peramanathan
+# One poller only. X allows ~15 dm_events reads per window — use 90s+ interval.
+./bin/groxy --live poll --interval 90 --reply-to Peramanathan
 ```
+
+If you see `poll error: xurl dm_events failed` / **429 Too Many Requests**:
+
+1. Stop **all** groxy pollers (`pgrep -af tools.groxy` then kill extras).
+2. Wait for the window reset (~1–2 minutes after remaining hits 0).
+3. Restart with **`--interval 90`** (or higher). Do not run interval 20 with multiple processes.
+
 
 **Phone remote control:** keep `groxy --live poll …` running on the host (tmux/systemd). DM yourself:
 
