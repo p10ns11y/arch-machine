@@ -6,7 +6,7 @@ Arch Linux workstation toolkit steered by **`archy`**: thin install first, then 
 
 [![CI](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg)](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml)
 
-For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control plane: [docs/archy.md](docs/archy.md) (`tools/archy`). XChat remote control: [docs/groxy.md](docs/groxy.md) (`tools/groxy`, `bin/groxy`).
+For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control plane: [docs/archy.md](docs/archy.md) (`tools/archy`). Remote surfaces: [docs/groxy.md](docs/groxy.md) · [tools/groxy/README.md](tools/groxy/README.md) (`bin/groxy`).
 
 ## How it fits together
 
@@ -16,10 +16,13 @@ flowchart LR
   B --> C[Your machine]
   B --> D[Evidence logs]
   D -.->|next steps| A
+  G[groxy] -->|inject notify| X[XChat]
+  G -->|acp serve| Ag[grok agent]
 ```
 
 **archy** shows a menu, runs a script, then highlights the **next** useful action.  
-It does not reimplement pacman logic in Rust.
+It does not reimplement pacman logic in Rust.  
+**groxy** is separate: **control** a Grok agent (ACP) or **notify** yourself on XChat (inject).
 
 ## What you can use this for
 
@@ -31,7 +34,7 @@ It does not reimplement pacman logic in Rust.
 | Light base tools only | `./install.sh --profile minimal` |
 | Inventory / ownership | `./maintenance/inventory.sh --json` (also in archy menu) |
 | Omarchy host status | `./maintenance/omarchy-status.sh` |
-| XChat DM remote control | `./bin/groxy` (see [docs/groxy.md](docs/groxy.md)) |
+| Notify on XChat / remote ACP | `./bin/groxy` ([docs/groxy.md](docs/groxy.md) · [tools/groxy/README.md](tools/groxy/README.md)) |
 | Search tools & profiles | `./maintenance/catalog.sh docker` |
 | Package change plan (dry-run) | `./maintenance/package-actuate.sh --update jq` |
 | Security audit | `./maintenance/security-audit.sh` |
@@ -160,13 +163,22 @@ arch-machine/
 
 ## Remote surfaces (`groxy`) — any Grok workspace
 
-groxy is **session-aware plumbing**, not “only arch-machine.” Several Grok TUIs can be open; **none listen to XChat** unless something **delivers a prompt** (ACP or human typing).
+**groxy** works for any Grok project on the laptop. It is not arch-machine-only.
+
+```mermaid
+flowchart LR
+  Client[ACP client] -->|picks cwd| Serve[acp serve]
+  Serve --> Agent[grok agent serve]
+  Job[host job] --> Inject[inject]
+  Inject --> XChat[XChat notify]
+  Phone[Phone DM] -.->|no ambient path| TUI[open Grok TUI]
+```
 
 | Goal | How | Who is targeted? |
 |------|-----|------------------|
 | **Control** a Grok agent | `./bin/groxy acp serve --cwd /path/to/project` | **ACP client chooses** bind + session/cwd |
-| **Notify** on XChat | `./bin/groxy --live inject "status" --session-label name` | Outbound only; label disambiguates multi-project |
-| **DM → “the right TUI”** | *not productized* | Needs inbound transport **and** session registry/addressing |
+| **Notify** on XChat | `./bin/groxy --live inject "status" --session-label name` | Outbound only; label names multi-project work |
+| **DM → “the right TUI”** | *not productized* | Needs inbound transport **and** a session registry |
 
 ```bash
 make groxy-test
@@ -177,18 +189,13 @@ export GROXY_ALLOW_SELF=1
 ./bin/groxy --live inject "status" --session-label arch-machine
 ```
 
-Guide (routing model + **Neovim ACP setup**): [docs/groxy.md](docs/groxy.md).
-
-```text
-ACP client ── picks agent/cwd ──► grok agent serve ──► that workspace   ✅
-inject [--session-label] ──► XChat notify                               ✅
-Phone DM ──► “which of my 3 Grok windows?”                              ❌ no ambient listeners
-```
+Short README: [tools/groxy/README.md](tools/groxy/README.md).  
+Full guide (routing + **Neovim ACP**): [docs/groxy.md](docs/groxy.md).
 
 ## Documentation
 
 - [docs/archy.md](docs/archy.md) — control plane in simple English + diagrams (incl. **Grok plugin ↔ archy** cycle)
-- [docs/groxy.md](docs/groxy.md) — XChat DM remote control + multi-Grok routing
+- [docs/groxy.md](docs/groxy.md) · [tools/groxy/README.md](tools/groxy/README.md) — notify + ACP control (any workspace)
 - Grok plugin (slash `/arch-*`): [p10ns11y/plugins](https://github.com/p10ns11y/plugins) → `arch-machine/`; local `~/Work/personal/plugins/arch-machine` · `docs/CROSS-REF.md`
 - [docs/INDEX.md](docs/INDEX.md) — architecture index
 - [arch-design/coming-next.md](arch-design/coming-next.md) — backlog

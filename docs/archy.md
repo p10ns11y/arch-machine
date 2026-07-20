@@ -177,3 +177,5 @@ Keys: ↑↓ menu · Enter run · Tab focus · `g` co-pilot brief · `G`/`p` lau
 Brief is not live ACP; full agent session is suspend-to-Grok with preload.
 
 More detail: [tools/archy/README.md](../tools/archy/README.md).
+
+**Remote surfaces (separate from this TUI):** [groxy.md](groxy.md) · [tools/groxy/README.md](../tools/groxy/README.md) — host→XChat **inject** and ACP **serve**. Open Grok windows are not XChat listeners.

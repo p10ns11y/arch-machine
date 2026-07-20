@@ -41,9 +41,14 @@ Do not tell users to run `am-*` by hand — slash commands only.
 archy (Eagle + satellites)  →  maintenance/*.sh / install.sh  →  evidence bundles
         ↑ TEA Msg/Cmd                    iron peak                    logs/
 tinfoil.go / gum TUI          (optional shim / legacy)
+
+groxy:  inject → host job → XChat notify
+        acp serve → grok agent serve (client picks cwd)
+        (no ambient XChat → open TUI)
 ```
 
-**Sentinel surface** (`tools/archy`, optional `bin/tinfoil.go`, `lib/tui.sh`) → **profile installer** (`install.sh`, `lib/installer.sh`, `modules/*/`) → **maintenance heart** (`maintenance/*`, `policies/security-remediation.md`) → **evidence loop** (`lib/evidence.sh`, `logs/evidence-bundle-*.{json,toon}`).
+**Sentinel surface** (`tools/archy`, optional `bin/tinfoil.go`, `lib/tui.sh`) → **profile installer** (`install.sh`, `lib/installer.sh`, `modules/*/`) → **maintenance heart** (`maintenance/*`, `policies/security-remediation.md`) → **evidence loop** (`lib/evidence.sh`, `logs/evidence-bundle-*.{json,toon}`).  
+**Remote:** `tools/groxy` / `bin/groxy` — inject + ACP only (see `docs/groxy.md`).
 
 ## Verify before done
 
@@ -79,7 +84,7 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | **Control plane (main)** | `tools/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
-| **Remote surfaces** | `tools/groxy`: `inject` (XChat notify) · `acp serve` (ACP control) · `docs/groxy.md` |
+| **Remote surfaces** | `tools/groxy` · `tools/groxy/README.md` · `docs/groxy.md` · `bin/groxy` (`inject` notify · `acp serve` control) |
 | TUI (Elm/gum legacy) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI shim | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
 | Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / schema v1 + ownership tags |
@@ -93,5 +98,6 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 ## Expand commands
 
 - `expand tui` / `expand archy` — Eagle+Satellites TEA control plane (`tools/archy`, `docs/archy.md`)
+- `expand groxy` / `expand remote` — inject + ACP remote surfaces (`tools/groxy`, `docs/groxy.md`)
 - `expand profiles` — YAML profile composition
 - `expand evidence` — bundle schema + extraction pipeline

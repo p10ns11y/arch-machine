@@ -29,13 +29,18 @@ flowchart TD
   B --> D[Evidence bundles<br/>logs/]
   D --> A
   E[tinfoil shim / gum legacy] -.->|optional| A
+  G[groxy] -->|inject| X[XChat notify]
+  G -->|acp serve| Ag[grok agent serve]
+  N[Neovim avante] -->|stdio ACP| Gs[grok agent stdio]
   style A fill:#2d4a3e,color:#fff
   style D fill:#3d4a6b,color:#fff
+  style G fill:#4a3d5a,color:#fff
 ```
 
 | Layer | What it does | Where |
 |-------|----------------|-------|
 | **Control plane** | Menu, live output, next steps | `tools/archy` |
+| **Remote surfaces** | Host→XChat notify + ACP control | `tools/groxy` |
 | **Backends** | Real inventory, audit, install | `maintenance/`, `install.sh` |
 | **Profiles / modules** | What a full install may add | `config/profiles/`, `modules/` |
 | **Evidence** | JSON/TOON for agents | `logs/`, `lib/evidence.sh` |
@@ -43,7 +48,7 @@ flowchart TD
 How archy routes work (simple English + diagrams): **[archy.md](archy.md)**.  
 Agent skill: **eagle-satellite-elomaxz** (`.agents/skills/eagle-satellite-elomaxz/`).
 
-**Remote surfaces:** **[groxy.md](groxy.md)** (`tools/groxy`) — **inject** (host→XChat) + **acp serve** (ACP remote Grok); no live DM→host poll.
+**Remote surfaces:** **[groxy.md](groxy.md)** · **[tools/groxy/README.md](../tools/groxy/README.md)** — **inject** (host→XChat) + **acp serve** (remote Grok). No live DM→host poll. Open TUIs are not XChat listeners.
 
 **Grok plugin ↔ archy:** from Grok use `/arch-*`; from archy use `G`/`p` to reopen Grok with preload. See [archy.md § Grok plugin](archy.md) and the plugin’s `docs/CROSS-REF.md` (`~/Work/personal/plugins/arch-machine` or [p10ns11y/plugins](https://github.com/p10ns11y/plugins)).
 
@@ -59,6 +64,20 @@ flowchart LR
 
 Eagle receives **messages** (keys, job lines, job done). Satellites own each domain job. Jobs are **offline**: start → stream → exit — no busy heartbeats.
 
+### groxy paths (notify vs control)
+
+```mermaid
+flowchart LR
+  subgraph notify [Notify]
+    Job[host job] --> Inj[inject]
+    Inj --> DM[XChat]
+  end
+  subgraph control [Control]
+    Client[ACP client] --> Serve[acp serve]
+    Serve --> Agent[grok agent]
+  end
+```
+
 ---
 
 ## Key docs
@@ -66,7 +85,7 @@ Eagle receives **messages** (keys, job lines, job done). Satellites own each dom
 | Topic | Doc |
 |-------|-----|
 | Control plane | [archy.md](archy.md) · [tools/archy/README.md](../tools/archy/README.md) |
-| Remote surfaces (inject + ACP; **Neovim ACP setup**) | [groxy.md](groxy.md) |
+| Remote surfaces (inject + ACP; **Neovim ACP setup**) | [groxy.md](groxy.md) · [tools/groxy/README.md](../tools/groxy/README.md) |
 | Install | [INSTALLATION.md](INSTALLATION.md) |
 | Maintenance | [MAINTENANCE.md](MAINTENANCE.md) |
 | Modules / profiles | [MODULES.md](MODULES.md) · profiles under `config/profiles/` |
@@ -82,7 +101,7 @@ Eagle receives **messages** (keys, job lines, job done). Satellites own each dom
 ## Directories
 
 - `tools/archy/` — **main** operator UI (Ratatui, Eagle FSM, satellites)
-- `tools/groxy/` — XChat DM remote control (binary `groxy`)
+- `tools/groxy/` — remote surfaces: inject notify + ACP serve (binary `groxy`)
 - `maintenance/` — shell backends (iron peak)
 - `install.sh` + `lib/` — thin default; `--profile` for full
 - `modules/` — installable capabilities (`install_<name>()`)
@@ -109,8 +128,9 @@ Runs should leave token-friendly bundles for agents:
 make lint
 make validate-profiles
 cargo test --manifest-path tools/archy/Cargo.toml
+cargo test --manifest-path tools/groxy/Cargo.toml   # or: make groxy-test
 ./install.sh --thin --validate   # or --dry-run with a profile
 ./maintenance/extract-evidence.sh --dry-run
 ```
 
-CI: shellcheck, profile checks, Go build/vet, evidence smoke (see `.github/workflows/ci.yml`).
+CI: shellcheck, profile checks, Go build/vet, archy + groxy cargo test, evidence smoke (see `.github/workflows/ci.yml`).
