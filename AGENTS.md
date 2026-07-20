@@ -79,7 +79,7 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | **Control plane (main)** | `tools/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
-| **XChat remote control** | `tools/groxy` (Rust, binary `groxy`) · `bin/groxy` · `docs/groxy.md` |
+| **XChat host→DM** | `tools/groxy` · `bin/groxy inject` · `docs/groxy.md` (DM→host poll deferred) |
 | TUI (Elm/gum legacy) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI shim | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
 | Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / schema v1 + ownership tags |

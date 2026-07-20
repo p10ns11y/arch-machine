@@ -1,7 +1,15 @@
-//! groxy — XChat DM remote control (Rust satellite under Eagle discipline).
+//! groxy — host → XChat outcome DMs (Rust satellite under Eagle discipline).
 //!
-//! Package path: `tools/groxy`. Binary name: **groxy**.
-//! Thin CLI → Eagle process_direct_message_event → offline host job → outcome DM.
+//! Package path: `tools/groxy`. Binary: **groxy**.
+//!
+//! **Supported product path:** `inject` (and dry-run inject) — host runs a
+//! command and posts an outcome package to XChat via `xurl dm`.
+//!
+//! **Not supported (removed from CLI):** live `poll` / DM→host control.
+//! Operator pings often never appear on `GET /2/dm_events` while inject works;
+//! rate limits make poll unsuitable as a production control plane without a
+//! push/webhook product (e.g. Account Activity). Revisit only with a proven
+//! inbound transport.
 
 mod allowlist;
 mod command_parse;
@@ -20,20 +28,17 @@ use dm_adapter::{
 use eagle::{process_direct_message_event, DispatchOutcomeKind};
 use state_store::{default_state_path, load_state_compatible, save_state};
 use std::path::PathBuf;
-use std::thread;
-use std::time::Duration;
 
 const BANNER: &str = "\
-groxy — XChat DM remote control for arch-machine hosts
-Eagle routes DM events; host jobs run offline; outcome packages go back to XChat.
-Inbound:  allowlisted DM → host action
-Outbound: ✓ Done bullets + visual panel (+ PR when set)
+groxy — host → XChat outcome packages for arch-machine
+Supported:  inject  (host job → ✓ Done package → XChat DM)
+Not supported: live DM → host poll (deferred; not production-grade on GET dm_events)
 ";
 
 #[derive(Parser, Debug)]
 #[command(
     name = "groxy",
-    about = "XChat DM remote control (Rust satellite)",
+    about = "Host → XChat outcome DMs (inject). Live DM→host poll is not supported.",
     long_about = BANNER,
     version
 )]
@@ -42,7 +47,7 @@ struct Cli {
     #[arg(long, global = true)]
     config: Option<PathBuf>,
 
-    /// State file for seen DM event ids.
+    /// State file for seen event ids (used by inject dedupe).
     #[arg(long, global = true)]
     state: Option<PathBuf>,
 
@@ -66,7 +71,7 @@ struct Cli {
     #[arg(long = "allow-id", global = true)]
     allow_ids: Vec<String>,
 
-    /// Repository root (default: walk up from cwd / CARGO_MANIFEST_DIR).
+    /// Repository root (default: walk up from CARGO_MANIFEST_DIR).
     #[arg(long, global = true, env = "GROXY_ROOT")]
     repository_root: Option<PathBuf>,
 
@@ -78,31 +83,11 @@ struct Cli {
 enum Commands {
     /// Show product banner (use --help for full CLI).
     About,
-    /// Poll DM events once and process.
-    Once {
-        /// JSON dm_events fixture (dry-run).
-        #[arg(long)]
-        fixture: Option<PathBuf>,
-        /// Max events to fetch.
-        #[arg(long, default_value_t = 15)]
-        max: usize,
-    },
-    /// Poll DM events in a loop (one process only; prefer --interval 90+).
-    Poll {
-        /// Seconds between polls (X dm_events ≈ 15 req/window).
-        #[arg(long, default_value_t = 90.0)]
-        interval: f64,
-        #[arg(long)]
-        fixture: Option<PathBuf>,
-        #[arg(long, default_value_t = 15)]
-        max: usize,
-        /// Stop after N loops (0 = forever).
-        #[arg(long, default_value_t = 0)]
-        count: u64,
-    },
-    /// Inject one synthetic DM command (local E2E / live one-shot).
+    /// Run a host command and post outcome to XChat (or dry-run files).
+    ///
+    /// This is the supported Grok/host → DM flow.
     Inject {
-        /// Command text, e.g. status or !g ping
+        /// Command text, e.g. status or ping
         text: String,
         /// Synthetic sender id for dry-run (live uses authenticated self when default).
         #[arg(long, default_value = "100001")]
@@ -110,7 +95,7 @@ enum Commands {
         #[arg(long)]
         event_id: Option<String>,
     },
-    /// Build a demo outbound package without inbound.
+    /// Build a demo outbound package without running a host job.
     DemoOutbound {
         #[arg(long, default_value = "status")]
         verb: String,
@@ -130,7 +115,12 @@ fn run(cli: Cli) -> i32 {
     match command {
         Commands::About => {
             print!("{BANNER}");
-            println!("Use: groxy --help | groxy --dry-run inject \"ping\" | groxy --live poll --interval 90");
+            println!(
+                "Use: groxy --help | groxy --dry-run inject \"ping\" | groxy --live inject \"status\""
+            );
+            println!(
+                "Note: live poll / DM→host is intentionally not offered (see docs/groxy.md)."
+            );
             0
         }
         Commands::DemoOutbound { verb, text } => {
@@ -154,24 +144,6 @@ fn run(cli: Cli) -> i32 {
             sender_id,
             event_id,
         } => run_inject(&cli, text, sender_id, event_id),
-        Commands::Once { fixture, max } => run_poll_loop(&cli, fixture, max, 1, 0.0),
-        Commands::Poll {
-            interval,
-            fixture,
-            max,
-            count,
-        } => {
-            let loops = if count == 0 { u64::MAX } else { count };
-            if !is_live(&cli) && fixture.is_none() {
-                // dry-run poll without fixture is empty; still ok
-            }
-            if is_live(&cli) && interval < 60.0 {
-                eprintln!(
-                    "warn: interval < 60s can hit X DM rate limits (~15/window); prefer 90+"
-                );
-            }
-            run_poll_loop(&cli, fixture, max, loops, interval)
-        }
     }
 }
 
@@ -327,7 +299,6 @@ fn run_inject(
     );
     let _ = save_state(&state_path, &state);
 
-    // Send outbound
     if let Some(ref package) = result.outbound_package {
         let body = package.direct_message_body(900);
         if live {
@@ -359,7 +330,8 @@ fn run_inject(
                 }
             }
         } else {
-            let mut dry = DryRunDirectMessageAdapter::new(None, work.join("outbound").join("sends"));
+            let mut dry =
+                DryRunDirectMessageAdapter::new(None, work.join("outbound").join("sends"));
             let _ = dry.send_text(&reply_to, &body);
             print!("{BANNER}");
             println!(
@@ -391,137 +363,4 @@ fn run_inject(
     } else {
         1
     }
-}
-
-fn run_poll_loop(
-    cli: &Cli,
-    fixture: Option<PathBuf>,
-    max_results: usize,
-    loops: u64,
-    interval_seconds: f64,
-) -> i32 {
-    let live = is_live(cli) && fixture.is_none();
-    let policy = resolve_policy(cli, live);
-    let work = resolve_work_dir(cli);
-    let state_path = cli.state.clone().unwrap_or_else(default_state_path);
-    let mut state = load_state_compatible(&state_path);
-    let repository_root = repository_root(cli);
-    let mut reply_to = resolve_reply_to(cli, live);
-    if !live && reply_to.is_empty() {
-        reply_to = "dry-run-recipient".into();
-    }
-    let pr = std::env::var("GROXY_PR_URL").ok();
-
-    print!("{BANNER}");
-    println!(
-        "mode={} work={} interval={}s",
-        if live { "live" } else { "dry-run" },
-        work.display(),
-        interval_seconds
-    );
-
-    let mut dry_adapter = DryRunDirectMessageAdapter::new(
-        fixture.clone(),
-        work.join("outbound").join("sends"),
-    );
-    let live_adapter = if live {
-        Some(XurlDirectMessageAdapter::new())
-    } else {
-        None
-    };
-
-    for iteration in 1..=loops {
-        let events = if live {
-            match live_adapter.as_ref().unwrap() {
-                Ok(adapter) => match adapter.list_events(max_results) {
-                    Ok(events) => events,
-                    Err(dm_adapter::DirectMessageError::RateLimited { sleep_seconds }) => {
-                        eprintln!(
-                            "[{iteration}] rate limited — sleeping {sleep_seconds}s (one poller only)"
-                        );
-                        if loops == 1 {
-                            return 1;
-                        }
-                        thread::sleep(Duration::from_secs(sleep_seconds));
-                        continue;
-                    }
-                    Err(error) => {
-                        eprintln!("[{iteration}] poll error: {error}");
-                        if loops == 1 {
-                            return 1;
-                        }
-                        thread::sleep(Duration::from_secs(interval_seconds.max(60.0) as u64));
-                        continue;
-                    }
-                },
-                Err(error) => {
-                    eprintln!("xurl: {error}");
-                    return 2;
-                }
-            }
-        } else {
-            match dry_adapter.list_events(max_results) {
-                Ok(events) => events,
-                Err(error) => {
-                    eprintln!("fixture error: {error}");
-                    return 1;
-                }
-            }
-        };
-
-        let mut accepted = 0u32;
-        let mut rejected = 0u32;
-        let mut skipped = 0u32;
-        // Process oldest first
-        for event in events.iter().rev() {
-            let result = process_direct_message_event(
-                event,
-                &policy,
-                &mut state,
-                &repository_root,
-                &work.join("effects"),
-                &work.join("outbound"),
-                pr.as_deref(),
-            );
-            match result.kind {
-                DispatchOutcomeKind::AlreadySeen | DispatchOutcomeKind::NoCommand => skipped += 1,
-                DispatchOutcomeKind::SenderNotAllowlisted
-                | DispatchOutcomeKind::PublicPostRejected => rejected += 1,
-                DispatchOutcomeKind::Ok
-                | DispatchOutcomeKind::HostFailed
-                | DispatchOutcomeKind::PendingConfirm
-                | DispatchOutcomeKind::BadConfirm
-                | DispatchOutcomeKind::ConfirmSenderMismatch => {
-                    accepted += 1;
-                    if let Some(ref package) = result.outbound_package {
-                        let body = package.direct_message_body(900);
-                        if live {
-                            if let Ok(adapter) = live_adapter.as_ref().unwrap() {
-                                let _ = adapter.send_text(&reply_to, &body);
-                            }
-                        } else {
-                            let _ = dry_adapter.send_text(&reply_to, &body);
-                        }
-                        println!(
-                            "  - {:?} event={:?} verb={:?}",
-                            result.kind,
-                            result.event_id,
-                            result.command.as_ref().map(|c| &c.verb)
-                        );
-                    }
-                }
-            }
-        }
-        state.last_poll_at_unix = Some(chrono::Utc::now().timestamp() as f64);
-        let _ = save_state(&state_path, &state);
-        println!(
-            "[{iteration}] processed batch accepted≈{accepted} rejected={rejected} skipped={skipped}"
-        );
-
-        if loops == 1 || iteration == loops {
-            break;
-        }
-        thread::sleep(Duration::from_secs_f64(interval_seconds.max(1.0)));
-    }
-    0
 }

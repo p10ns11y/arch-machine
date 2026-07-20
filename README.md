@@ -158,40 +158,38 @@ arch-machine/
 └── docs/                   # start at docs/INDEX.md
 ```
 
-## XChat remote control (`groxy`)
+## XChat notifications (`groxy`) — host → DM
+
+**Supported:** laptop/agent → XChat outcome DMs via **`inject`** (reliable).  
+**Not supported:** XChat DM → host control (live poll removed; `GET /2/dm_events` is not a production inbound control plane here).
 
 ```bash
 make groxy-test
 cargo build --manifest-path tools/groxy/Cargo.toml
 export GROXY_ALLOW_SELF=1
-./bin/groxy --live poll --interval 90   # ONE process; worst-case reply ≈ 90s
-./bin/groxy --live inject "status"      # immediate one-shot
+./bin/groxy --live inject "ping"     # host → XChat
+./bin/groxy --live inject "status"
+./bin/groxy --dry-run inject "ping"  # no network
 ```
 
 Guide: [docs/groxy.md](docs/groxy.md).
 
-### Multi-Grok: how an XChat DM reaches this laptop
+### Multi-Grok vs XChat
 
-Several **Grok Build TUI** windows can be open. They are **not** each listening to XChat.
-
-| Process | Listens to XChat DMs? |
-|---------|------------------------|
-| **`groxy --live poll`** (exactly one) | **Yes** — polls X API, runs host jobs, DMs you back |
-| Each interactive **Grok** session | **No** — local coding chat only |
-| **archy** TUI | **No** — local menu control plane |
+| Surface | Role |
+|---------|------|
+| **`groxy inject`** | Host runs a job and posts `✓ Done: …` to XChat |
+| **Grok TUI** (any number of sessions) | Local coding agents; **do not** auto-receive XChat DMs |
+| **archy** | Local menu control plane |
 
 ```text
-Phone XChat ──DM──► X API ──poll──► groxy (single daemon)
-                                       │
-                                       ├─► maintenance/*.sh / grok -p
-                                       └─► DM reply (✓ Done …)
+Laptop / agent ── inject ──► XChat (you)     ✅ supported
 
-Grok TUI #1 / #2 / #3  ── independent sessions; do not auto-get the DM
+Phone XChat ── DM ──► host / Grok sessions   ❌ not productized
+                      (needs push/webhook; poll never saw operator pings)
 ```
 
-- **Single poller rule:** more than one `groxy poll` burns X rate limits (429) and races state under `~/.local/state/groxy/`.
-- **Session isolation:** Grok transcripts live under `~/.grok/sessions/…`; groxy does not inject text into a random open TUI.
-- **If you need Grok to act on a command:** use `run <prompt>` via DM (poller spawns `grok -p`), or work in a TUI on the laptop yourself.
+Session isolation: Grok transcripts stay under `~/.grok/sessions/…`. groxy does not inject into open TUI windows.
 
 ## Documentation
 

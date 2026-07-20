@@ -1,90 +1,70 @@
-# groxy — XChat DM remote control (Rust)
+# groxy — host → XChat outcome packages
 
 Package: **`tools/groxy`** · Binary: **`groxy`** · Launch: **`bin/groxy`**
 
-Eagle + satellite: one host poller reads XChat DMs, runs offline host jobs, replies with outcome packages.
+## What works (supported)
 
-```text
-XChat DM  →  single groxy poller  →  host job (inventory/ping/…)
-                                      →  ✓ Done + visual + PR  →  XChat DM
-```
-
-## Build & run
+**Host → XChat** via **`inject`**: run a host job (ping, status, …), build an outcome package (`✓ Done: …` + visual panel + optional PR), send with `xurl dm` (or dry-run files).
 
 ```bash
 cargo build --manifest-path tools/groxy/Cargo.toml
-cargo test  --manifest-path tools/groxy/Cargo.toml   # or: make groxy-test
+cargo test  --manifest-path tools/groxy/Cargo.toml   # make groxy-test
 
 ./bin/groxy --help
 ./bin/groxy about
 
 # Dry-run (no network)
-./bin/groxy --dry-run inject "status" --sender-id 100001
+./bin/groxy --dry-run inject "ping"
+./bin/groxy --dry-run inject "status"
 
-# Live one-shot
+# Live (authenticated xurl)
 export GROXY_ALLOW_SELF=1
 export GROXY_PR_URL="https://github.com/<org>/<repo>/pull/<n>"
+./bin/groxy --live inject "ping"
 ./bin/groxy --live inject "status"
-
-# Live poll — ONE process only
-./bin/groxy --live poll --interval 90
 ```
 
-Worst-case reply latency ≈ **poll interval** (default 90s) + job time. X `dm_events` ≈ 15 reads/window.
+## What does **not** work (removed from product UX)
+
+**XChat DM → host control** (live `poll` / reading `GET /2/dm_events` in a loop) is **not** a supported remote-control path.
+
+| Direction | Status | Mechanism |
+|-----------|--------|-----------|
+| Host / Grok → XChat | **Supported** | `inject` + `xurl dm` |
+| XChat → host / Grok | **Deferred** | Live poll removed from CLI |
+
+**Why removed:** operator messages often **never appear** on `GET /2/dm_events` while inject sends reliably; the list endpoint is low-rate (~15/window) and multi-reader load causes 429s. Polishing poll is not production-grade without a **push** product (e.g. X Account Activity / webhooks) that we do not have on this host.
+
+Revisit DM→host only with a documented push subscription and proof that a real phone/self-DM shows up as an event.
+
+## Multi-Grok sessions
+
+Interactive **Grok TUI** windows do **not** receive XChat DMs. They are separate laptop coding sessions under `~/.grok/sessions/…`.
+
+```text
+Laptop:  ./bin/groxy --live inject "status"  ──►  XChat (you)
+
+Grok TUI #1 / #2 / #3  ── independent; not auto-driven by DMs
+```
+
+To notify yourself from the host or agent: use **inject**. To control the host from the phone via DM: **not available** until a real inbound transport exists.
 
 ## Data hygiene
 
 - No operator X ids in git.
-- `GROXY_ALLOW_SELF=1` (runtime `xurl /2/users/me`) or gitignored `config/groxy/allowlist.local.conf`.
-
-## How an XChat message reaches the laptop (multi-Grok)
-
-See **[Multi-Grok / XChat routing](#multi-grok--xchat-routing)** below (also summarized in the root README).
-
-### Multi-Grok / XChat routing
-
-**Short answer:** only the **groxy daemon** polls XChat. Interactive Grok TUI sessions (many windows) do **not** each receive DMs.
-
-```text
-                    ┌─────────────────────┐
-   You (phone) ──DM─►│  X API dm_events    │
-                    └──────────┬──────────┘
-                               │ poll ~90s (one process)
-                               ▼
-                    ┌─────────────────────┐
-                    │  groxy (tools/groxy) │  allowlist + parse + host job
-                    └──────────┬──────────┘
-                               │ reply DM
-                               ▼
-                            XChat you
-
-   Grok TUI #1  ──┐
-   Grok TUI #2  ──┼── separate sessions: code/chat in terminal
-   Grok TUI #3  ──┘   they do NOT auto-subscribe to XChat DMs
-```
-
-| Surface | Receives XChat DMs? | Role |
-|---------|---------------------|------|
-| **`groxy --live poll`** | **Yes** (single poller) | Host remote control |
-| **Grok Build TUI** (any number) | No (unless you run inject/tools yourself) | Interactive coding agents |
-| **archy** TUI | No | Local menu control plane |
-
-**Why one poller:** X rate-limits `dm_events` (~15/window). Multiple pollers burn the budget (429) and fight over state.  
-**Session isolation:** each Grok TUI has its own transcript under `~/.grok/sessions/…`; groxy writes host effects under `~/.local/state/groxy/` and replies on XChat—it does not inject into a random open Grok window.  
-**If you want a Grok session to act on a DM:** either (a) the poller runs a `run <prompt>` host job that invokes `grok -p`, or (b) you paste/inject from the laptop—there is no automatic fan-out to all open TUIs.
+- `GROXY_ALLOW_SELF=1` or gitignored `config/groxy/allowlist.local.conf`.
 
 ## Modules
 
 | Module | Role |
 |--------|------|
-| `eagle.rs` | Route event → policy → job → package |
-| `command_parse.rs` | DM text → verb |
-| `allowlist.rs` | Who may command |
+| `eagle.rs` | Route synthetic/event → policy → job → package (used by inject + tests) |
+| `command_parse.rs` | Text → verb |
+| `allowlist.rs` | Who may command (inject path) |
 | `outcome_package.rs` | Done bullets + visual |
 | `host_job.rs` | Offline shell jobs |
-| `dm_adapter.rs` | xurl / dry-run I/O |
-| `state_store.rs` | Seen events + confirms |
-| `main.rs` | CLI |
+| `dm_adapter.rs` | `xurl` send (+ list helper unused by CLI) |
+| `main.rs` | CLI: about / inject / demo-outbound only |
 
 ## Related
 
