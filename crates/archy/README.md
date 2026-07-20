@@ -1,110 +1,167 @@
-# archy — Ratatui control plane
+# archy — your control plane
 
-**Main entry and loop controller** for arch-machine on Omarchy (and any Arch host).
+**archy** is the main app you open to run maintenance on this machine.
 
-You stay oriented: **Home › job › live stdio › next actions**.  
-Heavy work stays in **shell scripts**, **Go `tinfoil`**, and **`install.sh`**.
+- You stay oriented: **pick → watch output → do the next step**
+- Real work stays in **shell scripts** and **`install.sh`**
+- Rust only **steers** and draws a calm screen
 
-**Palette:** eye-comfort **light or dark** at startup (restrained sage/amber).
+Full walkthrough with diagrams: [docs/archy.md](../../docs/archy.md)  
+Agent skill: [eagle-satellite-elomaxz](../../.agents/skills/eagle-satellite-elomaxz/SKILL.md)
 
-### Theme detection (startup only)
+---
 
-Ratatui cannot inherit a full OS/GTK theme. archy picks **light vs dark** once, in this order (same as `theme::resolve_theme_mode` / `detect_theme_mode`):
+## Operator flow
 
-1. `ARCHY_THEME=light|dark` (override)
-2. Omarchy `~/.config/omarchy/current/theme/colors.toml` **background** luminance (`#RRGGBB` → light if bright paper)
-3. `~/.config/omarchy/current/theme.name` (eye-comfort / Omarchy package name heuristics, including TN packages)
-4. `COLORFGBG` terminal background index
-5. default **dark**
+```mermaid
+flowchart LR
+  A[Home menu] --> B[Run job]
+  B --> C[Watch stdio]
+  C --> D[NEXT bar]
+  D --> A
+  D --> B
+```
 
-No live phase hot-reload. Details: `?` help.
+After a job, the **amber NEXT** item is the best next step. Secondaries stay muted.  
+Inventory is smart: missing tools → install dry-run; upgrades → pkg dry-run; clean → audit.
 
-## Co-pilot (Grok)
+---
 
-| Mode | What it is |
-|------|------------|
-| **Brief (split)** `g` | Sparse side panel — job + suggested ask. **Not a live chat.** |
-| **Launch** `G` / **Enter** in brief / next `[p]` | Suspends TUI, writes `logs/archy-grok-context.txt`, runs `grok`. |
+## Architecture (simple)
 
-Env on launch: `ARCHY_ROOT`, `ARCHY_GROK_ASK`, `ARCHY_GROK_CONTEXT_FILE`, `TINFOIL_ROOT`.
+**Eagle** = thin top brain. **Satellites** = one domain each. **Messages** = everything that happens.
 
-After a job finishes, the **NEXT** bar shows one primary action (amber) plus muted secondaries.
-Primaries are **job-aware**: inventory uses `tools_yaml_miss` / `upgradable` from the summary line
-(missing tools → install dry-run; upgradable → pkg dry-run; clean → audit).
+```mermaid
+flowchart TB
+  subgraph You
+    K[Keys]
+  end
+
+  subgraph Eagle["Eagle (thin)"]
+    Msg[Messages]
+    Up[update]
+    Phase[Home / Running / Review / Help]
+    Msg --> Up --> Phase
+    Up --> Cmd[Commands]
+  end
+
+  subgraph Sats[Satellites]
+    Inv[Inventory]
+    Aud[Audit]
+    More[…]
+  end
+
+  subgraph Work[Offline job]
+    Sh[Shell script]
+  end
+
+  K --> Msg
+  Cmd -->|Fire| Sats --> Sh
+  Sh -->|lines + exit| Msg
+```
+
+| Piece | Plain English |
+|-------|----------------|
+| Eagle | Routes events; never hard-codes package scripts |
+| Satellite | Owns one job (build command + “what next?”) |
+| Offline job | Start script → stream text → check exit (no heartbeat spam) |
+| Msg / Cmd | Elm-style message passing (Elomaxz / TEA) |
+| Phase | State machine: where you are on screen |
+
+Same idea as the older gum TUI: `lib/tui/{messages,model,update,view}.sh`.
+
+### State machine
+
+```mermaid
+stateDiagram-v2
+  [*] --> Home
+  Home --> Running: run
+  Running --> Review: finished
+  Review --> Home: Esc
+  Review --> Running: next job
+  Home --> Help: "?"
+  Help --> Home: Esc
+```
+
+### Source map
+
+```text
+main.rs        → loop: draw, tick, keys, perform commands
+eagle.rs       → update(message) → command
+fsm.rs         → phases
+msg.rs / cmd.rs → events and effects
+satellites/    → menu + each job’s script + finish plan
+jobs.rs        → spawn / stream / poll exit
+ui.rs          → draw only
+```
+
+---
 
 ## Build
 
 ```bash
 cargo build --release --manifest-path crates/archy/Cargo.toml
 # binary: crates/archy/target/release/archy
-```
 
-```bash
-cargo run --manifest-path crates/archy/Cargo.toml
+TINFOIL_ROOT=$PWD cargo run --release --manifest-path crates/archy/Cargo.toml
 TINFOIL_ROOT=$PWD cargo run --manifest-path crates/archy/Cargo.toml -- --grok-split
 ```
 
 ## Keys
 
-| Key | Action |
-|-----|--------|
-| ↑↓ / j k | Menu or scroll output |
-| Enter | Run command · in brief: launch Grok · on next focus: primary |
+| Key | What it does |
+|-----|----------------|
+| ↑↓ / j k | Move menu or scroll output |
+| Enter | Run · in brief: launch Grok · on NEXT: primary |
 | Tab | Focus: menu → stdio → brief → next |
-| g | Toggle co-pilot **brief** |
-| G / p | Launch Grok (`p` from NEXT bar) |
-| Esc | Home |
-| Ctrl+C | Cancel job / quit if idle |
-| q | Quit (Home) |
-| ? | Help (keys + theme limits) |
+| g | Toggle co-pilot **brief** (not a live chat) |
+| G / p | Launch Grok (suspends the TUI) |
+| Esc | Back to Home |
+| Ctrl+C | Cancel job · or quit if idle |
+| q | Quit from Home |
+| ? | Help |
 
-## Backends (not reimplemented in Rust)
+## Co-pilot (Grok)
 
-| Menu | Command |
+| Mode | Meaning |
+|------|---------|
+| Brief (`g`) | Small side panel: job + suggested ask |
+| Launch (`G` / Enter in brief / `[p]`) | Writes `logs/archy-grok-context.txt`, runs `grok` |
+
+Env: `ARCHY_ROOT`, `ARCHY_GROK_ASK`, `ARCHY_GROK_CONTEXT_FILE`, `TINFOIL_ROOT`.
+
+## Theme (startup only)
+
+Ratatui cannot fully copy the OS theme. Light vs dark is chosen once:
+
+1. `ARCHY_THEME=light|dark`
+2. Omarchy `colors.toml` background brightness
+3. Theme name
+4. `COLORFGBG`
+5. Default **dark**
+
+No live phase hot-reload. See `?` help.
+
+## Menu → backends
+
+| Menu | Backend |
 |------|---------|
 | Inventory | `maintenance/inventory.sh` |
 | Catalog | `maintenance/catalog.sh` |
 | Omarchy status | `maintenance/omarchy-status.sh` |
-| Audit | `security-audit.sh` / tinfoil |
+| Audit | `security-audit` / tinfoil |
 | Install dry-run | `install.sh --profile … --dry-run` |
 | Evidence | `extract-evidence.sh --dry-run` |
 | Actuate dry-run | `package-actuate.sh` |
 
-## Architecture — Eagle + Satellites (TEA / xstate-inspired)
-
-```
-  Key / JobLine / JobFinished
-              │
-              ▼
-        ┌───────────┐
-        │   Eagle   │  fsm::Phase + eagle::update(msg) → Cmd
-        │  (TEA)    │  routes only — no domain builders
-        └─────┬─────┘
-              │ Cmd::FireSatellite | KillJob | LaunchGrok | Quit
-              ▼
-   satellites/*  (Inventory, Catalog, Omarchy, Audit, Install, …)
-              │  each owns: build Command + finish → NEXT plan
-              ▼
-        jobs.rs   offline runner: fire → stream lines → poll exit
-```
-
-| Piece | Role (xstate analogy) |
-|-------|------------------------|
-| `fsm::Phase` | Finite **states** (Home / Help / Running / Review) |
-| `msg::Msg` | **Events** |
-| `App` fields | **Context** |
-| `eagle::update` | Transition table + assigns |
-| `cmd::Cmd` | **Actions** / invoked services |
-| `satellites` | Domain orchestrators (offline when jobs) |
-| `main` loop | Interprets Cmd (spawn, kill, suspend Grok) |
-
-**Phases:** `Home → (Fire) → Running → (JobFinished) → Review → (NEXT / Esc) → Home`  
-Offline satellites: no heartbeats — trigger, structural shell work, verify exit + stdio.
-
-Gum TEA (`lib/tui`) is the same discipline in bash; this crate mirrors it in Rust.
-
-**Iron peak:** JSON/scripts under `maintenance/`. This crate only steers.
+**Iron peak:** logic lives under `maintenance/`. This crate only steers.
 
 ## Wire as default `tinfoil tui`
 
-When the release binary is on `PATH` as `archy`, the Go dispatcher can exec it first (see `bin/tinfoil.go`). Gum remains fallback.
+When `archy` is on `PATH`, the Go dispatcher can start it first (`bin/tinfoil.go`). Gum stays fallback. (PATH install: SN-ARCHY-1.)
+
+## Tests
+
+```bash
+cargo test --manifest-path crates/archy/Cargo.toml
+```

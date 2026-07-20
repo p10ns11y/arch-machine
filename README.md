@@ -2,11 +2,24 @@
 
 <img src="tinfoil.jpg" alt="arch-machine" width="140" style="display: block; margin: auto;">
 
-Arch Linux workstation toolkit steered by **`archy`** (Ratatui entry + loop): thin install first, then optional YAML profiles for ML/AI and security hardening. Shell backends (`maintenance/`, `install.sh`) do the work; evidence bundles close the loop. Omarchy-friendly inventory and package plans.
+Arch Linux workstation toolkit steered by **`archy`**: thin install first, then optional YAML profiles for ML/AI and security. Shell backends do the work; evidence closes the loop. Works well on Omarchy.
 
 [![CI](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg)](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml)
 
-For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety details: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md).
+For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control-plane guide: [docs/archy.md](docs/archy.md).
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  A[archy UI] -->|steers| B[Shell backends]
+  B --> C[Your machine]
+  B --> D[Evidence logs]
+  D -.->|next steps| A
+```
+
+**archy** shows a menu, runs a script, then highlights the **next** useful action.  
+It does not reimplement pacman logic in Rust.
 
 ## What you can use this for
 
@@ -90,8 +103,12 @@ TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
 archy
 ```
 
-Keys: ↑↓ select · Enter run · `g` Grok split · `G` fullscreen Grok · `?` help · `q` quit.  
-Details: [crates/archy/README.md](crates/archy/README.md).
+```text
+Home → run job → watch output → NEXT bar → Home
+```
+
+Keys: ↑↓ select · Enter run · `g` brief · `G`/`p` Grok · `?` help · `q` quit.  
+Simple guide: [docs/archy.md](docs/archy.md) · crate: [crates/archy/README.md](crates/archy/README.md).
 
 ### Backends (scripts archy steers)
 
@@ -140,11 +157,13 @@ arch-machine/
 
 ## Documentation
 
-- [arch-design/coming-next.md](arch-design/coming-next.md) — backlog (archy-first)
-- [docs/INDEX.md](docs/INDEX.md) · [SAFETY.md](SAFETY.md)
-- [docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/MAINTENANCE.md](docs/MAINTENANCE.md)
+- [docs/archy.md](docs/archy.md) — control plane in simple English + diagrams
+- [docs/INDEX.md](docs/INDEX.md) — architecture index
+- [arch-design/coming-next.md](arch-design/coming-next.md) — backlog
+- [SAFETY.md](SAFETY.md) · [docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/MAINTENANCE.md](docs/MAINTENANCE.md)
 - [docs/omarchy.md](docs/omarchy.md) · [docs/BACKUP.md](docs/BACKUP.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - [AUTHORS-MOTTO.md](AUTHORS-MOTTO.md)
+- Agent skill: `.agents/skills/eagle-satellite-elomaxz/`
 
 ## License
 
