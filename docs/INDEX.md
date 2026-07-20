@@ -43,7 +43,7 @@ flowchart TD
 How archy routes work (simple English + diagrams): **[archy.md](archy.md)**.  
 Agent skill: **eagle-satellite-elomaxz** (`.agents/skills/eagle-satellite-elomaxz/`).
 
-**XChat notifications:** **[groxy.md](groxy.md)** (`tools/groxy`, binary `groxy`) — host→DM via **inject**; live DM→host poll removed (not production-grade).
+**Remote surfaces:** **[groxy.md](groxy.md)** (`tools/groxy`) — **inject** (host→XChat) + **acp serve** (ACP remote Grok); no live DM→host poll.
 
 **Grok plugin ↔ archy:** from Grok use `/arch-*`; from archy use `G`/`p` to reopen Grok with preload. See [archy.md § Grok plugin](archy.md) and the plugin’s `docs/CROSS-REF.md` (`~/Work/personal/plugins/arch-machine` or [p10ns11y/plugins](https://github.com/p10ns11y/plugins)).
 

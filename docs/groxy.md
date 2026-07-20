@@ -1,53 +1,66 @@
-# groxy — host → XChat outcome packages
+# groxy — host→XChat notify + ACP remote control
 
 Package: **`tools/groxy`** · Binary: **`groxy`** · Launch: **`bin/groxy`**
 
-## What works (supported)
+## Two supported surfaces
 
-**Host → XChat** via **`inject`**: run a host job (ping, status, …), build an outcome package (`✓ Done: …` + visual panel + optional PR), send with `xurl dm` (or dry-run files).
+| Goal | Command | Transport |
+|------|---------|-----------|
+| **Notify** phone/self on XChat | `groxy --live inject "…"` | `xurl dm` (reliable) |
+| **Control** Grok on this host | `groxy acp serve` | **ACP** WebSocket (`grok agent serve`) |
+
+| Goal | Status |
+|------|--------|
+| XChat DM → host via `GET /2/dm_events` poll | **Not supported** (missing events + rate limits) |
+
+## ACP remote control (production inbound to Grok)
+
+ACP ([Agent Client Protocol](https://agentclientprotocol.com)) is the stable way to drive Grok with sessions, prompts, tools, and permissions—same protocol IDEs use.
+
+```bash
+# Explain architecture
+./bin/groxy acp explain
+
+# Check listener / secret / grok binary
+./bin/groxy acp status
+
+# Start ACP WebSocket agent (loopback + secret)
+export GROK_AGENT_SECRET="your-long-secret"   # optional; else auto file under ~/.local/state/groxy/
+./bin/groxy acp serve --cwd "$PWD"
+# default bind: 127.0.0.1:2419
+```
+
+```text
+ACP client (IDE / custom / phone over Tailscale)
+        │  JSON-RPC WebSocket + secret
+        ▼
+  grok agent serve   ◄──  groxy acp serve
+        │
+        ▼
+  host tools (files, shell, maintenance)
+
+Optional notify:
+  groxy --live inject "status"  →  XChat
+```
+
+**Security:** bind stays on **127.0.0.1** by default. For remote access use **SSH/Tailscale** to that port; do not open `0.0.0.0` without a secret and network policy.
+
+**Multi-session:** several ACP clients can attach (see also `grok agent --leader`). Interactive Grok TUI windows remain separate; they do not auto-receive XChat DMs.
+
+## Host → XChat (`inject`)
 
 ```bash
 cargo build --manifest-path tools/groxy/Cargo.toml
-cargo test  --manifest-path tools/groxy/Cargo.toml   # make groxy-test
+make groxy-test
 
-./bin/groxy --help
-./bin/groxy about
-
-# Dry-run (no network)
 ./bin/groxy --dry-run inject "ping"
-./bin/groxy --dry-run inject "status"
-
-# Live (authenticated xurl)
 export GROXY_ALLOW_SELF=1
-export GROXY_PR_URL="https://github.com/<org>/<repo>/pull/<n>"
-./bin/groxy --live inject "ping"
 ./bin/groxy --live inject "status"
 ```
 
-## What does **not** work (removed from product UX)
+## Why not XChat → host poll?
 
-**XChat DM → host control** (live `poll` / reading `GET /2/dm_events` in a loop) is **not** a supported remote-control path.
-
-| Direction | Status | Mechanism |
-|-----------|--------|-----------|
-| Host / Grok → XChat | **Supported** | `inject` + `xurl dm` |
-| XChat → host / Grok | **Deferred** | Live poll removed from CLI |
-
-**Why removed:** operator messages often **never appear** on `GET /2/dm_events` while inject sends reliably; the list endpoint is low-rate (~15/window) and multi-reader load causes 429s. Polishing poll is not production-grade without a **push** product (e.g. X Account Activity / webhooks) that we do not have on this host.
-
-Revisit DM→host only with a documented push subscription and proof that a real phone/self-DM shows up as an event.
-
-## Multi-Grok sessions
-
-Interactive **Grok TUI** windows do **not** receive XChat DMs. They are separate laptop coding sessions under `~/.grok/sessions/…`.
-
-```text
-Laptop:  ./bin/groxy --live inject "status"  ──►  XChat (you)
-
-Grok TUI #1 / #2 / #3  ── independent; not auto-driven by DMs
-```
-
-To notify yourself from the host or agent: use **inject**. To control the host from the phone via DM: **not available** until a real inbound transport exists.
+Operator messages often never appear on `GET /2/dm_events` while inject works; the list endpoint is low-rate (~15/window). That is not a production control plane. **ACP replaces that role** for driving Grok; inject remains for notifications.
 
 ## Data hygiene
 

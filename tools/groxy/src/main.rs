@@ -1,16 +1,14 @@
-//! groxy — host → XChat outcome DMs (Rust satellite under Eagle discipline).
+//! groxy — arch-machine remote surfaces (Rust satellite under Eagle discipline).
 //!
 //! Package path: `tools/groxy`. Binary: **groxy**.
 //!
-//! **Supported product path:** `inject` (and dry-run inject) — host runs a
-//! command and posts an outcome package to XChat via `xurl dm`.
+//! **Supported:**
+//! - `inject` — host job → XChat outcome DM (notify)
+//! - `acp serve` — production remote **control** via Grok ACP WebSocket
 //!
-//! **Not supported (removed from CLI):** live `poll` / DM→host control.
-//! Operator pings often never appear on `GET /2/dm_events` while inject works;
-//! rate limits make poll unsuitable as a production control plane without a
-//! push/webhook product (e.g. Account Activity). Revisit only with a proven
-//! inbound transport.
+//! **Not supported:** live XChat DM → host via `GET /2/dm_events` poll.
 
+mod acp_remote;
 mod allowlist;
 mod command_parse;
 mod dm_adapter;
@@ -30,15 +28,16 @@ use state_store::{default_state_path, load_state_compatible, save_state};
 use std::path::PathBuf;
 
 const BANNER: &str = "\
-groxy — host → XChat outcome packages for arch-machine
-Supported:  inject  (host job → ✓ Done package → XChat DM)
-Not supported: live DM → host poll (deferred; not production-grade on GET dm_events)
+groxy — arch-machine remote surfaces
+  inject     host → XChat outcome DM (notify; reliable)
+  acp serve  remote Grok control via ACP WebSocket (production inbound)
+  (no live XChat DM → host poll — dm_events is not a stable control plane)
 ";
 
 #[derive(Parser, Debug)]
 #[command(
     name = "groxy",
-    about = "Host → XChat outcome DMs (inject). Live DM→host poll is not supported.",
+    about = "Host→XChat inject + ACP remote control for arch-machine",
     long_about = BANNER,
     version
 )]
@@ -85,7 +84,7 @@ enum Commands {
     About,
     /// Run a host command and post outcome to XChat (or dry-run files).
     ///
-    /// This is the supported Grok/host → DM flow.
+    /// Supported notify path: host/agent → XChat.
     Inject {
         /// Command text, e.g. status or ping
         text: String,
@@ -102,6 +101,41 @@ enum Commands {
         #[arg(long, default_value = "demo host status: ok")]
         text: String,
     },
+    /// Production remote **control** via Grok ACP (not XChat DM poll).
+    Acp {
+        #[command(subcommand)]
+        action: AcpCommands,
+    },
+}
+
+#[derive(Subcommand, Debug, Clone)]
+enum AcpCommands {
+    /// Explain ACP vs XChat inject architecture.
+    Explain,
+    /// Check whether ACP serve is reachable / configured.
+    Status {
+        /// Bind address to probe (default 127.0.0.1:2419).
+        #[arg(long, default_value = "127.0.0.1:2419")]
+        bind: String,
+    },
+    /// Launch `grok agent serve` (ACP WebSocket) for remote clients.
+    Serve {
+        /// Listen address (default loopback).
+        #[arg(long, default_value = "127.0.0.1:2419")]
+        bind: String,
+        /// Client auth secret (env GROK_AGENT_SECRET or auto file under state dir).
+        #[arg(long, env = "GROK_AGENT_SECRET")]
+        secret: Option<String>,
+        /// Working directory for the agent (default: repository root).
+        #[arg(long)]
+        cwd: Option<PathBuf>,
+        /// Pass --always-approve to grok agent.
+        #[arg(long, default_value_t = false)]
+        always_approve: bool,
+        /// Model id for grok agent (-m).
+        #[arg(long, short = 'm')]
+        model: Option<String>,
+    },
 }
 
 fn main() {
@@ -116,11 +150,9 @@ fn run(cli: Cli) -> i32 {
         Commands::About => {
             print!("{BANNER}");
             println!(
-                "Use: groxy --help | groxy --dry-run inject \"ping\" | groxy --live inject \"status\""
+                "Use: groxy --dry-run inject \"ping\" | groxy --live inject \"status\""
             );
-            println!(
-                "Note: live poll / DM→host is intentionally not offered (see docs/groxy.md)."
-            );
+            println!("     groxy acp explain | groxy acp status | groxy acp serve");
             0
         }
         Commands::DemoOutbound { verb, text } => {
@@ -144,6 +176,47 @@ fn run(cli: Cli) -> i32 {
             sender_id,
             event_id,
         } => run_inject(&cli, text, sender_id, event_id),
+        Commands::Acp { action } => run_acp(&cli, action),
+    }
+}
+
+fn run_acp(cli: &Cli, action: AcpCommands) -> i32 {
+    let work = resolve_work_dir(cli);
+    match action {
+        AcpCommands::Explain => {
+            acp_remote::print_architecture_explanation();
+            0
+        }
+        AcpCommands::Status { bind } => {
+            acp_remote::print_status(&bind, &work);
+            0
+        }
+        AcpCommands::Serve {
+            bind,
+            secret,
+            cwd,
+            always_approve,
+            model,
+        } => {
+            let secret = match secret.filter(|s| !s.is_empty()) {
+                Some(s) => s,
+                None => match acp_remote::resolve_or_create_agent_secret(&work) {
+                    Ok(s) => s,
+                    Err(error) => {
+                        eprintln!("secret error: {error}");
+                        return 1;
+                    }
+                },
+            };
+            let cwd_path = cwd.unwrap_or_else(|| repository_root(cli));
+            acp_remote::exec_agent_serve(
+                &bind,
+                &secret,
+                Some(cwd_path.as_path()),
+                always_approve,
+                model.as_deref(),
+            )
+        }
     }
 }
 

@@ -158,38 +158,40 @@ arch-machine/
 └── docs/                   # start at docs/INDEX.md
 ```
 
-## XChat notifications (`groxy`) — host → DM
+## Remote surfaces (`groxy`)
 
-**Supported:** laptop/agent → XChat outcome DMs via **`inject`** (reliable).  
-**Not supported:** XChat DM → host control (live poll removed; `GET /2/dm_events` is not a production inbound control plane here).
+| Goal | Command | Notes |
+|------|---------|--------|
+| **Notify** on XChat | `./bin/groxy --live inject "status"` | Reliable host → DM |
+| **Control** Grok remotely | `./bin/groxy acp serve` | **ACP** WebSocket (`grok agent serve`) |
+| XChat DM → host poll | *(removed)* | `dm_events` is not a stable control plane |
 
 ```bash
 make groxy-test
 cargo build --manifest-path tools/groxy/Cargo.toml
+
+# Notify
 export GROXY_ALLOW_SELF=1
-./bin/groxy --live inject "ping"     # host → XChat
-./bin/groxy --live inject "status"
-./bin/groxy --dry-run inject "ping"  # no network
+./bin/groxy --live inject "ping"
+
+# Remote control (production inbound to Grok)
+./bin/groxy acp explain
+./bin/groxy acp status
+./bin/groxy acp serve --cwd "$PWD"    # 127.0.0.1:2419 + secret
 ```
 
 Guide: [docs/groxy.md](docs/groxy.md).
 
-### Multi-Grok vs XChat
-
-| Surface | Role |
-|---------|------|
-| **`groxy inject`** | Host runs a job and posts `✓ Done: …` to XChat |
-| **Grok TUI** (any number of sessions) | Local coding agents; **do not** auto-receive XChat DMs |
-| **archy** | Local menu control plane |
+### Multi-Grok vs ACP vs XChat
 
 ```text
-Laptop / agent ── inject ──► XChat (you)     ✅ supported
-
-Phone XChat ── DM ──► host / Grok sessions   ❌ not productized
-                      (needs push/webhook; poll never saw operator pings)
+ACP client ── WebSocket ──► grok agent serve ──► tools on host   ✅ control
+Laptop ── groxy inject ──► XChat (you)                           ✅ notify
+Phone XChat ── dm_events poll ──► host                           ❌ not supported
+Grok TUI #1/#2  ── local sessions only; not auto-fed from DMs
 ```
 
-Session isolation: Grok transcripts stay under `~/.grok/sessions/…`. groxy does not inject into open TUI windows.
+Use **Tailscale/SSH** to reach ACP on loopback; keep a secret (`GROK_AGENT_SECRET` or `~/.local/state/groxy/acp-agent.secret`).
 
 ## Documentation
 
