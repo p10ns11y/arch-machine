@@ -352,6 +352,7 @@ There is still **no** link from phone XChat DMs into the Avante buffer unless yo
 |---------|--------|
 | Plugin starts Claude/Gemini instead | `provider` / adapter name points at `grok-acp` |
 | `Unknown notification method: _x.ai/mcp/…` WARN spam | Grok proprietary ACP extensions; avante only handles `session/*` + `fs/*`. Ignore `_x.ai/*` (host hook) or wait for upstream — **not** a broken install |
+| `Sending message to fast!, API key is not yet set` | **Not** a missing XAI key for ACP. Stock avante sets `vim.g.avante_login=false` for ACP providers; `Sidebar:submit_input` then blocks. Host `avante-grok.lua` re-asserts login for ACP (and wraps Providers.setup / submit). Restart nvim after config change; `:AvanteSwitchProvider grok-acp` if needed |
 | `command not found: grok` | PATH / `~/.grok/bin` in Neovim’s env (`:echo $PATH`) |
 | Auth errors | `grok login` in a real shell; or `XAI_API_KEY` for the child `env` |
 | Wrong project files | Open Neovim with `nvim /path/to/project` so cwd is correct |
