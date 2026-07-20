@@ -157,6 +157,55 @@ fn draw_menu(f: &mut Frame, area: Rect, app: &App, p: Palette) {
     f.render_stateful_widget(list, area, &mut state);
 }
 
+/// Severity-aware line colors for eye-comfort light/dark (no neon ANSI dependency).
+/// Prefers audit tags `[x]` fail, `[!]` warn, `[ok]` pass, `##` sections.
+pub fn style_stdio_line(line: &str, p: Palette) -> Style {
+    let t = line.trim_start();
+    if t.starts_with('▶') || t.starts_with('■') {
+        return p.style_fg(p.amber);
+    }
+    if t.starts_with("[stderr]") {
+        return p.style_fg(p.error_soft);
+    }
+    // Threat audit tags (security-audit.sh quiet format)
+    if t.starts_with("[x]") || t.starts_with("x ") {
+        return p.style_bold(p.error);
+    }
+    if t.starts_with("[!]") || t.starts_with("! ") {
+        return p.style_bold(p.warning);
+    }
+    if t.starts_with("[ok]") {
+        return p.style_fg(p.sage_lift);
+    }
+    if t.starts_with("[·]") || t.starts_with("## ") {
+        return p.style_fg(p.fg_muted);
+    }
+    if t.starts_with("## SUMMARY") || t.starts_with("malware=") || t.starts_with("counts ") {
+        return p.style_bold(p.amber);
+    }
+    if t.starts_with("exit=2") || t.contains(" fail=") && t.contains("counts") {
+        return p.style_bold(p.error);
+    }
+    if t.starts_with("exit=1") {
+        return p.style_bold(p.warning);
+    }
+    if t.starts_with('✗')
+        || t.contains(" ERROR")
+        || t.contains("[ERROR]")
+        || t.contains("error:")
+    {
+        return p.style_fg(p.error);
+    }
+    if t.starts_with('✓') || t.contains("success") {
+        return p.style_fg(p.sage_lift);
+    }
+    // Strip legacy emoji-heavy progress as muted when present
+    if t.contains("🚀") || t.contains("========") {
+        return p.style_fg(p.fg_muted);
+    }
+    p.style_fg(p.fg)
+}
+
 fn draw_output(f: &mut Frame, area: Rect, app: &App, p: Palette) {
     let title = if app.job.is_some() {
         " stdio · live "
@@ -177,20 +226,7 @@ fn draw_output(f: &mut Frame, area: Rect, app: &App, p: Palette) {
     let end = (start + height).min(total);
     let text: Vec<Line> = app.lines[start..end]
         .iter()
-        .map(|l| {
-            let style = if l.starts_with('▶') || l.starts_with('■') {
-                p.style_fg(p.amber)
-            } else if l.starts_with('✗') || l.contains("error") || l.contains("ERROR") {
-                p.style_fg(p.error)
-            } else if l.starts_with('✓') || l.contains("success") {
-                p.style_fg(p.sage_lift)
-            } else if l.starts_with("[stderr]") {
-                p.style_fg(p.error_soft)
-            } else {
-                p.style_fg(p.fg)
-            };
-            Line::from(Span::styled(l.clone(), style))
-        })
+        .map(|l| Line::from(Span::styled(l.clone(), style_stdio_line(l, p))))
         .collect();
 
     let para = Paragraph::new(text)
@@ -382,6 +418,10 @@ fn draw_help(f: &mut Frame, area: Rect, app: &App, p: Palette) {
             p.style_fg(p.fg_muted),
         )),
         Line::from(""),
+        Line::from(Span::styled(
+            "Audit exit: 0 clean · 1 warn · 2 fail (malware/ports/config)",
+            p.style_fg(p.fg_muted),
+        )),
         Line::from(Span::styled("Esc / Enter → Home", p.style_fg(p.clay))),
     ];
     let para = Paragraph::new(text)
@@ -398,8 +438,31 @@ fn draw_help(f: &mut Frame, area: Rect, app: &App, p: Palette) {
 
 #[cfg(test)]
 mod tests {
-    use super::menu_panel_height;
+    use super::{menu_panel_height, style_stdio_line};
     use crate::app::App;
+    use crate::theme::{self, ThemeMode};
+    use ratatui::style::Color;
+
+    #[test]
+    fn stdio_styles_distinguish_audit_severity_on_light_and_dark() {
+        for mode in [ThemeMode::Light, ThemeMode::Dark] {
+            let p = theme::palette(mode);
+            let fail = style_stdio_line("[x] malware rkhunter hit", p);
+            let warn = style_stdio_line("[!] ports public high ports", p);
+            let ok = style_stdio_line("[ok] malware clean", p);
+            let muted = style_stdio_line("## ports", p);
+            let plain = style_stdio_line("listen 127.0.0.1:22", p);
+            // Distinct tokens: fail/warn not same as plain fg
+            assert_ne!(fail.fg, plain.fg, "fail should differ from plain ({mode:?})");
+            assert_ne!(warn.fg, plain.fg, "warn should differ from plain ({mode:?})");
+            assert_ne!(ok.fg, Some(Color::Reset));
+            assert_eq!(muted.fg, Some(p.fg_muted));
+            // Fail uses error token
+            assert_eq!(fail.fg, Some(p.error));
+            assert_eq!(warn.fg, Some(p.warning));
+            assert_eq!(ok.fg, Some(p.sage_lift));
+        }
+    }
 
     #[test]
     fn menu_height_fits_all_shipped_items_plus_borders() {

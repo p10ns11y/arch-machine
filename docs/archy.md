@@ -99,7 +99,7 @@ flowchart LR
 | Inventory | `maintenance/inventory.sh` |
 | Catalog | `maintenance/catalog.sh` |
 | Omarchy status | `maintenance/omarchy-status.sh` |
-| Audit | `maintenance/security-audit.sh` / tinfoil |
+| Audit | `maintenance/security-audit.sh` (threat areas: malware · ports · supply · config) |
 | Install dry-run | `install.sh --profile … --dry-run` |
 | Evidence dry-run | `maintenance/extract-evidence.sh --dry-run` |
 | Pkg update dry-run | `maintenance/package-actuate.sh` |

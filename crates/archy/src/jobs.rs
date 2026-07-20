@@ -174,14 +174,8 @@ pub fn build_omarchy_status(root: &PathBuf) -> Command {
 }
 
 pub fn build_audit_global(root: &PathBuf) -> Command {
-    // Prefer installed tinfoil, else bash security-audit
-    if let Ok(t) = which::which("tinfoil") {
-        let mut c = Command::new(t);
-        c.arg("audit");
-        c.env("TINFOIL_ROOT", root);
-        c.current_dir(root);
-        return c;
-    }
+    // Always use the repo/runtime script so archy sees threat-focused quiet format
+    // (installed `tinfoil audit` may lag behind maintenance/security-audit.sh).
     let mut c = Command::new("bash");
     c.arg(root.join("maintenance/security-audit.sh"));
     c.arg("--global");
@@ -191,14 +185,6 @@ pub fn build_audit_global(root: &PathBuf) -> Command {
 }
 
 pub fn build_audit_project(root: &PathBuf, path: &str) -> Command {
-    if let Ok(t) = which::which("tinfoil") {
-        let mut c = Command::new(t);
-        c.arg("audit");
-        c.arg(path);
-        c.env("TINFOIL_ROOT", root);
-        c.current_dir(root);
-        return c;
-    }
     let mut c = Command::new("bash");
     c.arg(root.join("maintenance/security-audit.sh"));
     c.arg("--project");
@@ -282,5 +268,31 @@ mod tests {
     fn actuate_dry_builder_smoke() {
         let root = repo_root();
         run_ok_nonempty(build_actuate_update_dry(&root, "jq"));
+    }
+
+    #[test]
+    fn audit_global_dry_run_has_threat_summary() {
+        let root = repo_root();
+        let mut c = Command::new("bash");
+        c.arg(root.join("maintenance/security-audit.sh"));
+        c.arg("--global");
+        c.arg("--dry-run");
+        c.env("TINFOIL_ROOT", &root);
+        c.current_dir(&root);
+        c.stdout(Stdio::piped());
+        c.stderr(Stdio::piped());
+        let out = c.output().expect("spawn audit dry-run");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            out.status.success(),
+            "dry-run should exit 0: stderr={}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(stdout.contains("## SUMMARY"), "missing SUMMARY block");
+        assert!(stdout.contains("malware="), "missing malware area");
+        assert!(stdout.contains("ports="), "missing ports area");
+        assert!(stdout.contains("supply="), "missing supply area");
+        assert!(stdout.contains("config="), "missing config area");
+        assert!(!stdout.contains("🚀"), "default path must not use rocket banners");
     }
 }
