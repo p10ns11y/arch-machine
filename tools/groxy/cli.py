@@ -13,8 +13,9 @@ from . import __version__
 from .dispatch import process_event, run_once
 from .dm_io import DryRunDmIO, RateLimitedError, XurlDmIO, resolve_xurl
 from .host import hostname, repo_root
+from .identity import fetch_authenticated_user
 from .package import build_outbound_package
-from .policy import load_policy_file, load_policy_from_env
+from .policy import Policy, load_policy, with_self_identity
 from .state import default_state_path, load_state, save_state
 
 BANNER = f"""groxy {__version__} — XChat DM remote control for arch-machine hosts
@@ -71,7 +72,7 @@ def _common_flags(p: argparse.ArgumentParser, *, suppress_defaults: bool = False
     p.add_argument(
         "--reply-to",
         default=argparse.SUPPRESS if suppress_defaults else os.environ.get("GROXY_REPLY_TO", ""),
-        help="DM recipient username (e.g. Peramanathan) for replies",
+        help="DM recipient username for replies (default: authenticated self via xurl)",
     )
     p.add_argument(
         "--allow-id",
@@ -126,7 +127,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     inj = sub.add_parser("inject", help="inject one synthetic DM command (local E2E)", parents=[sub_common])
     inj.add_argument("text", help='command text e.g. "status" or "!g inventory"')
-    inj.add_argument("--sender-id", default="295441607", help="synthetic sender id")
+    inj.add_argument(
+        "--sender-id",
+        default="100001",
+        help="synthetic sender id for dry-run inject (use real id only via env, not defaults)",
+    )
     inj.add_argument("--event-id", default=None, help="synthetic event id")
 
     demo = sub.add_parser(
@@ -140,22 +145,53 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _resolve_policy(args: argparse.Namespace):
-    cfg = args.config or _default_config()
-    if cfg.is_file():
-        policy = load_policy_file(cfg)
-    else:
-        policy = load_policy_from_env()
-    # CLI extras
-    ids = set(policy.allowlist_ids) | set(args.allow_id or [])
-    users = set(policy.allowlist_usernames) | {u.lstrip("@").lower() for u in (args.allow_user or [])}
-    from .policy import Policy
-
-    return Policy(
-        allowlist_ids=frozenset(ids),
-        allowlist_usernames=frozenset(users),
-        require_confirm_high_blast=policy.require_confirm_high_blast,
+def _resolve_policy(args: argparse.Namespace, *, live: bool) -> Policy:
+    """
+    Allowlist from local/gitignored files + env. Never bake operator ids into git.
+    Live mode with empty allowlist: allow authenticated self only (GROXY_ALLOW_SELF default on).
+    """
+    root = repo_root()
+    cfg = args.config
+    policy = load_policy(
+        repo_root=root,
+        config_path=cfg,
+        extra_ids=args.allow_id or [],
+        extra_usernames=args.allow_user or [],
     )
+
+    allow_self_env = os.environ.get("GROXY_ALLOW_SELF", "").strip().lower()
+    # Default: live + empty allowlist → self only (runtime, not written to disk)
+    allow_self = allow_self_env in ("1", "true", "yes") or (
+        live and not policy.allowlist_ids and not policy.allowlist_usernames and allow_self_env not in ("0", "false", "no")
+    )
+    me = None
+    if allow_self or live:
+        me = fetch_authenticated_user()
+    if allow_self and me:
+        policy = with_self_identity(policy, me.user_id, me.username)
+        print(
+            f"policy: allowlist includes authenticated self (@{me.username}) — runtime only",
+            file=sys.stderr,
+        )
+    elif live and not policy.allowlist_ids and not policy.allowlist_usernames:
+        print(
+            "error: empty allowlist. Set GROXY_ALLOW_SELF=1, GROXY_ALLOWLIST_IDS, "
+            "or config/groxy/allowlist.local.conf (gitignored).",
+            file=sys.stderr,
+        )
+    return policy
+
+
+def _resolve_reply_to(args: argparse.Namespace, *, live: bool) -> str:
+    reply = (getattr(args, "reply_to", None) or os.environ.get("GROXY_REPLY_TO") or "").strip()
+    if reply:
+        return reply.lstrip("@")
+    if live:
+        me = fetch_authenticated_user()
+        if me:
+            print(f"reply-to: defaulting to authenticated self @{me.username}", file=sys.stderr)
+            return me.username
+    return ""
 
 
 def _work_paths(args: argparse.Namespace) -> tuple[Path, Path, Path]:
@@ -192,11 +228,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     dry = _is_dry(args)
-    policy = _resolve_policy(args)
+    live = not dry
+    policy = _resolve_policy(args, live=live)
     state_path = args.state or default_state_path()
     state = load_state(state_path)
     work, effect_dir, package_dir = _work_paths(args)
-    reply_to = (args.reply_to or os.environ.get("GROXY_REPLY_TO") or "").strip()
+    reply_to = _resolve_reply_to(args, live=live)
 
     if args.cmd == "demo-outbound":
         pkg = build_outbound_package(
@@ -218,19 +255,23 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "inject":
         eid = args.event_id or f"inject-{int(time.time())}"
+        # Live inject: prefer authenticated self as sender so allowlist matches reality
+        sender_id = str(args.sender_id)
+        if live and sender_id in ("100001", ""):
+            me = fetch_authenticated_user()
+            if me:
+                sender_id = me.user_id
         event = {
             "id": eid,
             "event_type": "MessageCreate",
-            "sender_id": str(args.sender_id),
+            "sender_id": sender_id,
             "text": args.text,
             "dm_conversation_id": "local-inject",
         }
-        # Ensure sender is allowlisted for inject when empty policy
-        if not policy.is_allowed_sender(str(args.sender_id), None):
-            from .policy import Policy
-
+        # Ensure inject sender is allowlisted for this one-shot
+        if not policy.is_allowed_sender(sender_id, None):
             policy = Policy(
-                allowlist_ids=frozenset(set(policy.allowlist_ids) | {str(args.sender_id)}),
+                allowlist_ids=frozenset(set(policy.allowlist_ids) | {sender_id}),
                 allowlist_usernames=policy.allowlist_usernames,
                 require_confirm_high_blast=policy.require_confirm_high_blast,
             )

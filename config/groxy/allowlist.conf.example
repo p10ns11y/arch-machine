@@ -1,0 +1,13 @@
+# Copy to allowlist.local.conf (gitignored) or set env vars — never commit real IDs.
+#
+#   cp config/groxy/allowlist.conf.example config/groxy/allowlist.local.conf
+#   # edit local file with YOUR ids from: xurl /2/users/me
+#
+# Or environment only:
+#   export GROXY_ALLOWLIST_IDS=...
+#   export GROXY_ALLOWLIST_USERNAMES=...
+#   export GROXY_ALLOW_SELF=1   # auto-allow the xurl-authenticated account
+
+# allowlist_ids=
+# allowlist_usernames=
+require_confirm=true

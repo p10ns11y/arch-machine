@@ -3,7 +3,7 @@
     {
       "id": "fixture-evt-status-001",
       "event_type": "MessageCreate",
-      "sender_id": "295441607",
+      "sender_id": "100001",
       "dm_conversation_id": "fixture-conv-1",
       "text": "!g status",
       "created_at": "2026-07-20T12:00:00.000Z"
@@ -19,7 +19,7 @@
     {
       "id": "fixture-evt-public-003",
       "event_type": "MessageCreate",
-      "sender_id": "295441607",
+      "sender_id": "100001",
       "source": "tweet",
       "is_public_post": true,
       "text": "status",

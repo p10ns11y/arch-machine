@@ -3,59 +3,67 @@
 **groxy** bridges **XChat DMs** ↔ this arch-machine host.
 
 - **Inbound:** allowlisted sender DMs a command → host action (inventory, audit, grok headless, …)
-- **Outbound:** result **summary** + **visual explanation** (ASCII panel + PNG) → XChat DM  
-  (or identical dry-run files)
+- **Outbound:** outcome-first **summary** + **visual** → XChat DM (or dry-run files)
 
-Not named xchat-bridge. Does **not** treat public posts as commands.
-
-## Quick start
+## Quick start (no identities in git)
 
 ```bash
-# From repo root
-./bin/groxy --help
+# From repo root — live uses the xurl-authenticated account as allowlist + reply target
+export GROXY_PR_URL="https://github.com/<org>/<repo>/pull/<n>"   # optional
+export GROXY_ALLOW_SELF=1   # default when allowlist empty in live mode
 
-# Build a demo outbound package (no network)
-./bin/groxy --dry-run demo-outbound
+# One poller only. X dm_events ≈ 15 reads/window — use 90s+
+./bin/groxy --live poll --interval 90
 
-# Inject a local command (simulates allowlisted DM)
-./bin/groxy --dry-run inject "status" --sender-id 295441607
+# Or inject a one-shot without polling:
+./bin/groxy --live inject "status"
+```
 
-# Process a fixture of DM events once
+Optional private allowlist (gitignored):
+
+```bash
+cp config/groxy/allowlist.conf.example config/groxy/allowlist.local.conf
+# edit local file with YOUR id from: xurl /2/users/me
+# never commit allowlist.local.conf
+```
+
+Env alternatives: `GROXY_ALLOWLIST_IDS`, `GROXY_ALLOWLIST_USERNAMES`, `GROXY_REPLY_TO`.
+
+## Why XChat may not reply
+
+| Cause | Fix |
+|-------|-----|
+| No poller running | `./bin/groxy --live poll --interval 90` (exactly **one** process) |
+| Rate limit 429 | Stop all pollers; wait ~1–2 min; restart with interval ≥ 90 |
+| Message not a command | Send `status`, `ping`, or `!g …` — free chat is ignored |
+| Empty allowlist without self | `export GROXY_ALLOW_SELF=1` or local allowlist file |
+| Seen-event dedupe | New message gets a new event id; resend command if needed |
+
+Dry-run proof (no network):
+
+```bash
+./bin/groxy --dry-run inject "status" --sender-id 100001
 ./bin/groxy --dry-run once --fixture tools/groxy/fixtures/inbound_status.json
-
-# Live: poll X DM events and reply (requires xurl OAuth + DM scopes)
-export GROXY_REPLY_TO=Peramanathan   # your X username (no @ required)
-export GROXY_PR_URL=https://github.com/p10ns11y/arch-machine/pull/31
-# Flags work before or after the subcommand:
-./bin/groxy --live --reply-to Peramanathan once
-# One poller only. X allows ~15 dm_events reads per window — use 90s+ interval.
-./bin/groxy --live poll --interval 90 --reply-to Peramanathan
 ```
 
-If you see `poll error: xurl dm_events failed` / **429 Too Many Requests**:
+## Commands (DM text)
 
-1. Stop **all** groxy pollers (`pgrep -af tools.groxy` then kill extras).
-2. Wait for the window reset (~1–2 minutes after remaining hits 0).
-3. Restart with **`--interval 90`** (or higher). Do not run interval 20 with multiple processes.
+| DM text | Action |
+|---------|--------|
+| `help` | Command list |
+| `ping` | Liveness |
+| `status` / `inventory` | Inventory summary (not package dump) |
+| `audit` / `omarchy` | Maintenance jobs |
+| `run <prompt>` or `!g <free text>` | Restricted `grok -p` |
+| high-blast (`pkg` …) | Held until `confirm <token> …` |
 
-
-**Phone remote control:** keep `groxy --live poll …` running on the host (tmux/systemd). DM yourself:
-
-```text
-!g status
-ping
-status
-!g summarize open ports briefly
-```
-
-Replies are **outcome-first** (no host/cwd/package dumps):
+## Outbound shape (outcome-first)
 
 ```text
 ✓ Done: status
-• Inventory: 236 explicit packages
-• tools.yaml ok=18 miss=0; upgradable=0
-• Ownership: arch-machine 14 · omarchy 157 · user 65
-PR: https://github.com/p10ns11y/arch-machine/pull/N
+• Inventory: N explicit packages
+• …
+PR: https://github.com/…/pull/N
 
 ╔════════════════════════════════╗
 ║ OK    status                   ║
@@ -63,86 +71,66 @@ PR: https://github.com/p10ns11y/arch-machine/pull/N
 ╚════════════════════════════════╝
 ```
 
-PR link sources: `GROXY_PR_URL` env, else `gh pr view` for the current branch, else any PR URL found in the command output.
+No host/cwd/package dumps in the DM body.
 
-```bash
-export GROXY_PR_URL="https://github.com/p10ns11y/arch-machine/pull/31"  # optional pin
-./bin/groxy --live poll --reply-to Peramanathan
+## Architecture decision (Python v1 → Rust satellite)
+
+### Why Python v1 shipped first
+
+1. **Goal was a working remote loop the same session** (poll → allowlist → host job → DM).
+2. **Official surface today is HTTP + `xurl`**, not a first-class “XChat SDK for agents.”
+   - X API v2 DM endpoints (`/2/dm_events`, send DM) via authenticated HTTP.
+   - This host already had **`xurl`** (OAuth + DM scopes). groxy shells out to it.
+   - There is **no** blessed, stable “XChat Bot SDK” comparable to Slack Bolt / Discord.js for this control path. Community HTTP clients exist; they still speak the same REST.
+3. Repo already uses **Python for pure logic tests** (eye-comfort). Fast unit tests without cargo link.
+
+### Why that was the wrong long-term fit for *this* repo
+
+- Control plane is **Rust (`crates/archy`)** with **Eagle + Satellites + TEA**.
+- groxy should become a **satellite** (offline job style): Eagle starts poll/daemon; domain owns DM I/O + host dispatch — not a side Python tree forever.
+- **Data hygiene:** identities belong in env / gitignored local config / runtime `users/me`, never committed.
+
+### Target shape (Eagle / satellite)
+
+```text
+  XChat DM events  →  Msg::DmInbound
+         │
+         ▼
+      Eagle (phase: Idle | Polling | RunningHost | Outbound)
+         │ Cmd
+         ▼
+   Satellite: Groxy
+     - read events (xurl / HTTP)
+     - allowlist (local only)
+     - host job (inventory.sh / …)
+     - build outcome package
+     - send DM
 ```
 
-Install to PATH (optional):
+Skill: **eagle-satellite-elomaxz** (in-repo + global `~/.grok/skills/eagle-satellite-elomaxz`).
 
-```bash
-ln -sf "$PWD/bin/groxy" ~/.local/bin/groxy
-```
-
-## Allowlist (required)
-
-Default config: `config/groxy/allowlist.conf`
-
-```
-allowlist_ids=295441607
-allowlist_usernames=Peramanathan
-require_confirm=true
-```
-
-Or env:
-
-```bash
-export GROXY_ALLOWLIST_IDS=295441607
-export GROXY_ALLOWLIST_USERNAMES=Peramanathan
-```
-
-Empty allowlist = **fail closed** (nobody can command the host).
-
-## Commands (DM text)
-
-| DM text | Action |
-|---------|--------|
-| `help` / `!g help` | Command list |
-| `ping` | Host liveness + effect log |
-| `status` | `maintenance/inventory.sh --text` |
-| `inventory` | inventory JSON/text |
-| `audit` | security-audit (dry-run when supported) |
-| `omarchy` | `omarchy-status.sh` |
-| `run <prompt>` | `grok -p` with restricted tools (no YOLO by default) |
-| `!g <free text>` | Same as `run` (prefix **required** for free-form) |
-| `pkg …` etc. | High-blast → held until `confirm <token> …` |
-
-Optional prefixes: `!g`, `!groxy`, `groxy`.
-
-**Safety:** ordinary chat (e.g. “I have lost MFA…”) is **not** a command. Free-form only runs with `!g …` or an explicit `run …` verb. Single-letter aliases are not used (avoids English “I …” misfires).
+v1 Python stays as the reference loop + tests until a `crates/groxy` (or archy satellite) port lands.
 
 ## Safety
 
 - Untrusted senders rejected; public posts rejected.
-- High-blast verbs require `confirm <token>`.
-- Default mode is **dry-run** (writes outbound under work dir, no live DM).
-- `--live` sends real DMs via `xurl dm`.
-- groxy policy is independent of Grok `always-approve`.
+- High-blast needs confirm.
+- Default mode dry-run; `--live` sends DMs.
+- groxy policy is independent of Grok always-approve.
+- **Do not commit** `allowlist.local.conf` or real user ids.
 
 ## Layout
 
 | Path | Role |
 |------|------|
-| `bin/groxy` | Launchable entry |
-| `tools/groxy/` | Python package (parse, policy, dispatch, package, I/O) |
-| `config/groxy/allowlist.conf` | Operator allowlist |
-| `~/.local/state/groxy/` | Default state + effects + outbound packages |
-| `tools/groxy/tests/test_groxy.py` | Unit/integration tests |
+| `bin/groxy` | Entry |
+| `tools/groxy/` | Python v1 package |
+| `config/groxy/allowlist.conf` | Template (no identities) |
+| `config/groxy/allowlist.local.conf` | Operator private (gitignored) |
+| `docs/groxy.md` | This doc |
 
 ## Tests
 
 ```bash
 make groxy-test
-# or
-python3 tools/groxy/tests/test_groxy.py
-```
-
-## Work directory override
-
-```bash
-./bin/groxy --dry-run --work-dir /path/to/work inject "ping"
-# effects:  work/effects/host-effect-*.txt
-# outbound: work/outbound/evt-*/{summary.txt,visual.txt,visual.png,dm_payload.txt}
 ```

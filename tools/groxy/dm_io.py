@@ -146,6 +146,43 @@ class XurlDmIO:
             raise RuntimeError(f"xurl dm_events bad JSON: {e}: {raw[:200]}") from e
         return list(data.get("data") or [])
 
+    def send_text(self, recipient: str, text: str) -> dict[str, Any]:
+        recip = recipient if recipient.startswith("@") else recipient
+        proc = subprocess.run(
+            self._base() + ["dm", recip, text],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        return {
+            "ok": proc.returncode == 0,
+            "exit_code": proc.returncode,
+            "output": out.strip(),
+            "recipient": recip,
+            "dry_run": False,
+        }
+
+    def send_with_media(self, recipient: str, text: str, media_path: Path | None) -> dict[str, Any]:
+        # Upload visual for archive; do not append upload logs to DM body.
+        result: dict[str, Any] = {"media_upload": None}
+        if media_path and Path(media_path).is_file():
+            up = subprocess.run(
+                self._base() + ["media", "upload", str(media_path)],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+            result["media_upload"] = {
+                "ok": up.returncode == 0,
+                "output": ((up.stdout or "") + (up.stderr or "")).strip()[:500],
+            }
+        send = self.send_text(recipient, text)
+        send.update(result)
+        return send
+
 
 def _rate_limit_wait(blob: str) -> tuple[float | None, int | None]:
     """Return (sleep_sec, reset_unix) if this looks like a 429 / exhausted limit."""
@@ -165,45 +202,6 @@ def _rate_limit_wait(blob: str) -> tuple[float | None, int | None]:
     if is_429 or remaining == 0:
         return 90.0, reset_at
     return None, reset_at
-
-    def send_text(self, recipient: str, text: str) -> dict[str, Any]:
-        recip = recipient if recipient.startswith("@") else recipient
-        # xurl dm expects username; if numeric id, try as-is (may fail)
-        proc = subprocess.run(
-            self._base() + ["dm", recip, text],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
-        out = (proc.stdout or "") + (proc.stderr or "")
-        return {
-            "ok": proc.returncode == 0,
-            "exit_code": proc.returncode,
-            "output": out.strip(),
-            "recipient": recip,
-            "dry_run": False,
-        }
-
-    def send_with_media(self, recipient: str, text: str, media_path: Path | None) -> dict[str, Any]:
-        # Upload visual media for archive/future attach; do not append upload logs to the DM body
-        # (operator DMs stay outcome-first: done bullets + PR, no system noise).
-        result: dict[str, Any] = {"media_upload": None}
-        if media_path and Path(media_path).is_file():
-            up = subprocess.run(
-                self._base() + ["media", "upload", str(media_path)],
-                capture_output=True,
-                text=True,
-                timeout=120,
-                check=False,
-            )
-            result["media_upload"] = {
-                "ok": up.returncode == 0,
-                "output": ((up.stdout or "") + (up.stderr or "")).strip()[:500],
-            }
-        send = self.send_text(recipient, text)
-        send.update(result)
-        return send
 
 
 def resolve_xurl() -> str | None:

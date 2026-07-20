@@ -44,6 +44,10 @@ systemd/
 .composer/
 setups/
 
+# groxy operator identity (never commit real X user ids)
+config/groxy/allowlist.local.conf
+config/groxy/*.local.conf
+
 # Phase 4 lint caches
 __pycache__/
 .mypy_cache/

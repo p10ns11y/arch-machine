@@ -105,15 +105,11 @@ def load_policy_from_env(
     )
 
 
-def load_policy_file(path: Path) -> Policy:
-    """Load allowlist from a simple key=value or line-based config file."""
+def _parse_policy_text(text: str) -> tuple[set[str], set[str], bool | None]:
     ids: set[str] = set()
     users: set[str] = set()
-    require = True
-    if not path.is_file():
-        return load_policy_from_env()
-
-    for line in path.read_text(encoding="utf-8").splitlines():
+    require: bool | None = None
+    for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
@@ -132,20 +128,103 @@ def load_policy_file(path: Path) -> Policy:
             elif key in ("require_confirm", "require_confirm_high_blast"):
                 require = val not in ("0", "false", "False", "no")
         else:
-            # bare id or @username
             if line.startswith("@"):
                 users.add(line.lstrip("@").lower())
             elif line.isdigit():
                 ids.add(line)
             else:
                 users.add(line.lower())
+    return ids, users, require
 
-    # Merge env on top of file
+
+def load_policy_file(path: Path) -> Policy:
+    """Load allowlist from a simple key=value or line-based config file."""
+    if not path.is_file():
+        return load_policy_from_env()
+    ids, users, require = _parse_policy_text(path.read_text(encoding="utf-8"))
     env = load_policy_from_env(extra_ids=ids, extra_usernames=users)
+    if require is None or "GROXY_REQUIRE_CONFIRM" in os.environ:
+        conf = env.require_confirm_high_blast
+    else:
+        conf = require
     return Policy(
         allowlist_ids=env.allowlist_ids,
         allowlist_usernames=env.allowlist_usernames,
-        require_confirm_high_blast=require
-        if "GROXY_REQUIRE_CONFIRM" not in os.environ
-        else env.require_confirm_high_blast,
+        require_confirm_high_blast=conf,
+    )
+
+
+def policy_search_paths(repo_root: Path) -> list[Path]:
+    """Ordered allowlist locations (local/gitignored first). Never invent identities."""
+    return [
+        repo_root / "config" / "groxy" / "allowlist.local.conf",
+        Path.home() / ".config" / "groxy" / "allowlist.conf",
+        Path.home() / ".local" / "state" / "groxy" / "allowlist.conf",
+        repo_root / "config" / "groxy" / "allowlist.conf",
+    ]
+
+
+def load_policy(
+    *,
+    repo_root: Path,
+    config_path: Path | None = None,
+    extra_ids: Iterable[str] | None = None,
+    extra_usernames: Iterable[str] | None = None,
+) -> Policy:
+    """
+    Merge allowlist from the first existing config path + env + extras.
+    Committed allowlist.conf is a template (no operator IDs).
+    """
+    ids: set[str] = set()
+    users: set[str] = set()
+    require: bool | None = None
+
+    paths = [config_path] if config_path else policy_search_paths(repo_root)
+    for path in paths:
+        if path is None or not path.is_file():
+            continue
+        f_ids, f_users, f_req = _parse_policy_text(path.read_text(encoding="utf-8"))
+        ids |= f_ids
+        users |= f_users
+        if f_req is not None:
+            require = f_req
+        # Prefer the first *local* file that actually has identities; still merge env later.
+        if f_ids or f_users:
+            break
+
+    env = load_policy_from_env(extra_ids=ids, extra_usernames=users)
+    if extra_ids:
+        env_ids = set(env.allowlist_ids) | {str(x) for x in extra_ids if x}
+    else:
+        env_ids = set(env.allowlist_ids)
+    if extra_usernames:
+        env_users = set(env.allowlist_usernames) | {
+            u.lstrip("@").lower() for u in extra_usernames if u
+        }
+    else:
+        env_users = set(env.allowlist_usernames)
+
+    conf = env.require_confirm_high_blast
+    if require is not None and "GROXY_REQUIRE_CONFIRM" not in os.environ:
+        conf = require
+
+    return Policy(
+        allowlist_ids=frozenset(env_ids),
+        allowlist_usernames=frozenset(env_users),
+        require_confirm_high_blast=conf,
+    )
+
+
+def with_self_identity(policy: Policy, user_id: str | None, username: str | None) -> Policy:
+    """Add the authenticated operator to the allowlist (runtime only — not written to disk)."""
+    ids = set(policy.allowlist_ids)
+    users = set(policy.allowlist_usernames)
+    if user_id:
+        ids.add(str(user_id))
+    if username:
+        users.add(username.lstrip("@").lower())
+    return Policy(
+        allowlist_ids=frozenset(ids),
+        allowlist_usernames=frozenset(users),
+        require_confirm_high_blast=policy.require_confirm_high_blast,
     )
