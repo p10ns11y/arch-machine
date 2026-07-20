@@ -8,7 +8,9 @@
 mod actions;
 mod app;
 mod jobs;
+mod nav;
 mod root;
+mod theme;
 mod ui;
 
 use app::App;
@@ -120,24 +122,26 @@ fn suspend_and_run_grok(
 
     println!();
     println!("══════════════════════════════════════════════════");
-    println!("  tinfoil → Grok  (fullscreen interactive)");
+    println!("  archy → Grok  (interactive co-pilot)");
     println!("  root: {}", app.root.display());
     println!("  Exit Grok to return to the control plane.");
     println!("══════════════════════════════════════════════════");
     println!();
     // Write context file for operator / agent
-    let ctx_path = app.root.join("logs/tinfoil-grok-context.txt");
+    let ctx_path = app.root.join("logs/archy-grok-context.txt");
     if let Some(parent) = ctx_path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
+    let ask = app.suggested_grok_ask();
     let _ = std::fs::write(
         &ctx_path,
         format!(
-            "{}\n\n--- prompt hint ---\n{}\n",
-            app.grok_context, app.grok_prompt
+            "{}\n\n--- suggested ask ---\n{}\n\n--- standing orders ---\n{}\n",
+            app.grok_context, ask, app.grok_prompt
         ),
     );
     println!("Context written: {}", ctx_path.display());
+    println!("Suggested ask: {ask}");
     println!();
 
     match app.grok_launch_command() {

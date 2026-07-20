@@ -17,8 +17,6 @@ pub enum JobKind {
     InstallDryRun,
     Evidence,
     ActuateDry,
-    #[allow(dead_code)]
-    Custom,
 }
 
 impl JobKind {
@@ -32,33 +30,29 @@ impl JobKind {
             JobKind::InstallDryRun => "install --dry-run",
             JobKind::Evidence => "evidence",
             JobKind::ActuateDry => "pkg dry-run",
-            JobKind::Custom => "job",
         }
     }
 }
 
+/// Async stdio events from a running shell backend (satellite).
+/// Exit is polled via [`RunningJob::poll_exit`] — not a channel event.
 #[derive(Debug, Clone)]
 pub enum JobEvent {
     Line(String),
-    #[allow(dead_code)]
-    Finished { code: i32, elapsed_ms: u128 },
     SpawnFailed(String),
 }
 
+/// Offline-style job handle: fire command, stream lines, later poll outcome.
 pub struct RunningJob {
-    #[allow(dead_code)]
-    pub kind: JobKind,
-    #[allow(dead_code)]
-    pub title: String,
     pub child: Option<Child>,
     pub rx: Receiver<JobEvent>,
     pub started: Instant,
-    /// keep sender alive until threads finish (drop order)
+    /// Keep sender alive until reader threads finish (drop order).
     _tx: Sender<JobEvent>,
 }
 
 impl RunningJob {
-    pub fn spawn(kind: JobKind, title: String, mut cmd: Command) -> Self {
+    pub fn spawn(mut cmd: Command) -> Self {
         let (tx, rx) = mpsc::channel();
         let started = Instant::now();
 
@@ -72,8 +66,6 @@ impl RunningJob {
             Err(e) => {
                 let _ = tx.send(JobEvent::SpawnFailed(e.to_string()));
                 return Self {
-                    kind,
-                    title,
                     child: None,
                     rx,
                     started,
@@ -111,16 +103,8 @@ impl RunningJob {
             });
         }
 
-        // Waiter thread
-        let tx_wait = tx.clone();
-        // We cannot move child into waiter if we want kill — keep child in RunningJob
-        // and poll try_wait from the UI loop instead of a waiter thread.
-        // Drop unused to silence; finish polling is in App::poll_job.
-        let _ = tx_wait;
-
+        // Exit is polled from the UI loop (kill stays possible); no waiter thread.
         Self {
-            kind,
-            title,
             child: Some(child),
             rx,
             started,
@@ -242,4 +226,61 @@ pub fn build_evidence(root: &PathBuf) -> Command {
     c.env("TINFOIL_ROOT", root);
     c.current_dir(root);
     c
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::process::Stdio;
+
+    fn repo_root() -> PathBuf {
+        // crates/archy → repo root
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .expect("repo root")
+            .to_path_buf()
+    }
+
+    fn run_ok_nonempty(mut cmd: Command) {
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
+        let out = cmd.output().expect("spawn backend");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            out.status.success() || !stdout.is_empty() || !stderr.is_empty(),
+            "backend produced no output and failed: status={:?} stderr={stderr}",
+            out.status
+        );
+        assert!(
+            !stdout.is_empty() || !stderr.is_empty(),
+            "backend produced empty stdout+stderr"
+        );
+    }
+
+    #[test]
+    fn inventory_builder_smoke() {
+        let root = repo_root();
+        run_ok_nonempty(build_inventory(&root));
+    }
+
+    #[test]
+    fn catalog_builder_smoke() {
+        let root = repo_root();
+        run_ok_nonempty(build_catalog(&root, "docker"));
+    }
+
+    #[test]
+    fn omarchy_status_builder_smoke() {
+        let root = repo_root();
+        run_ok_nonempty(build_omarchy_status(&root));
+    }
+
+    #[test]
+    fn actuate_dry_builder_smoke() {
+        let root = repo_root();
+        run_ok_nonempty(build_actuate_update_dry(&root, "jq"));
+    }
 }
