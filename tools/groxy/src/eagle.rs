@@ -4,7 +4,7 @@
 use crate::allowlist::RemoteControlPolicy;
 use crate::command_parse::{DirectMessageEvent, ParsedRemoteCommand};
 use crate::host_job::{run_host_job, HostJobResult};
-use crate::outcome_package::{build_outbound_package, OutboundPackage};
+use crate::outcome_package::{self, OutboundPackage};
 use crate::state_store::GroxyState;
 use std::path::Path;
 
@@ -45,6 +45,7 @@ pub fn process_direct_message_event(
     effect_directory: &Path,
     package_directory_root: &Path,
     pull_request_url: Option<&str>,
+    session_label: Option<&str>,
 ) -> EventDispatchResult {
     let event_id = event.event_id().map(str::to_string);
     let sender_id = event.sender_id_str().map(str::to_string);
@@ -141,7 +142,13 @@ pub fn process_direct_message_event(
             duration_seconds: 0.0,
             effect_log_path: None,
         };
-        let package = build_outbound_package(&command.verb, false, &message, pull_request_url);
+        let package = outcome_package::build_outbound_package_with_session(
+            &command.verb,
+            false,
+            &message,
+            pull_request_url,
+            session_label,
+        );
         let package_dir = package_directory_root.join(format!(
             "evt-{}",
             event_id.as_deref().unwrap_or("pending")
@@ -168,7 +175,13 @@ pub fn process_direct_message_event(
                     state.mark_seen(id);
                 }
                 let message = format!("unknown or expired token {token}");
-                let package = build_outbound_package("confirm", false, &message, pull_request_url);
+                let package = outcome_package::build_outbound_package_with_session(
+                    "confirm",
+                    false,
+                    &message,
+                    pull_request_url,
+                    session_label,
+                );
                 let package_dir = package_directory_root
                     .join(format!("evt-{}", event_id.as_deref().unwrap_or("bad-confirm")));
                 let _ = package.write_to_directory(&package_dir);
@@ -199,8 +212,13 @@ pub fn process_direct_message_event(
                         state.mark_seen(id);
                     }
                     let message = "token sender mismatch".to_string();
-                    let package =
-                        build_outbound_package("confirm", false, &message, pull_request_url);
+                    let package = outcome_package::build_outbound_package_with_session(
+                        "confirm",
+                        false,
+                        &message,
+                        pull_request_url,
+                        session_label,
+                    );
                     return EventDispatchResult {
                         accepted: true,
                         kind: DispatchOutcomeKind::ConfirmSenderMismatch,
@@ -245,11 +263,12 @@ pub fn process_direct_message_event(
         effect_directory,
         confirmed,
     );
-    let package = build_outbound_package(
+    let package = outcome_package::build_outbound_package_with_session(
         &command.verb,
         host_result.succeeded,
         &host_result.output_text,
         pull_request_url,
+        session_label,
     );
     let package_dir = package_directory_root.join(format!(
         "evt-{}",
@@ -311,6 +330,7 @@ mod tests {
             dir.path(),
             dir.path(),
             None,
+            None,
         );
         assert!(!result.accepted);
         assert_eq!(result.kind, DispatchOutcomeKind::SenderNotAllowlisted);
@@ -347,6 +367,7 @@ mod tests {
             &dir.path().join("effects"),
             &dir.path().join("outbound"),
             Some("https://github.com/example/repo/pull/1"),
+            Some("test-session"),
         );
         assert!(result.accepted);
         assert_eq!(result.kind, DispatchOutcomeKind::Ok);

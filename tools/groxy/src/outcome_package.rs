@@ -225,6 +225,23 @@ pub fn build_outbound_package(
     raw_host_output: &str,
     explicit_pull_request_url: Option<&str>,
 ) -> OutboundPackage {
+    build_outbound_package_with_session(
+        verb,
+        succeeded,
+        raw_host_output,
+        explicit_pull_request_url,
+        None,
+    )
+}
+
+/// Same as [`build_outbound_package`] but tags multi-session / multi-project notifies.
+pub fn build_outbound_package_with_session(
+    verb: &str,
+    succeeded: bool,
+    raw_host_output: &str,
+    explicit_pull_request_url: Option<&str>,
+    session_label: Option<&str>,
+) -> OutboundPackage {
     let pull_request_url = resolve_pull_request_url(explicit_pull_request_url, raw_host_output);
     let done_lines = distill_done_lines(verb, succeeded, raw_host_output);
     let mark = if succeeded { "✓" } else { "✗" };
@@ -234,6 +251,9 @@ pub fn build_outbound_package(
         format!("{mark} Failed: {verb}")
     };
     let mut summary_lines = vec![title];
+    if let Some(label) = session_label.map(str::trim).filter(|s| !s.is_empty()) {
+        summary_lines.push(format!("• session: {label}"));
+    }
     for line in &done_lines {
         if line.starts_with('•') || line.starts_with('-') {
             summary_lines.push(line.clone());
@@ -244,8 +264,12 @@ pub fn build_outbound_package(
     if let Some(ref url) = pull_request_url {
         summary_lines.push(format!("PR: {url}"));
     }
+    let mut visual_lines = done_lines.clone();
+    if let Some(label) = session_label.map(str::trim).filter(|s| !s.is_empty()) {
+        visual_lines.insert(0, format!("session: {label}"));
+    }
     let visual_panel_text =
-        build_visual_panel(verb, succeeded, &done_lines, pull_request_url.as_deref());
+        build_visual_panel(verb, succeeded, &visual_lines, pull_request_url.as_deref());
     OutboundPackage {
         summary_text: summary_lines.join("\n"),
         visual_panel_text,
@@ -269,14 +293,16 @@ ownership: arch-machine=14 omarchy=157 user=65
 === Explicit packages (pacman -Qe) — first 40 ===
 pkg-a  1.0
 "#;
-        let package = build_outbound_package(
+        let package = build_outbound_package_with_session(
             "status",
             true,
             inventory_output,
             Some("https://github.com/example/arch-machine/pull/31"),
+            Some("my-workspace"),
         );
         let body = package.direct_message_body(900);
         assert!(body.contains("Done: status"));
+        assert!(body.contains("session: my-workspace"));
         assert!(body.contains("236 explicit"));
         assert!(body.contains("PR: https://github.com/example/arch-machine/pull/31"));
         assert!(!body.to_lowercase().contains("host="));

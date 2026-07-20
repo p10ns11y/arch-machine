@@ -158,40 +158,32 @@ arch-machine/
 └── docs/                   # start at docs/INDEX.md
 ```
 
-## Remote surfaces (`groxy`)
+## Remote surfaces (`groxy`) — any Grok workspace
 
-| Goal | Command | Notes |
-|------|---------|--------|
-| **Notify** on XChat | `./bin/groxy --live inject "status"` | Reliable host → DM |
-| **Control** Grok remotely | `./bin/groxy acp serve` | **ACP** WebSocket (`grok agent serve`) |
-| XChat DM → host poll | *(removed)* | `dm_events` is not a stable control plane |
+groxy is **session-aware plumbing**, not “only arch-machine.” Several Grok TUIs can be open; **none listen to XChat** unless something **delivers a prompt** (ACP or human typing).
+
+| Goal | How | Who is targeted? |
+|------|-----|------------------|
+| **Control** a Grok agent | `./bin/groxy acp serve --cwd /path/to/project` | **ACP client chooses** bind + session/cwd |
+| **Notify** on XChat | `./bin/groxy --live inject "status" --session-label name` | Outbound only; label disambiguates multi-project |
+| **DM → “the right TUI”** | *not productized* | Needs inbound transport **and** session registry/addressing |
 
 ```bash
 make groxy-test
-cargo build --manifest-path tools/groxy/Cargo.toml
-
-# Notify
+# Control this workspace via ACP (any project path):
+./bin/groxy acp serve --cwd "$PWD"
+# Notify (optional label when many projects share one X account):
 export GROXY_ALLOW_SELF=1
-./bin/groxy --live inject "ping"
-
-# Remote control (production inbound to Grok)
-./bin/groxy acp explain
-./bin/groxy acp status
-./bin/groxy acp serve --cwd "$PWD"    # 127.0.0.1:2419 + secret
+./bin/groxy --live inject "status" --session-label arch-machine
 ```
 
-Guide: [docs/groxy.md](docs/groxy.md).
-
-### Multi-Grok vs ACP vs XChat
+Guide (routing model in depth): [docs/groxy.md](docs/groxy.md).
 
 ```text
-ACP client ── WebSocket ──► grok agent serve ──► tools on host   ✅ control
-Laptop ── groxy inject ──► XChat (you)                           ✅ notify
-Phone XChat ── dm_events poll ──► host                           ❌ not supported
-Grok TUI #1/#2  ── local sessions only; not auto-fed from DMs
+ACP client ── picks agent/cwd ──► grok agent serve ──► that workspace   ✅
+inject [--session-label] ──► XChat notify                               ✅
+Phone DM ──► “which of my 3 Grok windows?”                              ❌ no ambient listeners
 ```
-
-Use **Tailscale/SSH** to reach ACP on loopback; keep a secret (`GROK_AGENT_SECRET` or `~/.local/state/groxy/acp-agent.secret`).
 
 ## Documentation
 

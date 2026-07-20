@@ -81,34 +81,41 @@ pub fn is_port_listening(bind: &str) -> bool {
 /// Print operator-facing architecture for ACP remote control.
 pub fn print_architecture_explanation() {
     println!(
-        r#"groxy + ACP remote control (production path)
-============================================
+        r#"groxy: multi-session model (any Grok workspace)
+=============================================
 
-Problem: XChat → laptop via GET /2/dm_events is not reliable (messages missing,
-rate limits). Host → XChat via inject works.
+Nuance most “DM → Grok” sketches miss:
+  Several Grok TUIs can be open. None of them listen to XChat by default.
+  A message must be addressed to a session (cwd / ACP endpoint / alias).
+  Without addressing + a reliable inbound transport, “DM to Grok” is undefined.
 
-Solution: control Grok with ACP; use XChat only for notifications.
+What exists today (no X webhooks / Account Activity):
 
-  Phone / laptop client
-        │  ACP (JSON-RPC over WebSocket)
-        ▼
-  grok agent serve   ◄──  groxy acp serve
-        │  tools, cwd, sessions
-        ▼
-  arch-machine host (files, shell, maintenance)
+  CONTROL (which agent?):
+    ACP client ── picks bind/cwd ──► grok agent serve  ◄── groxy acp serve
+                                         │
+                                         ▼
+                                    tools in THAT cwd
 
-  Optional notify:
-  groxy --live inject "status"  →  XChat (you)
+  NOTIFY (host → human):
+    any workspace ── groxy inject [--session-label NAME] ──► XChat
+
+  NOT OFFERED:
+    Phone XChat ── dm_events poll ──► “the right Grok window”
+    (events often missing; no session registry; 429 under load)
+
+Who is the chat for?
+  - ACP: the client chooses the agent (bind + session/new cwd).
+  - inject: optional --session-label so multi-project notifies are readable.
+  - Future inbound (only with real push): DM prefix !alias … → sessions.json
+    registry → ACP prompt or grok -p in that cwd. Never broadcast to all TUIs.
 
 Commands:
-  groxy acp serve [--bind 127.0.0.1:2419] [--secret …] [--cwd …]
-  groxy acp status [--bind …]
-  groxy acp explain
+  groxy acp serve [--bind 127.0.0.1:2419] [--secret …] [--cwd /any/project]
+  groxy acp status | groxy acp explain
+  groxy --live inject "status" --session-label my-app
 
-Security:
-  - Default bind is loopback only.
-  - Secret: GROK_AGENT_SECRET or ~/.local/state/groxy/acp-agent.secret
-  - For remote access use Tailscale/SSH tunnel, not open 0.0.0.0 without care.
+Security: loopback bind by default; Tailscale/SSH for remote; secret required.
 "#
     );
 }

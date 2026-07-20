@@ -1,12 +1,13 @@
-//! groxy — arch-machine remote surfaces (Rust satellite under Eagle discipline).
+//! groxy — multi-session Grok remote surfaces (notify + ACP control).
 //!
 //! Package path: `tools/groxy`. Binary: **groxy**.
+//! Works for **any workspace** (cwd); not limited to arch-machine.
 //!
 //! **Supported:**
-//! - `inject` — host job → XChat outcome DM (notify)
-//! - `acp serve` — production remote **control** via Grok ACP WebSocket
+//! - `inject` — host job → XChat outcome DM (notify; optional --session-label)
+//! - `acp serve` — remote **control** via Grok ACP (client picks which agent/cwd)
 //!
-//! **Not supported:** live XChat DM → host via `GET /2/dm_events` poll.
+//! **Not supported:** ambient XChat DM → “the right Grok TUI” (no listeners; no routing).
 
 mod acp_remote;
 mod allowlist;
@@ -28,16 +29,16 @@ use state_store::{default_state_path, load_state_compatible, save_state};
 use std::path::PathBuf;
 
 const BANNER: &str = "\
-groxy — arch-machine remote surfaces
-  inject     host → XChat outcome DM (notify; reliable)
-  acp serve  remote Grok control via ACP WebSocket (production inbound)
-  (no live XChat DM → host poll — dm_events is not a stable control plane)
+groxy — multi-session Grok remote surfaces (any workspace)
+  inject     host → XChat notify (optional --session-label for multi-project)
+  acp serve  control a Grok agent (ACP); client chooses which cwd/session
+  Grok TUIs do not listen to XChat DMs; addressing is explicit (ACP/cwd/label)
 ";
 
 #[derive(Parser, Debug)]
 #[command(
     name = "groxy",
-    about = "Host→XChat inject + ACP remote control for arch-machine",
+    about = "Multi-session Grok notify (inject) + ACP control — any workspace",
     long_about = BANNER,
     version
 )]
@@ -84,7 +85,8 @@ enum Commands {
     About,
     /// Run a host command and post outcome to XChat (or dry-run files).
     ///
-    /// Supported notify path: host/agent → XChat.
+    /// Supported notify path: host/agent → XChat. Use --session-label when
+    /// several workspaces notify the same account.
     Inject {
         /// Command text, e.g. status or ping
         text: String,
@@ -93,6 +95,9 @@ enum Commands {
         sender_id: String,
         #[arg(long)]
         event_id: Option<String>,
+        /// Label this workspace/session in the XChat package (multi-project notify).
+        #[arg(long)]
+        session_label: Option<String>,
     },
     /// Build a demo outbound package without running a host job.
     DemoOutbound {
@@ -175,7 +180,8 @@ fn run(cli: Cli) -> i32 {
             text,
             sender_id,
             event_id,
-        } => run_inject(&cli, text, sender_id, event_id),
+            session_label,
+        } => run_inject(&cli, text, sender_id, event_id, session_label),
         Commands::Acp { action } => run_acp(&cli, action),
     }
 }
@@ -326,6 +332,7 @@ fn run_inject(
     text: String,
     sender_id: String,
     event_id: Option<String>,
+    session_label: Option<String>,
 ) -> i32 {
     let live = is_live(cli);
     let mut policy = resolve_policy(cli, live);
@@ -369,6 +376,7 @@ fn run_inject(
         &work.join("effects"),
         &work.join("outbound"),
         pr.as_deref(),
+        session_label.as_deref(),
     );
     let _ = save_state(&state_path, &state);
 
