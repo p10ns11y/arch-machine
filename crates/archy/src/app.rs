@@ -268,8 +268,17 @@ impl App {
             self.last_kind.map(SatelliteId::from_job_kind)
         });
         let Some(id) = sat else {
-            return "Orient on this arch-machine host; suggest the next dry-run maintenance step."
-                .into();
+            let root = self.root.display();
+            return format!(
+                "No job finished yet. Orient on arch-machine at `{root}`.\n\
+                 Produce ### Next actions with copy-paste bash, e.g.:\n\
+                 ```bash\n\
+                 cd {root}\n\
+                 bash maintenance/inventory.sh --text\n\
+                 bash maintenance/security-audit.sh --global --dry-run\n\
+                 cargo run --release --manifest-path crates/archy/Cargo.toml\n\
+                 ```"
+            );
         };
         let tail = self
             .lines
@@ -308,7 +317,8 @@ impl App {
 }
 
 fn default_grok_prompt() -> String {
-    "You are co-pilot for arch-machine/archy. Prefer dry-run, evidence, and explicit next steps."
+    "Evidence-first. Every recommendation needs a real shell command in a bash fence. \
+     Dry-run before mutate. Never invent package/host facts — use context file + stdio."
         .into()
 }
 

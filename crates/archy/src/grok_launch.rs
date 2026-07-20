@@ -32,6 +32,9 @@ pub struct GrokLaunchPlan {
 }
 
 /// Compose the text that Grok should see first (ask + context path + standing orders).
+///
+/// Output contract: crystal-clear next actions with **actual shell commands**
+/// the operator can copy-paste (dry-run first).
 pub fn compose_preload_prompt(
     ask: &str,
     context_file: &Path,
@@ -40,20 +43,38 @@ pub fn compose_preload_prompt(
     let ask = ask.trim();
     let standing = standing.trim();
     format!(
-        "You are co-pilot for arch-machine **archy** (Omarchy/Arch maintenance).\n\
-         Prefer dry-run, evidence, and explicit next steps. Do not invent host state —\n\
-         read the context file if needed.\n\
+        "You are co-pilot for arch-machine **archy** (Omarchy / Arch Linux maintenance).\n\
+         Do not invent host state — read the context file when paths/exit codes matter.\n\
+         Prefer dry-run, evidence, and fail-closed safety.\n\
          \n\
-         ## Suggested ask\n\
+         ## Your deliverable (required format)\n\
+         Reply with a short diagnosis (≤5 lines), then a section exactly titled:\n\
+         \n\
+         ### Next actions\n\
+         \n\
+         Numbered list. **Every** item must include:\n\
+         1. One-line goal (why)\n\
+         2. A fenced `bash` block with the **real command(s)** to run from the repo root\n\
+            (use absolute paths only when the context file gives them)\n\
+         3. Expected success signal (exit 0 / greppable line)\n\
+         \n\
+         Rules for commands:\n\
+         - Prefer dry-run / read-only first (`--dry-run`, `ss`, inventory, audit)\n\
+         - No vague steps like \"check the logs\" without a concrete command\n\
+         - No sudo password prompts in the command if avoidable; note when `sudo -n` is required\n\
+         - If something is blocked (missing tool, no sudo), give the install/enable command too\n\
+         - After the list, one line: `Primary: N` (the single best next step)\n\
+         \n\
+         ## Job-specific ask\n\
          {ask}\n\
          \n\
-         ## Context file (job stdio tail + phase)\n\
-         {ctx}\n\
+         ## Context file (phase, sat, exit, stdio tail)\n\
+         Read: `{ctx}`\n\
          \n\
          ## Standing orders\n\
          {standing}\n",
         ask = if ask.is_empty() {
-            "Review the latest archy job output and propose the safest next dry-run action."
+            "Review the latest archy job output. Produce ### Next actions with copy-paste bash."
         } else {
             ask
         },
@@ -138,19 +159,17 @@ impl GrokLaunchPlan {
 
     /// True if argv includes a non-empty preload (positional or `-p` body).
     pub fn has_preload_prompt(&self) -> bool {
+        let is_preload = |a: &str| {
+            !a.starts_with('-')
+                && (a.contains("### Next actions")
+                    || a.contains("Job-specific ask")
+                    || a.contains("Suggested ask"))
+        };
         match self.mode {
-            GrokLaunchMode::Interactive => {
-                // last arg is composed prompt; must not be only flags
-                self.args
-                    .last()
-                    .map(|a| !a.starts_with('-') && a.contains("Suggested ask"))
-                    .unwrap_or(false)
-            }
-            GrokLaunchMode::SingleTurn => {
-                self.args.windows(2).any(|w| {
-                    (w[0] == "-p" || w[0] == "--single") && w[1].contains("Suggested ask")
-                })
-            }
+            GrokLaunchMode::Interactive => self.args.last().map(|a| is_preload(a)).unwrap_or(false),
+            GrokLaunchMode::SingleTurn => self.args.windows(2).any(|w| {
+                (w[0] == "-p" || w[0] == "--single") && is_preload(&w[1])
+            }),
         }
     }
 }
@@ -218,7 +237,10 @@ mod tests {
         assert_eq!(plan.args[1], root.display().to_string());
         let prompt = plan.args.last().unwrap();
         assert!(prompt.contains("Explain audit FAIL"));
-        assert!(prompt.contains("Suggested ask"));
+        assert!(
+            prompt.contains("Job-specific ask") || prompt.contains("Suggested ask")
+        );
+        assert!(prompt.contains("### Next actions"));
         assert!(prompt.contains(ctx.display().to_string().as_str()));
         // Must NOT be single-turn -p as default interactive
         assert!(!plan.args.iter().any(|a| a == "-p" || a == "--single"));
@@ -266,6 +288,37 @@ mod tests {
         assert!(p.contains("do X"));
         assert!(p.contains("/r/logs/ctx.txt"));
         assert!(p.contains("stand"));
+    }
+
+    #[test]
+    fn compose_requires_next_actions_with_bash_commands() {
+        let p = compose_preload_prompt(
+            "explain audit",
+            Path::new("/repo/logs/archy-grok-context.txt"),
+            "dry-run first",
+        );
+        assert!(
+            p.contains("### Next actions"),
+            "must require Next actions section: {p}"
+        );
+        assert!(
+            p.contains("fenced `bash`") || p.contains("```bash") || p.contains("bash` block"),
+            "must require bash command blocks: {p}"
+        );
+        assert!(p.contains("Primary:"));
+        assert!(p.contains("Suggested ask") || p.contains("Job-specific ask"));
+        // has_preload still works
+        let plan = plan_launch(
+            "grok",
+            Path::new("/repo"),
+            "explain audit",
+            Path::new("/repo/logs/archy-grok-context.txt"),
+            "dry-run first",
+            false,
+            GrokLaunchMode::Interactive,
+        );
+        assert!(plan.has_preload_prompt());
+        assert!(plan.composed_prompt.contains("### Next actions"));
     }
 
     #[test]

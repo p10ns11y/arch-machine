@@ -183,43 +183,151 @@ pub fn on_finished(id: SatelliteId, code: i32, lines: &[String]) -> FinishPlan {
     }
 }
 
+/// Job-aware co-pilot ask: include seed commands so Grok returns runnable bash.
 pub fn grok_ask(
     id: SatelliteId,
     code: Option<i32>,
     ctx: &SatContext<'_>,
     lines_tail: &str,
 ) -> String {
-    let _ = lines_tail;
-    match (id, code) {
+    let root = ctx.root.display();
+    let exit = code
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| "unknown".into());
+    let tail_note = if lines_tail.trim().is_empty() {
+        "(stdio tail empty — still propose safe read-only commands)".into()
+    } else {
+        format!(
+            "Key stdio lines (also full tail in context file):\n{}",
+            lines_tail
+                .lines()
+                .rev()
+                .take(12)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    };
+
+    let seeds = match id {
+        SatelliteId::Inventory => format!(
+            "Seed commands (adapt after reading summary):\n\
+             ```bash\n\
+             cd {root}\n\
+             bash maintenance/inventory.sh --text\n\
+             bash maintenance/security-audit.sh --global --dry-run\n\
+             bash maintenance/package-actuate.sh --update jq --dry-run\n\
+             ```"
+        ),
+        SatelliteId::Catalog => format!(
+            "Seed commands for query `{q}`:\n\
+             ```bash\n\
+             cd {root}\n\
+             bash maintenance/catalog.sh --text {q}\n\
+             bash maintenance/package-actuate.sh --update {q} --dry-run\n\
+             ```",
+            q = ctx.catalog_query
+        ),
+        SatelliteId::OmarchyStatus => format!(
+            "Seed commands:\n\
+             ```bash\n\
+             cd {root}\n\
+             bash maintenance/omarchy-status.sh --text\n\
+             omarchy version 2>/dev/null || true\n\
+             omarchy theme current 2>/dev/null || true\n\
+             ```"
+        ),
+        SatelliteId::AuditGlobal => format!(
+            "Seed commands (threat areas malware/ports/supply/config):\n\
+             ```bash\n\
+             cd {root}\n\
+             bash maintenance/security-audit.sh --global --dry-run\n\
+             bash maintenance/security-audit.sh --global\n\
+             # if FAIL on malware and passwordless sudo available:\n\
+             sudo -n rkhunter --check --sk --nocolors 2>/dev/null | tail -40\n\
+             ss -H -tuln\n\
+             ```"
+        ),
+        SatelliteId::AuditProject => format!(
+            "Seed commands for project `{p}`:\n\
+             ```bash\n\
+             cd {root}\n\
+             bash maintenance/security-audit.sh --project {p}\n\
+             bash maintenance/security-audit.sh --project {p} --dry-run 2>/dev/null || true\n\
+             ```",
+            p = ctx.project_path
+        ),
+        SatelliteId::InstallDry => format!(
+            "Seed commands for profile `{prof}`:\n\
+             ```bash\n\
+             cd {root}\n\
+             bash install.sh --profile {prof} --dry-run\n\
+             # real apply only after review (consent):\n\
+             # bash install.sh --profile {prof}\n\
+             ```",
+            prof = ctx.install_profile
+        ),
+        SatelliteId::Evidence => format!(
+            "Seed commands:\n\
+             ```bash\n\
+             cd {root}\n\
+             bash maintenance/extract-evidence.sh --dry-run\n\
+             ls -lt logs/evidence* 2>/dev/null | head\n\
+             ```"
+        ),
+        SatelliteId::ActuateDry => format!(
+            "Seed commands for package `{pkg}`:\n\
+             ```bash\n\
+             cd {root}\n\
+             bash maintenance/package-actuate.sh --update {pkg} --dry-run\n\
+             # omarchy alt (if present):\n\
+             omarchy pkg present {pkg} 2>/dev/null || true\n\
+             ```",
+            pkg = ctx.actuate_pkg
+        ),
+    };
+
+    let focus = match (id, code) {
         (SatelliteId::Inventory, Some(0)) => {
-            "From this inventory: flag drift vs omarchy-baseline and tools.yaml; suggest one dry-run fix."
-                .into()
+            "Inventory OK: if tools_yaml_miss or upgradable > 0, prioritize install/actuate dry-run; else audit."
         }
         (SatelliteId::Inventory, _) => {
-            "Inventory failed or partial — diagnose the error and propose a safe re-run.".into()
+            "Inventory failed/partial: fix spawn/path first, then re-run inventory."
         }
-        (SatelliteId::Catalog, _) => format!(
-            "Catalog query '{}': interpret hits and next install/actuate dry-run.",
-            ctx.catalog_query
-        ),
-        (SatelliteId::OmarchyStatus, _) => {
-            "Omarchy status: summarize host health, theme, and any update path.".into()
+        (SatelliteId::AuditGlobal, Some(0)) | (SatelliteId::AuditProject, Some(0)) => {
+            "Audit clean or warn-only: list WARN lines and exact fix commands; evidence dry-run next."
         }
         (SatelliteId::AuditGlobal, _) | (SatelliteId::AuditProject, _) => {
-            "Explain audit findings; prioritize one remediation with dry-run first.".into()
+            "Audit non-zero: treat FAIL first (malware/ports/config), then WARN; give exact commands."
         }
-        (SatelliteId::InstallDry, _) => format!(
-            "Review install --profile {} --dry-run plan; call out risks before any apply.",
-            ctx.install_profile
-        ),
-        (SatelliteId::Evidence, _) => {
-            "Evidence dry-run finished — what should we include or fix before a real extract?".into()
+        (SatelliteId::InstallDry, _) => {
+            "Install dry-run: extract planned packages/risks; only then optional real install command."
         }
-        (SatelliteId::ActuateDry, _) => format!(
-            "Package actuate dry-run for '{}': confirm plan, refuse-list, Omarchy alt path.",
-            ctx.actuate_pkg
-        ),
-    }
+        (SatelliteId::ActuateDry, _) => {
+            "Actuate dry-run: confirm planned pacman/omarchy command; refuse silent --yes."
+        }
+        (SatelliteId::Catalog, _) => "Catalog: map hits to actuate/install dry-run commands.",
+        (SatelliteId::OmarchyStatus, _) => {
+            "Omarchy status: health + theme; concrete omarchy/arch-machine follow-ups."
+        }
+        (SatelliteId::Evidence, _) => "Evidence: when to run real extract vs stay dry-run.",
+    };
+
+    format!(
+        "Job={label} exit={exit}. {focus}\n\
+         {tail_note}\n\
+         \n\
+         {seeds}\n\
+         \n\
+         Produce ### Next actions with copy-paste `bash` blocks (see standing output format).",
+        label = id.label(),
+        exit = exit,
+        focus = focus,
+        tail_note = tail_note,
+        seeds = seeds,
+    )
 }
 
 /// Map next-action ids that fire satellites back to SatelliteId.
@@ -263,5 +371,33 @@ mod tests {
         ];
         let plan = on_finished(SatelliteId::Inventory, 0, &lines);
         assert_eq!(plan.next_actions[0].id, ActionId::InstallDry);
+    }
+
+    #[test]
+    fn grok_ask_includes_runnable_seed_commands() {
+        let root = std::path::Path::new("/home/u/arch-machine");
+        let ctx = SatContext {
+            root,
+            catalog_query: "docker",
+            project_path: ".",
+            install_profile: "minimal",
+            actuate_pkg: "jq",
+        };
+        let ask = grok_ask(
+            SatelliteId::AuditGlobal,
+            Some(1),
+            &ctx,
+            "[!] ports public high ports: 9999\n## SUMMARY\nexit=1",
+        );
+        assert!(ask.contains("```bash"), "seed bash fence missing: {ask}");
+        assert!(
+            ask.contains("security-audit.sh"),
+            "must name real audit script: {ask}"
+        );
+        assert!(
+            ask.contains("/home/u/arch-machine"),
+            "must use real root in commands: {ask}"
+        );
+        assert!(ask.contains("### Next actions") || ask.contains("Next actions"));
     }
 }
