@@ -2,12 +2,13 @@
 
 **Keeper deep-dive:** [keeper.md](./keeper.md) · [coming-next-keeper.md](./coming-next-keeper.md) (SN-KEEP-*)  
 **Main control plane:** [`tools/archy`](../tools/archy/) (`archy` binary — entry + loop)  
+**Remote surfaces:** [`tools/groxy`](../tools/groxy/) (`groxy` — inject notify + ACP serve) · [docs/groxy.md](../docs/groxy.md)  
 **Agent orchestration:** [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` (Grok slash)  
 **Legacy:** gum `lib/tui/` · optional Go shim `bin/tinfoil.go` (dispatch only; not the product)
 
 ## §0 Mission
 
-Ship and maintain a **thin-first, evidence-always, self-remediating** Arch Linux workstation platform steered by **`archy`** (Ratatui entry + loop), with shell backends as the iron peak, profile-driven ML/security modules, and a **threshold multi-factor keeper** for secrets that outlive passphrase loss.
+Ship and maintain a **thin-first, evidence-always, self-remediating** Arch Linux workstation platform steered by **`archy`** (Ratatui entry + loop), with shell backends as the iron peak, profile-driven ML/security modules, **session-aware remote surfaces** (`groxy`: ACP control + XChat notify), and a **threshold multi-factor keeper** for secrets that outlive passphrase loss.
 
 ## §0b Ten-year thrive picture
 
@@ -16,6 +17,7 @@ flowchart LR
   subgraph surfaces [OperatorSurfaces]
     Archy[archy — entry + loop controller]
     Grok[Grok plugin — complex orchestrator]
+    Groxy[groxy — inject + ACP]
     Shim[Optional thin CLI shim]
   end
   subgraph backends [ShellBackends iron peak]
@@ -31,6 +33,8 @@ flowchart LR
   end
   Archy --> backends
   Grok --> backends
+  Groxy -->|inject host jobs| backends
+  Groxy -->|acp serve| GrokAgent[grok agent serve]
   Shim --> backends
   backends --> Extract
   Extract --> Bundles
@@ -40,12 +44,12 @@ flowchart LR
 
 | Horizon | Outcome | Signal |
 |---------|---------|--------|
-| 2026 | **archy** on PATH from thin install; shell backends + inventory; Grok expand; gum frozen | SN-ARCHY-1; SN-INV-1 landed |
+| 2026 | **archy** on PATH from thin install; shell backends + inventory; Grok expand; gum frozen; **groxy inject+ACP** | SN-ARCHY-1; SN-INV-1; SN-GROXY-1 landed |
 | 2028 | Autonomous weekly sentinel on fleet machines | systemd timer + evidence drift alerts |
 | 2030 | Portable profile packs beyond Arch | adapter modules per distro |
-| 2036 | Agent-native ops: bundles + keeper under policy | LLM consumes TOON; drill-proven vault |
+| 2036 | Agent-native ops: bundles + keeper under policy; multi-session remote by registry | LLM consumes TOON; drill-proven vault; SN-GROXY-3 only if inbound exists |
 
-**Surface bet (locked):** **`archy` is the main interactive controller** (entry + event loop + next actions + Grok dock). **Complex orchestration → Grok plugin.** **Iron peak → `maintenance/*.sh` + `install.sh`.** Optional Go/`tinfoil` = thin subcommand shim only — shrink or exit once PATH/`archy` + shell cover day-1 jobs. Gum `lib/tui/` is a **legacy bridge**, not the product.
+**Surface bet (locked):** **`archy` is the main interactive controller** (entry + event loop + next actions + Grok dock). **Complex orchestration → Grok plugin.** **Remote control → ACP** (`groxy acp serve`); **remote notify → inject** (host→XChat). **Iron peak → `maintenance/*.sh` + `install.sh`.** Optional Go/`tinfoil` = thin subcommand shim only — shrink or exit once PATH/`archy` + shell cover day-1 jobs. Gum `lib/tui/` is a **legacy bridge**, not the product. **No ambient XChat→TUI listeners** without explicit session addressing.
 
 ## §1 Scorecard
 
@@ -59,13 +63,14 @@ flowchart LR
 | Catalog search | **B** | Shell backend + archy menu | `maintenance/catalog.sh`, SN-CAT-1 |
 | Select update/remove | **C** | Dry-run actuate + refuse-list; multi-select UX in archy next | `maintenance/package-actuate.sh`, SN-INV-2 |
 | Grok agent TUI | **B+** | Slash status/init/audit/expand; fail closed | `plugins/arch-machine`, BOUNDARY.md |
+| **groxy remote surfaces** | **B+** | inject (host→XChat) + `acp serve`; poll removed; multi-session docs | `tools/groxy`, `docs/groxy.md`, SN-GROXY-1 |
 | Gum TUI (legacy) | C+ | Works; freeze feature growth | `lib/tui/*.sh`, Issue #7 |
 | Go shim (optional) | C+ | Dispatcher only; not the control plane | `bin/tinfoil.go` |
 | Keeper (MFA vault) | **A-** | k=3 n=4 + PQ seal + drill; PR open | `modules/security/keeper`, PR #28 |
 | Profiles | B+ | YAML compose; harness asserts module.category | `config/profiles/*.yaml`, SN-3 harness |
 | Evidence | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
 | Remediation policy | A | Repo applies own 6-step policy | `policies/security-remediation.md` |
-| CI | B+ | shellcheck, go, yaml, evidence smoke | `.github/workflows/ci.yml` |
+| CI | B | shellcheck, go, yaml, evidence smoke; **groxy tests local-only** | `.github/workflows/ci.yml`; gap SN-GROXY-2 |
 | Agent skills | B+ | Symlinked skills + overlays | `AGENTS.md`, `.agents/` |
 
 ## §2 System map today
@@ -74,6 +79,10 @@ flowchart LR
 flowchart TD
   A[archy — main entry + loop] -->|spawn| B[maintenance/*.sh + install.sh]
   A -->|optional dock| G[grok]
+  X[groxy inject] -->|host job| B
+  X -->|outcome DM| XChat[XChat notify]
+  Acp[groxy acp serve] -->|wrap| Gas[grok agent serve WS]
+  Nvim[Neovim avante / CC] -->|stdio ACP| GrokStdio[grok agent stdio]
   S[Optional Go shim] -->|dispatch| B
   Gum[gum lib/tui — legacy] -->|bridge| B
   B --> E[extract-evidence → logs/]
@@ -82,13 +91,15 @@ flowchart TD
 
 Runtime today: thin install copies repo under `/usr/share/tinfoil/` and installs the **optional Go shim** at `/usr/local/bin/tinfoil`. **`archy` is the intended day-1 controller** but is not yet installed to PATH by `--thin` (gap = SN-ARCHY-1). Until then: `make archy` and run `./tools/archy/target/debug/archy` with `TINFOIL_ROOT` set to the checkout (or `/usr/share/tinfoil`).
 
+**Remote today:** `./bin/groxy` — **control** via `acp serve` (any project cwd); **notify** via `inject [--session-label]`. Live `dm_events` poll is **gone** (rate-limited + never saw operator pings). Grok TUIs are not XChat listeners; addressing is client-chosen ACP cwd or inject label. Guide: [docs/groxy.md](../docs/groxy.md).
+
 ## §4 Musk 5-step on backlog
 
-1. **Question** — Why install a Go shim by default when archy is the product surface?
-2. **Delete** — Stop documenting gum/`tinfoil tui` as the primary path
-3. **Simplify** — Thin install ships **`archy` on PATH**; shell backends stay the contract
-4. **Accelerate** — Dogfood `make archy` + `make lint` in verification cockpit
-5. **Automate** — Weekly timer generates evidence without human
+1. **Question** — Why install a Go shim by default when archy is the product surface? Why poll DMs when push inbound is unavailable?
+2. **Delete** — Stop documenting gum/`tinfoil tui` as the primary path; **delete live DM→host poll** (done SN-GROXY-1)
+3. **Simplify** — Thin install ships **`archy` on PATH**; shell backends stay the contract; remote = **ACP + inject** only
+4. **Accelerate** — Dogfood `make archy` + `make groxy-test` + `make lint` in verification cockpit
+5. **Automate** — Weekly timer generates evidence without human; CI runs groxy tests (SN-GROXY-2)
 
 ## §6 Guardrails
 
@@ -101,6 +112,9 @@ Runtime today: thin install copies repo under `/usr/share/tinfoil/` and installs
 | Silent bulk uninstall | dry-run default + refuse-list for critical pkgs |
 | Full Ubuntu Software / Electron store | Searchable catalog over tools.yaml + pacman |
 | New business logic in Rust duplicating shell | archy steers; scripts execute |
+| Live `dm_events` poll or fake “DM→open TUI” | **ACP** for control; **inject** for host→XChat notify |
+| Inbound XChat control without reliable source **and** session registry | Park SN-GROXY-3 until both exist |
+| Broadcast one DM to every Grok window | Explicit alias / cwd / ACP endpoint only |
 
 ## §7 Blueprint cards
 
@@ -137,17 +151,18 @@ flowchart LR
   dev[Agent edit] --> lint[make lint]
   lint --> prof[make validate-profiles]
   prof --> archy[make archy]
-  archy --> thin[install.sh --validate]
+  archy --> groxy[make groxy-test]
+  groxy --> thin[install.sh --validate]
 ```
 
 | File | Work |
 |------|------|
-| `AGENTS.md` | document verify block with `make archy` |
-| `Makefile` | keep `archy` / `archy-release` stable |
+| `AGENTS.md` | document verify block with `make archy` + `make groxy-test` |
+| `Makefile` | keep `archy` / `archy-release` / `groxy-test` stable |
 
-**Done when:** lint + profiles + archy build + install validate exit 0 on sentinel.
+**Done when:** lint + profiles + archy build + groxy tests + install validate exit 0 on sentinel.
 
-**Verify:** `make lint && make validate-profiles && make archy && ./tools/archy/target/debug/archy --print-root && ./install.sh --validate`
+**Verify:** `make lint && make validate-profiles && make archy && make groxy-test && ./tools/archy/target/debug/archy --print-root && ./install.sh --validate`
 
 ### SN-2 · gum TUI — **SUPERSEDED / freeze**
 
@@ -391,6 +406,68 @@ flowchart LR
 
 **Depends:** SN-EC-CAL preferred first; cultures can sequence IN → SE → US.
 
+### SN-GROXY-1 · inject + ACP remote surfaces — **MVP landed**
+
+**Problem:** Operators need phone/remote *notify* and IDE/remote *control* without pretending open Grok TUIs listen to XChat.
+
+```mermaid
+flowchart LR
+  AcpClient[ACP client] --> Serve[groxy acp serve]
+  Serve --> GrokWS[grok agent serve]
+  Host[host job] --> Inject[groxy inject]
+  Inject -->|optional label| XChat[XChat DM]
+  Phone[Phone DM] -.->|not product| Dead[no ambient listener]
+```
+
+| File | Work |
+|------|------|
+| `tools/groxy/` | Rust satellite: Eagle inject path, outcome packages, allowlist |
+| `tools/groxy/src/acp_remote.rs` | `acp {explain,status,serve}` wraps `grok agent serve` |
+| `tools/groxy/src/main.rs` | Drop live `dm_events` poll/once from CLI |
+| `docs/groxy.md` + README | Multi-session routing; Neovim avante/CodeCompanion stdio ACP |
+| `make groxy-test` | Unit tests (17+) for policy, packages, grok resolve |
+
+**Done when (MVP):** dry-run + live inject sends/writes outcome; `--session-label` tags multi-project notifies; `acp serve --cwd` launches agent; docs state poll is out and TUIs are not DM listeners. **(Met on branch `feat/groxy-xchat-remote`.)**
+
+**Verify:** `make groxy-test` · `./bin/groxy acp explain` · `./bin/groxy --dry-run inject "ping" --session-label test`
+
+### SN-GROXY-2 · CI `cargo test` for groxy — **next**
+
+**Problem:** `make groxy-test` is local-only; CI can ship regressions on inject/ACP helpers unnoticed.
+
+| File | Work |
+|------|------|
+| `.github/workflows/ci.yml` | Job or step: `cargo test --manifest-path tools/groxy/Cargo.toml` |
+| `AGENTS.md` verify block | Already lists groxy; keep as gate |
+
+**Done when:** CI fails on red `tools/groxy` tests on default PR branches.
+
+**Verify:** Open PR touching `tools/groxy` → CI green; break a test → CI red.
+
+### SN-GROXY-3 · Session registry + inbound addressing — **parked**
+
+**Problem:** “DM → the right of N Grok windows” needs reliable inbound **and** a registry; poll alone never delivered.
+
+```mermaid
+flowchart LR
+  Inbound[Reliable event source TBD] --> Disp[dispatcher]
+  Reg[sessions.json alias cwd acp] --> Disp
+  Disp -->|session/prompt| One[one ACP handle]
+  Disp -.->|refuse| All[broadcast all TUIs]
+```
+
+| File | Work |
+|------|------|
+| `~/.local/state/groxy/sessions.json` | alias → cwd + ACP endpoint (design in docs) |
+| dispatcher | resolve `!alias` → one prompt target |
+| product gate | **Do not ship** registry-only without (1) reliable inbound |
+
+**Done when:** Documented inbound product exists; registry + alias resolve dogfood’d; zero broadcast-default.
+
+**Verify:** Single alias routes to one serve; unknown alias fails closed.
+
+**Depends:** External inbound (not Account Activity poll). Until then: use ACP client addressing + inject labels only.
+
 ### SN-KEEP · Keeper follow-ups (see coming-next-keeper.md)
 
 Full cards: [coming-next-keeper.md](./coming-next-keeper.md) · architecture: [keeper.md](./keeper.md)
@@ -432,6 +509,10 @@ gantt
   SN-TUI-RUST MVP         :rust, 2026-07-18, 1d
   SN-GO-THIN demote shim  :go, after a1, 3d
   SN-2 gum freeze         :sn2, 2026-07-18, 1d
+  section Remote groxy
+  SN-GROXY-1 inject ACP   :done, gx1, 2026-07-18, 3d
+  SN-GROXY-2 CI cargo     :gx2, 2026-07-20, 2d
+  SN-GROXY-3 registry     :gx3, after gx2, 14d
   section Keeper
   SN-KEEP-1 dogfood drill :k1, 2026-07-18, 3d
   SN-KEEP-2 CI cargo      :k2, after k1, 3d
@@ -447,6 +528,8 @@ gantt
 - `logs/evidence-bundle-*.json` age > 7d on active machines
 - `archy` missing from PATH after thin install (SN-ARCHY-1 regression)
 - Control-plane build drift: `tools/archy` vs installed binary
+- `make groxy-test` red; docs re-introduce DM poll as supported path
+- ACP serve cannot resolve `grok` on PATH (avante / `acp status` miss)
 
 ## §11 Done log
 
@@ -467,12 +550,16 @@ gantt
 | SN-INV-2 actuate dry-run | `maintenance/package-actuate.sh` + refuse-list |
 | SN-3 profile harness | `scripts/profile-validation-harness.sh` (module.category) |
 | Loop controller name | `archy` (was tinfoil-tui) |
+| **SN-GROXY-1** inject + ACP; drop DM poll | `tools/groxy`, `docs/groxy.md`; commits `bc67c8e`…`dd2019c` |
+| Multi-session routing + `--session-label` | `docs/groxy.md`, `outcome_package` session tag |
+| Neovim ACP setup (avante / CodeCompanion) | `docs/groxy.md` IDE section; `scripts/verify-nvim-avante.sh` |
 
 ## §13 References
 
 | Source | Use |
 |--------|-----|
 | `tools/archy/README.md` | Control plane keys + backends |
+| `docs/groxy.md` | Remote surfaces: inject, ACP, multi-session, Neovim |
 | `docs/INDEX.md` | System map |
 | `arch-design/keeper.md` | Keeper architecture + mermaid |
 | `arch-design/coming-next-keeper.md` | SN-KEEP-* backlog |
@@ -484,4 +571,4 @@ gantt
 
 ---
 
-**Plain rule:** **archy** steers; shell backends work; evidence stays loud — the platform must pass its own audit before it audits your machine. Offline escrow off-box, or the keeper is theater.
+**Plain rule:** **archy** steers; shell backends work; evidence stays loud — the platform must pass its own audit before it audits your machine. Offline escrow off-box, or the keeper is theater. **Remote: ACP controls, inject notifies; no ambient DM listeners.**
