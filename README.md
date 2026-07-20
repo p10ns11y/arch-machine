@@ -157,7 +157,8 @@ arch-machine/
 
 ## Documentation
 
-- [docs/archy.md](docs/archy.md) — control plane in simple English + diagrams
+- [docs/archy.md](docs/archy.md) — control plane in simple English + diagrams (incl. **Grok plugin ↔ archy** cycle)
+- Grok plugin (slash `/arch-*`): [p10ns11y/plugins](https://github.com/p10ns11y/plugins) → `arch-machine/`; local `~/Work/personal/plugins/arch-machine` · `docs/CROSS-REF.md`
 - [docs/INDEX.md](docs/INDEX.md) — architecture index
 - [arch-design/coming-next.md](arch-design/coming-next.md) — backlog
 - [SAFETY.md](SAFETY.md) · [docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/MAINTENANCE.md](docs/MAINTENANCE.md)

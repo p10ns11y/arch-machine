@@ -13,6 +13,46 @@ Code: [`crates/archy/`](../crates/archy/). Agent skill: [eagle-satellite-elomaxz
 
 ---
 
+## Grok plugin ↔ archy (cyclic)
+
+You can enter the host from **Grok** or from **archy**; each can hand off to the other.
+
+```text
+  Grok Build + arch-machine plugin
+       │  /arch-status  /arch-audit  /arch-control  /arch-init  /arch-expand
+       ▼
+  arch-machine (scripts + archy)
+       │  G / p / Enter brief → grok --cwd ROOT "<preloaded prompt>"
+       ▼
+  Grok again (with job context)
+```
+
+| Start here | Use when | How |
+|------------|----------|-----|
+| **Grok + plugin** | Agent-driven status, audit, thin install, expand | Install plugin → `/arch-*` slash commands |
+| **archy** | Local menu loop on the machine | Run archy → jobs → NEXT; press **`p`** / **`G`** to open Grok preloaded |
+
+### Plugin install (Grok side)
+
+```bash
+grok plugin install "$HOME/Work/personal/plugins/arch-machine" --trust
+# or: ln -sfn …/plugins/arch-machine ~/.grok/plugins/arch-machine
+grok plugin enable arch-machine
+```
+
+Full cycle guide (plugin repo): `docs/CROSS-REF.md` under the [arch-machine Grok plugin](https://github.com/p10ns11y/plugins) (`arch-machine/` package), or locally:
+
+`~/Work/personal/plugins/arch-machine/docs/CROSS-REF.md`
+
+### From archy back into Grok
+
+1. Run a job (e.g. Audit).  
+2. `g` = co-pilot **brief** only (not live chat).  
+3. `p` / Enter / `G` = suspend archy, write `logs/archy-grok-*.txt`, launch **interactive** Grok with composed prompt.  
+4. Exit Grok → archy resumes. In that Grok session you can still run `/arch-*` if the plugin is enabled.
+
+---
+
 ## What you see
 
 ```text

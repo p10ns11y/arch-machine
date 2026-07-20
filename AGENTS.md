@@ -11,6 +11,16 @@ Profile-based Arch Linux bootstrap + **archy** control plane (Ratatui) + thin **
 
 Skill: **eagle-satellite-elomaxz** · Doc: `docs/archy.md` · Code: `crates/archy/`
 
+## Grok plugin ↔ archy (cyclic)
+
+| Direction | Surface | Entry |
+|-----------|---------|--------|
+| Agent → host | Grok plugin `arch-machine` | `/arch-status`, `/arch-audit`, `/arch-control`, `/arch-init`, `/arch-expand` |
+| Host → agent | archy co-pilot | `p` / `G` / brief Enter → `grok --cwd … "<preload>"` |
+
+Plugin checkout: `~/Work/personal/plugins/arch-machine` ([p10ns11y/plugins](https://github.com/p10ns11y/plugins)) · `docs/CROSS-REF.md`  
+Do not tell users to run `am-*` by hand — slash commands only.
+
 ## Active skills (symlinked or in-repo)
 
 | Skill | Path | Use when |
@@ -75,7 +85,8 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Package actuate | `maintenance/package-actuate.sh` → `tinfoil pkg` (dry-run default) |
 | Omarchy | `docs/omarchy.md` + `docs/omarchy-commands.md` · `tinfoil omarchy` status |
 | Evidence | `maintenance/extract-evidence.sh`, `lib/evidence.sh` |
-| Surfaces | **archy** (main) · Grok plugin / dock · gum legacy |
+| Surfaces | **archy** (main) · [Grok plugin](https://github.com/p10ns11y/plugins) `arch-machine` · gum legacy |
+| Plugin ↔ archy cycle | `docs/archy.md` · plugin `docs/CROSS-REF.md` |
 
 ## Expand commands
 

@@ -9,6 +9,22 @@
 Full walkthrough with diagrams: [docs/archy.md](../../docs/archy.md)  
 Agent skill: [eagle-satellite-elomaxz](../../.agents/skills/eagle-satellite-elomaxz/SKILL.md)
 
+### Grok plugin ↔ this TUI (cycle)
+
+```text
+Grok (/arch-*)  ──►  arch-machine / archy
+     ▲                      │
+     └──── G / p preload ───┘
+```
+
+| Direction | Action |
+|-----------|--------|
+| **Grok → host** | Enable **arch-machine** plugin → `/arch-status`, `/arch-audit`, `/arch-control`, … |
+| **archy → Grok** | After a job: `g` brief, then `p` / Enter / `G` (preloaded interactive Grok) |
+
+Plugin path on this host: `~/Work/personal/plugins/arch-machine`  
+Cycle guide: [docs/archy.md § Grok plugin](../../docs/archy.md) · plugin `docs/CROSS-REF.md`
+
 ---
 
 ## Operator flow
