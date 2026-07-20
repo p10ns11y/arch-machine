@@ -6,7 +6,7 @@ Arch Linux workstation toolkit steered by **`archy`**: thin install first, then 
 
 [![CI](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg)](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml)
 
-For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control-plane guide: [docs/archy.md](docs/archy.md).
+For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control-plane guide: [docs/archy.md](docs/archy.md). XChat DM remote control: [docs/groxy.md](docs/groxy.md) (`bin/groxy`).
 
 ## How it fits together
 
@@ -31,6 +31,7 @@ It does not reimplement pacman logic in Rust.
 | Light base tools only | `./install.sh --profile minimal` |
 | Inventory / ownership | `./maintenance/inventory.sh --json` (also in archy menu) |
 | Omarchy host status | `./maintenance/omarchy-status.sh` |
+| XChat DM remote control | `./bin/groxy` (see [docs/groxy.md](docs/groxy.md)) |
 | Search tools & profiles | `./maintenance/catalog.sh docker` |
 | Package change plan (dry-run) | `./maintenance/package-actuate.sh --update jq` |
 | Security audit | `./maintenance/security-audit.sh` |

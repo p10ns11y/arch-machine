@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# groxy — XChat DM remote control entrypoint for arch-machine hosts.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export GROXY_ROOT="${GROXY_ROOT:-$ROOT}"
+export PYTHONPATH="${ROOT}${PYTHONPATH:+:$PYTHONPATH}"
+
+export PYTHONUNBUFFERED=1
+exec python3 -m tools.groxy "$@"

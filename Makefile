@@ -1,4 +1,4 @@
-.PHONY: lint validate-profiles evidence-smoke eye-comfort-test eye-comfort-generate-check ci-help archy archy-release archy-test
+.PHONY: lint validate-profiles evidence-smoke eye-comfort-test eye-comfort-generate-check ci-help archy archy-release archy-test groxy-test
 
 lint:
 	@shellcheck --severity=warning $$(find . -name '*.sh' -not -path './.grok/*' -not -path './logs/*' -not -path './systemd/*' 2>/dev/null) || true
@@ -34,8 +34,12 @@ archy-release:
 archy-test:
 	cargo test --manifest-path crates/archy/Cargo.toml
 
+# XChat DM remote control (groxy)
+groxy-test:
+	python3 tools/groxy/tests/test_groxy.py
+
 ci-help:
-	@echo "make lint | validate-profiles | evidence-smoke | eye-comfort-test | eye-comfort-generate-check | archy | archy-test | keeper-test"
+	@echo "make lint | validate-profiles | evidence-smoke | eye-comfort-test | eye-comfort-generate-check | archy | archy-test | keeper-test | groxy-test"
 
 # Keeper threshold vault tests (also intended for CI — see PR #28 if workflow scope blocks push)
 .PHONY: keeper-test

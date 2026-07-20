@@ -43,6 +43,8 @@ flowchart TD
 How archy routes work (simple English + diagrams): **[archy.md](archy.md)**.  
 Agent skill: **eagle-satellite-elomaxz** (`.agents/skills/eagle-satellite-elomaxz/`).
 
+**XChat DM remote control:** **[groxy.md](groxy.md)** (`bin/groxy`) — allowlisted DMs drive host actions; summary + visual reply.
+
 **Grok plugin ↔ archy:** from Grok use `/arch-*`; from archy use `G`/`p` to reopen Grok with preload. See [archy.md § Grok plugin](archy.md) and the plugin’s `docs/CROSS-REF.md` (`~/Work/personal/plugins/arch-machine` or [p10ns11y/plugins](https://github.com/p10ns11y/plugins)).
 
 ### archy control loop
