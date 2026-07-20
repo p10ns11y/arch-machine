@@ -34,7 +34,7 @@ chmod +x install.sh migrate.sh
 # Main controller is archy (Ratatui entry + loop). Until thin install ships
 # archy on PATH (SN-ARCHY-1), build and run from the checkout:
 make archy
-TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
+TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
 
 # Or call backends directly:
 ./maintenance/security-audit.sh

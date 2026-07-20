@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# groxy — XChat DM remote control entrypoint (prefers Rust satellite, falls back to Python v1).
+# groxy — XChat DM remote control (Rust only: tools/groxy).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export GROXY_ROOT="${GROXY_ROOT:-$ROOT}"
 
-RUST_RELEASE="$ROOT/tools/xchat-remote/target/release/groxy"
-RUST_DEBUG="$ROOT/tools/xchat-remote/target/debug/groxy"
+RUST_RELEASE="$ROOT/tools/groxy/target/release/groxy"
+RUST_DEBUG="$ROOT/tools/groxy/target/debug/groxy"
 
 if [[ -x "$RUST_RELEASE" ]]; then
   exec "$RUST_RELEASE" "$@"
@@ -15,15 +15,13 @@ if [[ -x "$RUST_DEBUG" ]]; then
   exec "$RUST_DEBUG" "$@"
 fi
 
-# Build debug binary on first use if cargo is available
-if command -v cargo >/dev/null 2>&1 && [[ -f "$ROOT/tools/xchat-remote/Cargo.toml" ]]; then
-  cargo build --manifest-path "$ROOT/tools/xchat-remote/Cargo.toml" --quiet 2>/dev/null || true
+if command -v cargo >/dev/null 2>&1 && [[ -f "$ROOT/tools/groxy/Cargo.toml" ]]; then
+  cargo build --manifest-path "$ROOT/tools/groxy/Cargo.toml" --quiet
   if [[ -x "$RUST_DEBUG" ]]; then
     exec "$RUST_DEBUG" "$@"
   fi
 fi
 
-# Python v1 reference (legacy)
-export PYTHONPATH="${ROOT}${PYTHONPATH:+:$PYTHONPATH}"
-export PYTHONUNBUFFERED=1
-exec python3 -m tools.groxy "$@"
+echo "error: groxy binary not found. Build with:" >&2
+echo "  cargo build --manifest-path tools/groxy/Cargo.toml" >&2
+exit 127

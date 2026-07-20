@@ -1,6 +1,6 @@
 //! groxy — XChat DM remote control (Rust satellite under Eagle discipline).
 //!
-//! Package path: `tools/xchat-remote` (not a vague dump). Binary name: **groxy**.
+//! Package path: `tools/groxy`. Binary name: **groxy**.
 //! Thin CLI → Eagle process_direct_message_event → offline host job → outcome DM.
 
 mod allowlist;
@@ -24,7 +24,7 @@ use std::thread;
 use std::time::Duration;
 
 const BANNER: &str = "\
-groxy (xchat-remote) — XChat DM remote control for arch-machine hosts
+groxy — XChat DM remote control for arch-machine hosts
 Eagle routes DM events; host jobs run offline; outcome packages go back to XChat.
 Inbound:  allowlisted DM → host action
 Outbound: ✓ Done bullets + visual panel (+ PR when set)
@@ -195,7 +195,7 @@ fn repository_root(cli: &Cli) -> PathBuf {
     if let Ok(root) = std::env::var("TINFOIL_ROOT") {
         return PathBuf::from(root);
     }
-    // tools/xchat-remote → repo root
+    // tools/groxy → repository root
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     manifest
         .parent()

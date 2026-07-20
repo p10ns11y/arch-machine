@@ -1,139 +1,92 @@
-# groxy — XChat DM remote control (Python v1 reference)
+# groxy — XChat DM remote control (Rust)
 
-> **Preferred path:** Rust satellite **`tools/xchat-remote`** (binary `groxy`). See **[xchat-remote.md](xchat-remote.md)**.
-> This page documents the Python v1 reference under `tools/groxy/`.
+Package: **`tools/groxy`** · Binary: **`groxy`** · Launch: **`bin/groxy`**
 
-**groxy** bridges **XChat DMs** ↔ this arch-machine host.
+Eagle + satellite: one host poller reads XChat DMs, runs offline host jobs, replies with outcome packages.
 
-- **Inbound:** allowlisted sender DMs a command → host action (inventory, audit, grok headless, …)
-- **Outbound:** outcome-first **summary** + **visual** → XChat DM (or dry-run files)
-
-## Quick start (no identities in git)
-
-```bash
-# From repo root — live uses the xurl-authenticated account as allowlist + reply target
-export GROXY_PR_URL="https://github.com/<org>/<repo>/pull/<n>"   # optional
-export GROXY_ALLOW_SELF=1   # default when allowlist empty in live mode
-
-# One poller only. X dm_events ≈ 15 reads/window — use 90s+
-./bin/groxy --live poll --interval 90
-
-# Or inject a one-shot without polling:
-./bin/groxy --live inject "status"
+```text
+XChat DM  →  single groxy poller  →  host job (inventory/ping/…)
+                                      →  ✓ Done + visual + PR  →  XChat DM
 ```
 
-Optional private allowlist (gitignored):
+## Build & run
 
 ```bash
-cp config/groxy/allowlist.conf.example config/groxy/allowlist.local.conf
-# edit local file with YOUR id from: xurl /2/users/me
-# never commit allowlist.local.conf
-```
+cargo build --manifest-path tools/groxy/Cargo.toml
+cargo test  --manifest-path tools/groxy/Cargo.toml   # or: make groxy-test
 
-Env alternatives: `GROXY_ALLOWLIST_IDS`, `GROXY_ALLOWLIST_USERNAMES`, `GROXY_REPLY_TO`.
+./bin/groxy --help
+./bin/groxy about
 
-## Why XChat may not reply
-
-| Cause | Fix |
-|-------|-----|
-| No poller running | `./bin/groxy --live poll --interval 90` (exactly **one** process) |
-| Rate limit 429 | Stop all pollers; wait ~1–2 min; restart with interval ≥ 90 |
-| Message not a command | Send `status`, `ping`, or `!g …` — free chat is ignored |
-| Empty allowlist without self | `export GROXY_ALLOW_SELF=1` or local allowlist file |
-| Seen-event dedupe | New message gets a new event id; resend command if needed |
-
-Dry-run proof (no network):
-
-```bash
+# Dry-run (no network)
 ./bin/groxy --dry-run inject "status" --sender-id 100001
-./bin/groxy --dry-run once --fixture tools/groxy/fixtures/inbound_status.json
+
+# Live one-shot
+export GROXY_ALLOW_SELF=1
+export GROXY_PR_URL="https://github.com/<org>/<repo>/pull/<n>"
+./bin/groxy --live inject "status"
+
+# Live poll — ONE process only
+./bin/groxy --live poll --interval 90
 ```
 
-## Commands (DM text)
+Worst-case reply latency ≈ **poll interval** (default 90s) + job time. X `dm_events` ≈ 15 reads/window.
 
-| DM text | Action |
-|---------|--------|
-| `help` | Command list |
-| `ping` | Liveness |
-| `status` / `inventory` | Inventory summary (not package dump) |
-| `audit` / `omarchy` | Maintenance jobs |
-| `run <prompt>` or `!g <free text>` | Restricted `grok -p` |
-| high-blast (`pkg` …) | Held until `confirm <token> …` |
+## Data hygiene
 
-## Outbound shape (outcome-first)
+- No operator X ids in git.
+- `GROXY_ALLOW_SELF=1` (runtime `xurl /2/users/me`) or gitignored `config/groxy/allowlist.local.conf`.
+
+## How an XChat message reaches the laptop (multi-Grok)
+
+See **[Multi-Grok / XChat routing](#multi-grok--xchat-routing)** below (also summarized in the root README).
+
+### Multi-Grok / XChat routing
+
+**Short answer:** only the **groxy daemon** polls XChat. Interactive Grok TUI sessions (many windows) do **not** each receive DMs.
 
 ```text
-✓ Done: status
-• Inventory: N explicit packages
-• …
-PR: https://github.com/…/pull/N
+                    ┌─────────────────────┐
+   You (phone) ──DM─►│  X API dm_events    │
+                    └──────────┬──────────┘
+                               │ poll ~90s (one process)
+                               ▼
+                    ┌─────────────────────┐
+                    │  groxy (tools/groxy) │  allowlist + parse + host job
+                    └──────────┬──────────┘
+                               │ reply DM
+                               ▼
+                            XChat you
 
-╔════════════════════════════════╗
-║ OK    status                   ║
-…
-╚════════════════════════════════╝
+   Grok TUI #1  ──┐
+   Grok TUI #2  ──┼── separate sessions: code/chat in terminal
+   Grok TUI #3  ──┘   they do NOT auto-subscribe to XChat DMs
 ```
 
-No host/cwd/package dumps in the DM body.
+| Surface | Receives XChat DMs? | Role |
+|---------|---------------------|------|
+| **`groxy --live poll`** | **Yes** (single poller) | Host remote control |
+| **Grok Build TUI** (any number) | No (unless you run inject/tools yourself) | Interactive coding agents |
+| **archy** TUI | No | Local menu control plane |
 
-## Architecture decision (Python v1 → Rust satellite)
+**Why one poller:** X rate-limits `dm_events` (~15/window). Multiple pollers burn the budget (429) and fight over state.  
+**Session isolation:** each Grok TUI has its own transcript under `~/.grok/sessions/…`; groxy writes host effects under `~/.local/state/groxy/` and replies on XChat—it does not inject into a random open Grok window.  
+**If you want a Grok session to act on a DM:** either (a) the poller runs a `run <prompt>` host job that invokes `grok -p`, or (b) you paste/inject from the laptop—there is no automatic fan-out to all open TUIs.
 
-### Why Python v1 shipped first
+## Modules
 
-1. **Goal was a working remote loop the same session** (poll → allowlist → host job → DM).
-2. **Official surface today is HTTP + `xurl`**, not a first-class “XChat SDK for agents.”
-   - X API v2 DM endpoints (`/2/dm_events`, send DM) via authenticated HTTP.
-   - This host already had **`xurl`** (OAuth + DM scopes). groxy shells out to it.
-   - There is **no** blessed, stable “XChat Bot SDK” comparable to Slack Bolt / Discord.js for this control path. Community HTTP clients exist; they still speak the same REST.
-3. Repo already uses **Python for pure logic tests** (eye-comfort). Fast unit tests without cargo link.
+| Module | Role |
+|--------|------|
+| `eagle.rs` | Route event → policy → job → package |
+| `command_parse.rs` | DM text → verb |
+| `allowlist.rs` | Who may command |
+| `outcome_package.rs` | Done bullets + visual |
+| `host_job.rs` | Offline shell jobs |
+| `dm_adapter.rs` | xurl / dry-run I/O |
+| `state_store.rs` | Seen events + confirms |
+| `main.rs` | CLI |
 
-### Why that was the wrong long-term fit for *this* repo
+## Related
 
-- Control plane is **Rust (`crates/archy`)** with **Eagle + Satellites + TEA**.
-- groxy should become a **satellite** (offline job style): Eagle starts poll/daemon; domain owns DM I/O + host dispatch — not a side Python tree forever.
-- **Data hygiene:** identities belong in env / gitignored local config / runtime `users/me`, never committed.
-
-### Target shape (Eagle / satellite)
-
-```text
-  XChat DM events  →  Msg::DmInbound
-         │
-         ▼
-      Eagle (phase: Idle | Polling | RunningHost | Outbound)
-         │ Cmd
-         ▼
-   Satellite: Groxy
-     - read events (xurl / HTTP)
-     - allowlist (local only)
-     - host job (inventory.sh / …)
-     - build outcome package
-     - send DM
-```
-
-Skill: **eagle-satellite-elomaxz** (in-repo + global `~/.grok/skills/eagle-satellite-elomaxz`).
-
-v1 Python stays as the reference loop + tests until a `crates/groxy` (or archy satellite) port lands.
-
-## Safety
-
-- Untrusted senders rejected; public posts rejected.
-- High-blast needs confirm.
-- Default mode dry-run; `--live` sends DMs.
-- groxy policy is independent of Grok always-approve.
-- **Do not commit** `allowlist.local.conf` or real user ids.
-
-## Layout
-
-| Path | Role |
-|------|------|
-| `bin/groxy` | Entry |
-| `tools/groxy/` | Python v1 package |
-| `config/groxy/allowlist.conf` | Template (no identities) |
-| `config/groxy/allowlist.local.conf` | Operator private (gitignored) |
-| `docs/groxy.md` | This doc |
-
-## Tests
-
-```bash
-make groxy-test
-```
+- Control plane: [archy.md](archy.md) · `tools/archy`
+- Skill: `eagle-satellite-elomaxz`

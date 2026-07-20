@@ -60,8 +60,8 @@ nvim.log
 # Rust build artifacts
 modules/security/keeper/target/
 crates/tinfoil-tui/target/
-crates/archy/target/
-tools/xchat-remote/target/
+tools/archy/target/
+tools/groxy/target/
 target/
 
 # agent expand stamps (Grok plugin)

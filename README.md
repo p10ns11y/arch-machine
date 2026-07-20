@@ -6,7 +6,7 @@ Arch Linux workstation toolkit steered by **`archy`**: thin install first, then 
 
 [![CI](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg)](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml)
 
-For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control-plane guide: [docs/archy.md](docs/archy.md). XChat DM remote control: [docs/groxy.md](docs/groxy.md) (`bin/groxy`).
+For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control plane: [docs/archy.md](docs/archy.md) (`tools/archy`). XChat remote control: [docs/groxy.md](docs/groxy.md) (`tools/groxy`, `bin/groxy`).
 
 ## How it fits together
 
@@ -62,7 +62,7 @@ chmod +x install.sh
 
 # Main controller (until SN-ARCHY-1 ships archy on PATH from thin install):
 make archy
-TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
+TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
 ```
 
 `./install.sh --thin` installs the shared runtime under `/usr/share/tinfoil/` (backends + profiles). Day-1 interaction is **`archy`**, not the optional Go shim.
@@ -99,7 +99,7 @@ maintenance/systemd-setup.sh setup
 
 ```bash
 make archy
-TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
+TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
 # after SN-ARCHY-1 / when on PATH:
 archy
 ```
@@ -109,7 +109,7 @@ Home → run job → watch output → NEXT bar → Home
 ```
 
 Keys: ↑↓ select · Enter run · `g` brief · `G`/`p` Grok · `?` help · `q` quit.  
-Simple guide: [docs/archy.md](docs/archy.md) · crate: [crates/archy/README.md](crates/archy/README.md).
+Simple guide: [docs/archy.md](docs/archy.md) · crate: [tools/archy/README.md](tools/archy/README.md).
 
 ### Backends (scripts archy steers)
 
@@ -138,7 +138,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/MODULES.md](docs/MODUL
 ./install.sh --validate
 make validate-profiles
 make archy
-./crates/archy/target/debug/archy --print-root
+./tools/archy/target/debug/archy --print-root
 ./maintenance/extract-evidence.sh --dry-run
 ```
 
@@ -146,19 +146,57 @@ make archy
 
 ```
 arch-machine/
-├── crates/archy/           # MAIN controller — Ratatui entry + loop
+├── tools/archy/            # MAIN controller — Ratatui entry + loop
+├── tools/groxy/            # XChat DM remote control (Eagle satellite, binary groxy)
 ├── maintenance/            # shell backends (iron peak)
 ├── install.sh              # thin default; --profile for full
 ├── config/profiles/        # minimal | ml-dev | security-dev
 ├── modules/                # system, development, ml_ai, security, …
 ├── lib/                    # installer, evidence, gum TUI (legacy)
+├── bin/groxy               # launches tools/groxy binary
 ├── bin/tinfoil.go          # optional thin dispatcher (not the product)
 └── docs/                   # start at docs/INDEX.md
 ```
 
+## XChat remote control (`groxy`)
+
+```bash
+make groxy-test
+cargo build --manifest-path tools/groxy/Cargo.toml
+export GROXY_ALLOW_SELF=1
+./bin/groxy --live poll --interval 90   # ONE process; worst-case reply ≈ 90s
+./bin/groxy --live inject "status"      # immediate one-shot
+```
+
+Guide: [docs/groxy.md](docs/groxy.md).
+
+### Multi-Grok: how an XChat DM reaches this laptop
+
+Several **Grok Build TUI** windows can be open. They are **not** each listening to XChat.
+
+| Process | Listens to XChat DMs? |
+|---------|------------------------|
+| **`groxy --live poll`** (exactly one) | **Yes** — polls X API, runs host jobs, DMs you back |
+| Each interactive **Grok** session | **No** — local coding chat only |
+| **archy** TUI | **No** — local menu control plane |
+
+```text
+Phone XChat ──DM──► X API ──poll──► groxy (single daemon)
+                                       │
+                                       ├─► maintenance/*.sh / grok -p
+                                       └─► DM reply (✓ Done …)
+
+Grok TUI #1 / #2 / #3  ── independent sessions; do not auto-get the DM
+```
+
+- **Single poller rule:** more than one `groxy poll` burns X rate limits (429) and races state under `~/.local/state/groxy/`.
+- **Session isolation:** Grok transcripts live under `~/.grok/sessions/…`; groxy does not inject text into a random open TUI.
+- **If you need Grok to act on a command:** use `run <prompt>` via DM (poller spawns `grok -p`), or work in a TUI on the laptop yourself.
+
 ## Documentation
 
 - [docs/archy.md](docs/archy.md) — control plane in simple English + diagrams (incl. **Grok plugin ↔ archy** cycle)
+- [docs/groxy.md](docs/groxy.md) — XChat DM remote control + multi-Grok routing
 - Grok plugin (slash `/arch-*`): [p10ns11y/plugins](https://github.com/p10ns11y/plugins) → `arch-machine/`; local `~/Work/personal/plugins/arch-machine` · `docs/CROSS-REF.md`
 - [docs/INDEX.md](docs/INDEX.md) — architecture index
 - [arch-design/coming-next.md](arch-design/coming-next.md) — backlog
@@ -174,7 +212,7 @@ See [LICENSE](LICENSE).
 ## Contributing
 
 1. Fork and branch  
-2. Prefer new capability in `maintenance/*.sh`, surfaces in `crates/archy`  
+2. Prefer new capability in `maintenance/*.sh`, surfaces in `tools/archy`  
 3. Verify with the commands above (`make lint` when touching shell/docs)  
 4. Open a pull request  
 

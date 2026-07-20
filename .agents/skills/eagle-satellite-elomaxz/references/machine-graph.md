@@ -1,6 +1,6 @@
 # Machine graph — Eagle, satellites, Elomaxz messages
 
-Simple English reference for agents and humans. Implementation: `crates/archy`.
+Simple English reference for agents and humans. Implementation: `tools/archy`.
 
 ## 1. Big picture
 
@@ -120,7 +120,7 @@ sequenceDiagram
 ## 5. File map (read like the diagram)
 
 ```text
-crates/archy/src/
+tools/archy/src/
   main.rs          Runtime host (draw, perform, poll)
   eagle.rs         update(Msg) → Cmd
   fsm.rs           Phase states

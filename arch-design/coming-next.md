@@ -1,7 +1,7 @@
 # coming-next — arch-machine architecture backlog
 
 **Keeper deep-dive:** [keeper.md](./keeper.md) · [coming-next-keeper.md](./coming-next-keeper.md) (SN-KEEP-*)  
-**Main control plane:** [`crates/archy`](../crates/archy/) (`archy` binary — entry + loop)  
+**Main control plane:** [`tools/archy`](../tools/archy/) (`archy` binary — entry + loop)  
 **Agent orchestration:** [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` (Grok slash)  
 **Legacy:** gum `lib/tui/` · optional Go shim `bin/tinfoil.go` (dispatch only; not the product)
 
@@ -51,7 +51,7 @@ flowchart LR
 
 | Area | Grade | One line | Evidence |
 |------|-------|----------|----------|
-| **archy control plane** | **B+** | Entry + loop MVP; menus steer shell backends | `crates/archy`, `make archy` |
+| **archy control plane** | **B+** | Entry + loop MVP; menus steer shell backends | `tools/archy`, `make archy` |
 | **archy on thin PATH** | **D** | MVP builds in-repo; thin install still ships Go shim only | `install.sh` → `/usr/local/bin/tinfoil`; no `archy` install yet |
 | Thin install | A- | Default `--thin` ships sentinel runtime tree | `install.sh`, README |
 | Shell backends | A- | Inventory/catalog/actuate/audit/evidence | `maintenance/*.sh` |
@@ -80,7 +80,7 @@ flowchart TD
   E --> A
 ```
 
-Runtime today: thin install copies repo under `/usr/share/tinfoil/` and installs the **optional Go shim** at `/usr/local/bin/tinfoil`. **`archy` is the intended day-1 controller** but is not yet installed to PATH by `--thin` (gap = SN-ARCHY-1). Until then: `make archy` and run `./crates/archy/target/debug/archy` with `TINFOIL_ROOT` set to the checkout (or `/usr/share/tinfoil`).
+Runtime today: thin install copies repo under `/usr/share/tinfoil/` and installs the **optional Go shim** at `/usr/local/bin/tinfoil`. **`archy` is the intended day-1 controller** but is not yet installed to PATH by `--thin` (gap = SN-ARCHY-1). Until then: `make archy` and run `./tools/archy/target/debug/archy` with `TINFOIL_ROOT` set to the checkout (or `/usr/share/tinfoil`).
 
 ## §4 Musk 5-step on backlog
 
@@ -147,7 +147,7 @@ flowchart LR
 
 **Done when:** lint + profiles + archy build + install validate exit 0 on sentinel.
 
-**Verify:** `make lint && make validate-profiles && make archy && ./crates/archy/target/debug/archy --print-root && ./install.sh --validate`
+**Verify:** `make lint && make validate-profiles && make archy && ./tools/archy/target/debug/archy --print-root && ./install.sh --validate`
 
 ### SN-2 · gum TUI — **SUPERSEDED / freeze**
 
@@ -197,7 +197,7 @@ flowchart LR
 | File | Work |
 |------|------|
 | `maintenance/inventory.sh` | Collect explicit pkgs + tools.yaml + mise + upgradable |
-| `crates/archy` | Inventory job (already); richer list widget next |
+| `tools/archy` | Inventory job (already); richer list widget next |
 | `logs/inventory-*.json` | Snapshots + `inventory-latest.json` |
 
 **Done when:** `./maintenance/inventory.sh` prints summary; `--json` is schema `tinfoil.inventory.v1`; archy menu streams it; write path works.
@@ -296,12 +296,12 @@ flowchart TB
 
 | File | Work |
 |------|------|
-| `crates/archy/` | MVP done: menu, jobs, scrollable stdio, actions, Grok dock |
+| `tools/archy/` | MVP done: menu, jobs, scrollable stdio, actions, Grok dock |
 | Next | SN-ARCHY-1 PATH install; inventory list widget from JSON; live package multi-select; real install confirm |
 
 **Done when (MVP):** `cargo build` + run shows Home; Inventory/Audit dry jobs stream stdio; next-action bar appears; `G` suspends and launches `grok`; Esc returns Home. **(Met for in-repo builds.)**
 
-**Verify:** `make archy` · `./crates/archy/target/debug/archy --print-root` · manual interactive dogfood.
+**Verify:** `make archy` · `./tools/archy/target/debug/archy --print-root` · manual interactive dogfood.
 
 **Guardrails:** No business logic in Rust that duplicates shell. Grok embed is suspend/split-context (not fake live PTY yet).
 
@@ -446,7 +446,7 @@ gantt
 - CI red on `sentinel` branch
 - `logs/evidence-bundle-*.json` age > 7d on active machines
 - `archy` missing from PATH after thin install (SN-ARCHY-1 regression)
-- Control-plane build drift: `crates/archy` vs installed binary
+- Control-plane build drift: `tools/archy` vs installed binary
 
 ## §11 Done log
 
@@ -461,7 +461,7 @@ gantt
 | UWSM graphical-session race | PR #25 merge |
 | Inventory v1 (shell backend) | `maintenance/inventory.sh` |
 | Surface pivot: gum freeze; **archy = main controller** | SN-TUI-RUST / SN-ARCHY-1 / SN-GO-THIN |
-| Ratatui control plane MVP | `crates/archy` (`archy` binary) |
+| Ratatui control plane MVP | `tools/archy` (`archy` binary) |
 | SN-CAT-1 catalog search | `maintenance/catalog.sh` + archy menu |
 | SN-OM-1 ownership tags | `config/baselines/omarchy.yaml` + inventory `ownership` |
 | SN-INV-2 actuate dry-run | `maintenance/package-actuate.sh` + refuse-list |
@@ -472,7 +472,7 @@ gantt
 
 | Source | Use |
 |--------|-----|
-| `crates/archy/README.md` | Control plane keys + backends |
+| `tools/archy/README.md` | Control plane keys + backends |
 | `docs/INDEX.md` | System map |
 | `arch-design/keeper.md` | Keeper architecture + mermaid |
 | `arch-design/coming-next-keeper.md` | SN-KEEP-* backlog |

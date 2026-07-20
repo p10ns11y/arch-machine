@@ -1,5 +1,5 @@
 [package]
-name = "xchat-remote"
+name = "groxy"
 version = "0.1.0"
 edition = "2021"
 description = "XChat DM remote control satellite (Eagle loop) for arch-machine — binary: groxy"

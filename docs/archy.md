@@ -3,7 +3,7 @@
 **archy** is the main screen you use to run maintenance on this machine.  
 It does **not** reimplement package logic in Rust. It **steers** shell scripts and shows you what to do next.
 
-Code: [`crates/archy/`](../crates/archy/). Agent skill: [eagle-satellite-elomaxz](../.agents/skills/eagle-satellite-elomaxz/SKILL.md).
+Code: [`tools/archy/`](../tools/archy/). Agent skill: [eagle-satellite-elomaxz](../.agents/skills/eagle-satellite-elomaxz/SKILL.md).
 
 **Why this shape** (X / design threads):
 
@@ -169,11 +169,11 @@ Picked **once** at startup (not live OS chrome sync):
 ## Build and run
 
 ```bash
-cargo build --release --manifest-path crates/archy/Cargo.toml
-TINFOIL_ROOT="$PWD" cargo run --release --manifest-path crates/archy/Cargo.toml
+cargo build --release --manifest-path tools/archy/Cargo.toml
+TINFOIL_ROOT="$PWD" cargo run --release --manifest-path tools/archy/Cargo.toml
 ```
 
 Keys: ↑↓ menu · Enter run · Tab focus · `g` co-pilot brief · `G`/`p` launch **Grok with preloaded ask** (interactive `grok --cwd … "prompt"`) · Esc home · `?` help · `q` quit.  
 Brief is not live ACP; full agent session is suspend-to-Grok with preload.
 
-More detail: [crates/archy/README.md](../crates/archy/README.md).
+More detail: [tools/archy/README.md](../tools/archy/README.md).

@@ -298,7 +298,7 @@ impl App {
                  cd {root}\n\
                  bash maintenance/inventory.sh --text\n\
                  bash maintenance/security-audit.sh --global --dry-run\n\
-                 cargo run --release --manifest-path crates/archy/Cargo.toml\n\
+                 cargo run --release --manifest-path tools/archy/Cargo.toml\n\
                  ```"
             );
         };
