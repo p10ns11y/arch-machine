@@ -66,7 +66,7 @@ Eagle receives **messages** (keys, job lines, job done). Satellites own each dom
 | Topic | Doc |
 |-------|-----|
 | Control plane | [archy.md](archy.md) · [tools/archy/README.md](../tools/archy/README.md) |
-| XChat remote control | [groxy.md](groxy.md) |
+| Remote surfaces (inject + ACP; **Neovim ACP setup**) | [groxy.md](groxy.md) |
 | Install | [INSTALLATION.md](INSTALLATION.md) |
 | Maintenance | [MAINTENANCE.md](MAINTENANCE.md) |
 | Modules / profiles | [MODULES.md](MODULES.md) · profiles under `config/profiles/` |

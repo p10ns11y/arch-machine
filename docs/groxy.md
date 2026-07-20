@@ -140,9 +140,213 @@ make groxy-test
 export GROXY_ALLOW_SELF=1
 ./bin/groxy --live inject "status" --session-label my-workspace
 
-# Control
+# Control (WebSocket ACP server — any ACP client)
 ./bin/groxy acp serve --cwd /path/to/workspace
 ```
+
+---
+
+## IDE clients: Neovim (ACP) vs Cursor
+
+| Client | ACP with Grok? | How |
+|--------|----------------|-----|
+| **Neovim** (avante.nvim / CodeCompanion) | **Yes** | Plugin spawns `grok agent stdio` (or custom command) |
+| **Zed** | Yes | External agents |
+| **Cursor Agents** | **No** | Cursor’s own agent stack; use terminal + ACP elsewhere |
+| **Emacs** | Yes | agent-shell |
+
+**Which chat is targeted?** The editor opens **one ACP agent process per chat/session** (stdio child). That process’s cwd (or `session/new` cwd) is the workspace. Opening a second Neovim ACP chat → second agent (or leader mode) — not “all DMs go to the focused buffer.”
+
+```text
+Neovim (avante / CodeCompanion)
+        │  ACP over stdio (spawn child)
+        ▼
+  grok agent stdio     ←── Grok Build CLI
+        │  tools, AGENTS.md, cwd = project root
+        ▼
+  your files / shell
+
+Optional notify (separate):
+  :! groxy --live inject "status" --session-label this-repo
+```
+
+---
+
+## Neovim setup guide (Grok via ACP)
+
+### Prerequisites
+
+1. **Neovim** 0.10+ (avante often wants 0.11+ — check plugin README).
+2. **Grok Build CLI** on `PATH` (`grok` works; auth via `grok login` or `XAI_API_KEY`).
+3. Optional: this repo’s `bin/groxy` for XChat notify only (not required for ACP).
+
+Verify:
+
+```bash
+which grok
+grok agent stdio --help   # or: grok agent --help
+# optional:
+./bin/groxy acp status
+```
+
+### Option A — avante.nvim (recommended Cursor-like UX)
+
+[avante.nvim](https://github.com/yetone/avante.nvim) supports **ACP providers** via `acp_providers` + `provider = "…"`.
+
+#### lazy.nvim
+
+```lua
+-- ~/.config/nvim/lua/plugins/avante-grok.lua  (or merge into your lazy specs)
+return {
+  "yetone/avante.nvim",
+  event = "VeryLazy",
+  build = "make",
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "MunifTanjim/nui.nvim",
+  },
+  opts = {
+    -- Use the custom ACP provider name below
+    provider = "grok-acp",
+    -- ACP agents are registered here (command must speak ACP on stdio)
+    acp_providers = {
+      ["grok-acp"] = {
+        command = "grok",
+        args = {
+          "agent",
+          -- Optional: model / always-approve (see grok agent --help)
+          -- "--model", "grok-build",
+          -- "--always-approve",
+          "stdio",
+        },
+        -- Env for this child process only
+        env = {
+          -- Prefer logged-in CLI auth; or set key if you use API path:
+          -- XAI_API_KEY = os.getenv("XAI_API_KEY"),
+        },
+      },
+    },
+    -- Optional: when ACP agent edits, follow locations in buffers
+    behaviour = {
+      acp_follow_agent_locations = true,
+      -- auto_approve_tool_permissions = true,  -- or false / list of tools
+    },
+  },
+}
+```
+
+**Notes:**
+
+- Prefer **`grok agent stdio`** for Neovim (plugin spawns the agent).  
+  `groxy acp serve` is WebSocket-oriented; most Neovim plugins use **stdio** ACP, not WS.
+- If `command` must be absolute: `command = vim.fn.expand("~/.grok/bin/grok")`.
+- Project rules: put `AGENTS.md` / `avante.md` in the project root so the agent sees them.
+- Switch provider: `:AvanteSwitchProvider grok-acp` (or your name).
+
+#### Usage in Neovim
+
+| Action | Typical |
+|--------|---------|
+| Open sidebar / ask | `:AvanteAsk` / leader maps from plugin |
+| Chat | `:AvanteChat` |
+| Toggle | `:AvanteToggle` |
+| Zen-mode CLI feel | see avante README (`avante` alias) |
+
+Confirm the agent is Grok: first message should use Grok tools/session (not Claude/Gemini keys).
+
+---
+
+### Option B — CodeCompanion.nvim
+
+[CodeCompanion](https://github.com/olimorris/codecompanion.nvim) supports ACP adapters (plugin version matters — need ACP-enabled release).
+
+Pattern (check current docs for exact adapter names; shape is “CLI adapter that runs an ACP agent”):
+
+```lua
+-- Sketch — adjust adapter name to your CodeCompanion version’s ACP docs
+{
+  "olimorris/codecompanion.nvim",
+  dependencies = { "nvim-lua/plenary.nvim" },
+  opts = {
+    strategies = {
+      chat = {
+        -- Many builds use an ACP/CLI adapter; wire command to grok:
+        adapter = "grok_acp", -- if you register a custom adapter
+      },
+    },
+    adapters = {
+      -- Custom adapter example (verify against CodeCompanion’s ACP adapter API):
+      grok_acp = function()
+        return require("codecompanion.adapters").extend("acp", { -- or "cmd" / plugin-specific base
+          name = "grok_acp",
+          commands = {
+            default = {
+              "grok",
+              "agent",
+              "stdio",
+            },
+          },
+        })
+      end,
+    },
+  },
+}
+```
+
+If your CodeCompanion version documents **ACP agents** differently (e.g. `adapters.acp` table), keep the same principle: **`command = grok`, `args = { "agent", "stdio" }`**.
+
+---
+
+### Option C — Terminal-only (no plugin)
+
+Inside Neovim `:terminal`:
+
+```bash
+cd %:p:h   " or project root
+grok                    # full Grok Build TUI (not ACP)
+# or headless one-shot:
+grok -p "review this file" --cwd .
+```
+
+For ACP WebSocket (other clients, remote):
+
+```bash
+./bin/groxy acp serve --cwd "$PWD"
+# then connect from Zed / custom WS client — not from avante’s stdio path
+```
+
+---
+
+### Multi-project / multi-session in Neovim
+
+| Goal | Approach |
+|------|----------|
+| One project | Open Neovim in that root; ACP agent inherits cwd |
+| Second project | New Neovim (or tab) in other root → **another** ACP child with that cwd |
+| Shared backend | `grok agent --leader` (advanced; see Grok agent docs) |
+| Label XChat notify | `:! groxy --live inject "status" --session-label this-repo` |
+
+There is still **no** link from phone XChat DMs into the Avante buffer unless you build registry + inbound transport later.
+
+---
+
+### Troubleshooting (Neovim + Grok ACP)
+
+| Symptom | Check |
+|---------|--------|
+| Plugin starts Claude/Gemini instead | `provider` / adapter name points at `grok-acp` |
+| `command not found: grok` | PATH / `~/.grok/bin` in Neovim’s env (`:echo $PATH`) |
+| Auth errors | `grok login` in a real shell; or `XAI_API_KEY` for the child `env` |
+| Wrong project files | Open Neovim with `nvim /path/to/project` so cwd is correct |
+| Permissions every tool call | avante `auto_approve_tool_permissions` or pass `--always-approve` to `grok agent` (powerful — local only) |
+
+---
+
+### Cursor (for contrast)
+
+Cursor Agents **do not** speak Grok ACP. From Cursor: use the **terminal** for `grok` / `groxy acp serve`, or an external ACP client. See multi-session section above.
+
+---
 
 ## Data hygiene
 
@@ -153,8 +357,17 @@ export GROXY_ALLOW_SELF=1
 
 | Module | Role |
 |--------|------|
-| `acp_remote.rs` | Launch/status for `grok agent serve` |
+| `acp_remote.rs` | Launch/status for `grok agent serve` (WS); Neovim usually uses **stdio** directly |
 | `eagle.rs` | inject path: policy → job → package |
 | `command_parse` / `allowlist` / `outcome_package` | Pure logic |
 | `host_job.rs` | Optional workspace scripts + `grok -p` |
 | `dm_adapter.rs` | Outbound `xurl dm` |
+
+## Related
+
+- Grok agent mode: `~/.grok/docs/user-guide/15-agent-mode.md`
+- ACP overview: [agentclientprotocol.com](https://agentclientprotocol.com)
+- avante ACP: [yetone/avante.nvim#acp-support](https://github.com/yetone/avante.nvim#acp-support)
+- CodeCompanion: [olimorris/codecompanion.nvim](https://github.com/olimorris/codecompanion.nvim)
+- Control plane: [archy.md](archy.md) · `tools/archy`
+

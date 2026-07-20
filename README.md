@@ -177,7 +177,7 @@ export GROXY_ALLOW_SELF=1
 ./bin/groxy --live inject "status" --session-label arch-machine
 ```
 
-Guide (routing model in depth): [docs/groxy.md](docs/groxy.md).
+Guide (routing model + **Neovim ACP setup**): [docs/groxy.md](docs/groxy.md).
 
 ```text
 ACP client ── picks agent/cwd ──► grok agent serve ──► that workspace   ✅
