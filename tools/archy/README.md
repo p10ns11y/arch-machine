@@ -191,3 +191,7 @@ When `archy` is on `PATH`, the Go dispatcher can start it first (`bin/tinfoil.go
 ```bash
 cargo test --manifest-path tools/archy/Cargo.toml
 ```
+
+## Related: remote surfaces (groxy)
+
+archy is the **local** menu loop. For **notify** (host→XChat) and **remote ACP control**, see [tools/groxy/README.md](../groxy/README.md) and [docs/groxy.md](../../docs/groxy.md).

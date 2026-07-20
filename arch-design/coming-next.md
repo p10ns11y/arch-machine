@@ -2,7 +2,7 @@
 
 **Keeper deep-dive:** [keeper.md](./keeper.md) · [coming-next-keeper.md](./coming-next-keeper.md) (SN-KEEP-*)  
 **Main control plane:** [`tools/archy`](../tools/archy/) (`archy` binary — entry + loop)  
-**Remote surfaces:** [`tools/groxy`](../tools/groxy/) (`groxy` — inject notify + ACP serve) · [docs/groxy.md](../docs/groxy.md)  
+**Remote surfaces:** [`tools/groxy`](../tools/groxy/) (`groxy` — inject notify + ACP serve) · [tools/groxy/README.md](../tools/groxy/README.md) · [docs/groxy.md](../docs/groxy.md)  
 **Agent orchestration:** [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` (Grok slash)  
 **Legacy:** gum `lib/tui/` · optional Go shim `bin/tinfoil.go` (dispatch only; not the product)
 
@@ -63,7 +63,7 @@ flowchart LR
 | Catalog search | **B** | Shell backend + archy menu | `maintenance/catalog.sh`, SN-CAT-1 |
 | Select update/remove | **C** | Dry-run actuate + refuse-list; multi-select UX in archy next | `maintenance/package-actuate.sh`, SN-INV-2 |
 | Grok agent TUI | **B+** | Slash status/init/audit/expand; fail closed | `plugins/arch-machine`, BOUNDARY.md |
-| **groxy remote surfaces** | **B+** | inject (host→XChat) + `acp serve`; poll removed; multi-session docs | `tools/groxy`, `docs/groxy.md`, SN-GROXY-1 |
+| **groxy remote surfaces** | **B+** | inject (host→XChat) + `acp serve`; poll removed; multi-session docs | `tools/groxy`, `tools/groxy/README.md`, `docs/groxy.md`, SN-GROXY-1 |
 | Gum TUI (legacy) | C+ | Works; freeze feature growth | `lib/tui/*.sh`, Issue #7 |
 | Go shim (optional) | C+ | Dispatcher only; not the control plane | `bin/tinfoil.go` |
 | Keeper (MFA vault) | **A-** | k=3 n=4 + PQ seal + drill; PR open | `modules/security/keeper`, PR #28 |
@@ -91,7 +91,7 @@ flowchart TD
 
 Runtime today: thin install copies repo under `/usr/share/tinfoil/` and installs the **optional Go shim** at `/usr/local/bin/tinfoil`. **`archy` is the intended day-1 controller** but is not yet installed to PATH by `--thin` (gap = SN-ARCHY-1). Until then: `make archy` and run `./tools/archy/target/debug/archy` with `TINFOIL_ROOT` set to the checkout (or `/usr/share/tinfoil`).
 
-**Remote today:** `./bin/groxy` — **control** via `acp serve` (any project cwd); **notify** via `inject [--session-label]`. Live `dm_events` poll is **gone** (rate-limited + never saw operator pings). Grok TUIs are not XChat listeners; addressing is client-chosen ACP cwd or inject label. Guide: [docs/groxy.md](../docs/groxy.md).
+**Remote today:** `./bin/groxy` — **control** via `acp serve` (any project cwd); **notify** via `inject [--session-label]`. Live `dm_events` poll is **gone** (rate-limited + never saw operator pings). Grok TUIs are not XChat listeners; addressing is client-chosen ACP cwd or inject label. Guides: [tools/groxy/README.md](../tools/groxy/README.md) · [docs/groxy.md](../docs/groxy.md).
 
 ## §4 Musk 5-step on backlog
 
@@ -424,10 +424,10 @@ flowchart LR
 | `tools/groxy/` | Rust satellite: Eagle inject path, outcome packages, allowlist |
 | `tools/groxy/src/acp_remote.rs` | `acp {explain,status,serve}` wraps `grok agent serve` |
 | `tools/groxy/src/main.rs` | Drop live `dm_events` poll/once from CLI |
-| `docs/groxy.md` + README | Multi-session routing; Neovim avante/CodeCompanion stdio ACP |
+| `docs/groxy.md` + `tools/groxy/README.md` | Multi-session routing; Neovim avante/CodeCompanion stdio ACP |
 | `make groxy-test` | Unit tests (17+) for policy, packages, grok resolve |
 
-**Done when (MVP):** dry-run + live inject sends/writes outcome; `--session-label` tags multi-project notifies; `acp serve --cwd` launches agent; docs state poll is out and TUIs are not DM listeners. **(Met on branch `feat/groxy-xchat-remote`.)**
+**Done when (MVP):** dry-run + live inject sends/writes outcome; `--session-label` tags multi-project notifies; `acp serve --cwd` launches agent; docs state poll is out and TUIs are not DM listeners. **(Met; merged on sentinel as #31.)**
 
 **Verify:** `make groxy-test` · `./bin/groxy acp explain` · `./bin/groxy --dry-run inject "ping" --session-label test`
 
