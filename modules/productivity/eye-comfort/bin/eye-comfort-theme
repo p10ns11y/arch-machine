@@ -320,6 +320,16 @@ def _waybar_running() -> bool:
     )
 
 
+def _waybar_count() -> int:
+    try:
+        out = subprocess.check_output(
+            ["pgrep", "-x", "waybar"], text=True, stderr=subprocess.DEVNULL
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return 0
+    return sum(1 for line in out.splitlines() if line.strip())
+
+
 def _import_session_env(env: dict) -> dict:
     """Pull Hyprland/Wayland vars from systemd --user when missing (timers / non-login shells)."""
     need = (
@@ -350,29 +360,31 @@ def _import_session_env(env: dict) -> dict:
     return env
 
 
-def _ensure_waybar(env: dict) -> None:
-    """Always make sure waybar is alive after omarchy-theme-set (it pkill's the bar)."""
-    env = _import_session_env(env)
-    if _waybar_running():
-        return
-
-    time.sleep(0.2)
+def _restart_waybar_once(env: dict) -> bool:
+    """Single exclusive restart (wrapper preferred). Never stack hyprctl + uwsm."""
     restart_wb = shutil.which("omarchy-restart-waybar", path=env["PATH"])
     if restart_wb:
         subprocess.call([restart_wb], env=env)
+        for _ in range(12):
+            if _waybar_count() == 1:
+                return True
+            if _waybar_count() > 1:
+                # Wrapper should collapse; give it one more exclusive pass.
+                subprocess.call([restart_wb], env=env)
+            time.sleep(0.25)
+        return _waybar_count() == 1
 
-    for _ in range(8):
-        if _waybar_running():
-            print("waybar: restored after theme-set")
-            return
-        time.sleep(0.25)
-
-    # Direct last resorts (do not depend on which() finding our wrapper).
+    # No wrapper on PATH — one exclusive path only (hyprctl XOR setsid).
+    subprocess.call(
+        ["pkill", "-9", "-x", "waybar"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    time.sleep(0.15)
     hyprctl = shutil.which("hyprctl", path=env["PATH"]) or shutil.which("hyprctl")
     if hyprctl and env.get("HYPRLAND_INSTANCE_SIGNATURE"):
         subprocess.call([hyprctl, "dispatch", "exec", "waybar"], env=env)
-        time.sleep(0.5)
-    if not _waybar_running() and env.get("WAYLAND_DISPLAY"):
+    elif env.get("WAYLAND_DISPLAY"):
         waybar_bin = shutil.which("waybar", path=env["PATH"]) or shutil.which("waybar")
         if waybar_bin:
             subprocess.Popen(
@@ -382,16 +394,44 @@ def _ensure_waybar(env: dict) -> None:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            time.sleep(0.5)
+    for _ in range(12):
+        if _waybar_count() == 1:
+            return True
+        time.sleep(0.25)
+    return _waybar_count() == 1
 
-    if _waybar_running():
+
+def _ensure_waybar(env: dict) -> None:
+    """Exactly one waybar after omarchy-theme-set (it pkill's the bar; cold boot can double-spawn)."""
+    env = _import_session_env(env)
+    n = _waybar_count()
+    if n == 1:
+        return
+    if n > 1:
+        print(f"waybar: collapsing {n} instances after theme-set")
+    elif n == 0:
+        # Persistent timer catch-up after power-drain often runs *during* Hyprland
+        # startup. Stock omarchy-theme-set only restarts when a bar already exists,
+        # so we must not race Hyprland's exec-once (uwsm-app -- waybar) or we get
+        # two bars. Wait briefly for session autostart before launching ourselves.
+        for _ in range(16):  # ~4s
+            time.sleep(0.25)
+            n = _waybar_count()
+            if n == 1:
+                return
+            if n > 1:
+                print(f"waybar: collapsing {n} instances after theme-set")
+                break
+
+    if _restart_waybar_once(env):
         print("waybar: restored after theme-set")
-    else:
-        print(
-            "warn: waybar not running after theme-set. "
-            "Restore with: omarchy restart waybar",
-            file=sys.stderr,
-        )
+        return
+
+    print(
+        "warn: waybar not running after theme-set. "
+        "Restore with: omarchy restart waybar",
+        file=sys.stderr,
+    )
 
 
 def _swaybg_running() -> bool:
