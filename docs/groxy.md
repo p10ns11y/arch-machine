@@ -25,9 +25,10 @@ Not named xchat-bridge. Does **not** treat public posts as commands.
 
 # Live: poll X DM events and reply (requires xurl OAuth + DM scopes)
 export GROXY_REPLY_TO=Peramanathan   # your X username (no @ required)
-./bin/groxy --live once --reply-to Peramanathan
-# daemon loop (remote control while this runs):
-./bin/groxy --live poll --interval 45 --reply-to Peramanathan
+export GROXY_PR_URL=https://github.com/p10ns11y/arch-machine/pull/31
+# Flags work before or after the subcommand:
+./bin/groxy --live --reply-to Peramanathan once
+./bin/groxy --live poll --interval 60 --reply-to Peramanathan
 ```
 
 **Phone remote control:** keep `groxy --live poll …` running on the host (tmux/systemd). DM yourself:

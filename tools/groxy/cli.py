@@ -32,77 +32,93 @@ def _default_work() -> Path:
     return xdg
 
 
-def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        prog="groxy",
-        description="XChat DM remote control bridge (summary + visual back to chat)",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=BANNER,
-    )
-    p.add_argument("--version", action="version", version=f"groxy {__version__}")
+def _common_flags(p: argparse.ArgumentParser, *, suppress_defaults: bool = False) -> None:
+    """
+    Shared flags. When attached to subparsers use suppress_defaults=True so a
+    value set before the subcommand is not wiped by store_true default=False.
+    """
+    d = argparse.SUPPRESS if suppress_defaults else None
     p.add_argument(
         "--config",
         type=Path,
-        default=None,
+        default=d if suppress_defaults else None,
         help="allowlist config path (default: config/groxy/allowlist.conf)",
     )
     p.add_argument(
         "--state",
         type=Path,
-        default=None,
+        default=d if suppress_defaults else None,
         help="state file for seen DM ids (default: ~/.local/state/groxy/state.json)",
     )
     p.add_argument(
         "--work-dir",
         type=Path,
-        default=None,
+        default=d if suppress_defaults else None,
         help="working dir for effects + outbound packages",
     )
     p.add_argument(
         "--dry-run",
         action="store_true",
-        default=False,
+        default=argparse.SUPPRESS if suppress_defaults else False,
         help="do not call live xurl send; write outbound packages to disk",
     )
     p.add_argument(
         "--live",
         action="store_true",
-        default=False,
+        default=argparse.SUPPRESS if suppress_defaults else False,
         help="send real XChat DMs via xurl (requires auth)",
     )
     p.add_argument(
         "--reply-to",
-        default=os.environ.get("GROXY_REPLY_TO", ""),
+        default=argparse.SUPPRESS if suppress_defaults else os.environ.get("GROXY_REPLY_TO", ""),
         help="DM recipient username (e.g. Peramanathan) for replies",
     )
     p.add_argument(
         "--allow-id",
         action="append",
-        default=[],
+        default=argparse.SUPPRESS if suppress_defaults else [],
         help="extra allowlisted sender user id (repeatable)",
     )
     p.add_argument(
         "--allow-user",
         action="append",
-        default=[],
+        default=argparse.SUPPRESS if suppress_defaults else [],
         help="extra allowlisted username (repeatable)",
     )
 
+
+def build_parser() -> argparse.ArgumentParser:
+    # Root defaults (flags before subcommand)
+    root_common = argparse.ArgumentParser(add_help=False)
+    _common_flags(root_common, suppress_defaults=False)
+    # Subcommand copy uses SUPPRESS so missing flags don't clobber root values
+    sub_common = argparse.ArgumentParser(add_help=False)
+    _common_flags(sub_common, suppress_defaults=True)
+
+    p = argparse.ArgumentParser(
+        prog="groxy",
+        description="XChat DM remote control bridge (summary + visual back to chat)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=BANNER,
+        parents=[root_common],
+    )
+    p.add_argument("--version", action="version", version=f"groxy {__version__}")
+
     sub = p.add_subparsers(dest="cmd", required=False)
 
-    sub.add_parser("help", help="show help banner")
+    sub.add_parser("help", help="show help banner", parents=[sub_common])
 
-    once = sub.add_parser("once", help="poll DM events once and process")
+    once = sub.add_parser("once", help="poll DM events once and process", parents=[sub_common])
     once.add_argument("--fixture", type=Path, help="JSON dm_events fixture (dry-run path)")
     once.add_argument("--max", type=int, default=20, help="max events to fetch")
 
-    poll = sub.add_parser("poll", help="poll DM events in a loop")
+    poll = sub.add_parser("poll", help="poll DM events in a loop", parents=[sub_common])
     poll.add_argument("--interval", type=float, default=45.0, help="seconds between polls")
     poll.add_argument("--fixture", type=Path, help="JSON fixture (re-read each loop; dry-run)")
     poll.add_argument("--max", type=int, default=20)
     poll.add_argument("--count", type=int, default=0, help="stop after N loops (0=forever)")
 
-    inj = sub.add_parser("inject", help="inject one synthetic DM command (local E2E)")
+    inj = sub.add_parser("inject", help="inject one synthetic DM command (local E2E)", parents=[sub_common])
     inj.add_argument("text", help='command text e.g. "status" or "!g inventory"')
     inj.add_argument("--sender-id", default="295441607", help="synthetic sender id")
     inj.add_argument("--event-id", default=None, help="synthetic event id")
@@ -110,6 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
     demo = sub.add_parser(
         "demo-outbound",
         help="build a summary+visual package without inbound (dry-run proof)",
+        parents=[sub_common],
     )
     demo.add_argument("--verb", default="status")
     demo.add_argument("--text", default="demo host status: ok")
