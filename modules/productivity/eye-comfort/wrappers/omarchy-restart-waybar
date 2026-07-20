@@ -1,42 +1,76 @@
 #!/bin/bash
 # Eye-comfort PATH override for stock omarchy-restart-waybar.
 # Stock: pkill -9 waybar; uwsm-app -- waybar  (often leaves no bar when UWSM
-# races / lacks Hyprland session env). Prefer hyprctl, then UWSM, then setsid.
+# races / lacks Hyprland session env).
+#
+# Cold-boot / power-drain footgun (fixed here): do NOT stack launch methods.
+# hyprctl dispatch is async — if we also call uwsm-app after a short poll, the
+# delayed hyprctl exec lands later → double Waybar (one under hyprland.service,
+# one under app-Hyprland-waybar-*.scope). Pick exactly one path and stick to it.
 set -u
 
 pkill -9 -x waybar 2>/dev/null || true
 sleep 0.15
 
 waybar_up() { pgrep -x waybar >/dev/null 2>&1; }
+waybar_count() { pgrep -x waybar 2>/dev/null | wc -l; }
 
-# Prefer compositor launch when Hyprland signature is in the environment.
-if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1; then
-  hyprctl dispatch exec waybar >/dev/null 2>&1 || true
-  for _ in 1 2 3 4 5 6; do
-    waybar_up && exit 0
-    sleep 0.2
+wait_one() {
+  # $1 = max iterations, $2 = sleep seconds
+  local max="${1:-12}" step="${2:-0.25}"
+  local i
+  for ((i = 0; i < max; i++)); do
+    if waybar_up; then
+      # Collapse any race that still produced >1 (exec-once vs restart).
+      if [[ "$(waybar_count)" -gt 1 ]]; then
+        pkill -9 -x waybar 2>/dev/null || true
+        sleep 0.1
+        return 1
+      fi
+      return 0
+    fi
+    sleep "$step"
   done
-fi
+  return 1
+}
 
-RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-if [[ -p "${RUNTIME}/uwsm-app-daemon-in" && -p "${RUNTIME}/uwsm-app-daemon-out" ]]; then
-  REAL_UWSM="${EC_UWSM_APP_REAL:-/usr/bin/uwsm-app}"
-  if [[ -x "$REAL_UWSM" ]]; then
-    setsid "$REAL_UWSM" -- waybar >/dev/null 2>&1 &
-    for _ in 1 2 3 4 5 6 7 8; do
-      waybar_up && exit 0
-      sleep 0.25
-    done
-  fi
-fi
+launch_hyprctl() {
+  [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] || return 1
+  command -v hyprctl >/dev/null 2>&1 || return 1
+  hyprctl dispatch exec waybar >/dev/null 2>&1 || return 1
+  wait_one 16 0.25
+}
 
-if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v waybar >/dev/null 2>&1; then
+launch_uwsm() {
+  local runtime real
+  runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  [[ -p "${runtime}/uwsm-app-daemon-in" && -p "${runtime}/uwsm-app-daemon-out" ]] || return 1
+  real="${EC_UWSM_APP_REAL:-/usr/bin/uwsm-app}"
+  [[ -x "$real" ]] || return 1
+  setsid "$real" -- waybar >/dev/null 2>&1 &
+  wait_one 16 0.25
+}
+
+launch_setsid() {
+  [[ -n "${WAYLAND_DISPLAY:-}" ]] || return 1
+  command -v waybar >/dev/null 2>&1 || return 1
   setsid waybar >/dev/null 2>&1 &
-  for _ in 1 2 3 4 5 6; do
-    waybar_up && exit 0
-    sleep 0.2
-  done
+  wait_one 12 0.2
+}
+
+# Exclusive order: prefer compositor when signature is live (timer/oneshot after
+# Hyprland is up). Only use real UWSM when Hyprland env is missing. Never both.
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+  launch_hyprctl && exit 0
+  # One clean retry (hyprctl may have been mid-start after power-drain boot).
+  pkill -9 -x waybar 2>/dev/null || true
+  sleep 0.15
+  launch_hyprctl && exit 0
+elif launch_uwsm; then
+  exit 0
 fi
+
+launch_setsid && exit 0
 
 waybar_up
 exit $?
