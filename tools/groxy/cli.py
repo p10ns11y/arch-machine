@@ -268,17 +268,24 @@ def main(argv: list[str] | None = None) -> int:
         print(BANNER)
         print(f"mode={'dry-run' if dry or fixture else 'live'} work={work}")
         for i in range(int(loops)):
-            report = run_once(
-                reader,
-                policy=policy,
-                state=state,
-                effect_dir=effect_dir,
-                package_dir=package_dir,
-                sender=sender,
-                reply_to=reply_to,
-                dry_run=dry or bool(fixture),
-                max_results=getattr(args, "max", 20),
-            )
+            try:
+                report = run_once(
+                    reader,
+                    policy=policy,
+                    state=state,
+                    effect_dir=effect_dir,
+                    package_dir=package_dir,
+                    sender=sender,
+                    reply_to=reply_to,
+                    dry_run=dry or bool(fixture),
+                    max_results=getattr(args, "max", 20),
+                )
+            except Exception as exc:  # keep poll alive through transient API errors
+                print(f"[{i+1}] poll error: {exc}", file=sys.stderr)
+                if args.cmd == "once":
+                    return 1
+                time.sleep(max(interval, 60.0))
+                continue
             save_state(state_path, state)
             print(
                 f"[{i+1}] processed={len(report.processed)} "
