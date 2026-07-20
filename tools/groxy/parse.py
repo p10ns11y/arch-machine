@@ -78,9 +78,13 @@ def is_groxy_outbound_noise(text: str) -> bool:
         return True
     if t.startswith("groxy OK:") or t.startswith("groxy FAIL:"):
         return True
+    if t.startswith("✓ Done:") or t.startswith("✗ Failed:"):
+        return True
     if t.startswith("── visual ──") or "╔══" in t[:80]:
         return True
     if t.startswith("[media]"):
+        return True
+    if t.startswith("PR: https://"):
         return True
     return False
 

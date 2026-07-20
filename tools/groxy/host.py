@@ -77,7 +77,8 @@ def write_effect_log(out_dir: Path, name: str, content: str) -> Path:
 
 def action_ping(effect_dir: Path) -> HostResult:
     t0 = time.monotonic()
-    msg = f"pong from {hostname()} cwd={repo_root()}"
+    # Operator-facing outcome only (no host/cwd in DM path)
+    msg = "Reachable — ready for next command"
     path = write_effect_log(effect_dir, "host-effect-ping.txt", msg + "\n")
     return HostResult(
         ok=True,
@@ -91,18 +92,15 @@ def action_ping(effect_dir: Path) -> HostResult:
 
 
 def action_help() -> HostResult:
-    text = """groxy remote commands (XChat DM):
-  help              this text
-  ping              host liveness + effect log
-  status            inventory snapshot (text)
-  inventory         same as status (JSON+text via inventory.sh)
-  audit             security-audit dry-run sample
-  omarchy           omarchy-status.sh
-  run <prompt>      grok headless (restricted tools; no yolo by default)
-  confirm <tok> …   approve a pending high-blast command
-
-Prefix optional: !g …  or  groxy …
-Untrusted senders are rejected. High-blast verbs need confirm.
+    text = """Commands:
+• help — this list
+• ping — liveness
+• status / inventory — package snapshot summary
+• audit — security audit
+• omarchy — omarchy status
+• run <prompt> — restricted grok task
+• confirm <token> … — approve high-blast
+Prefix optional: !g …
 """
     return HostResult(ok=True, verb="help", output=text.strip(), exit_code=0, duration_sec=0.0)
 

@@ -68,6 +68,7 @@ class ParseTests(unittest.TestCase):
 
     def test_outbound_noise_ignored(self):
         self.assertIsNone(parse_dm_text("groxy OK: `ping`\nhost=mzapan"))
+        self.assertIsNone(parse_dm_text("✓ Done: ping\n• Reachable — ready for next command"))
 
 
 class PolicyTests(unittest.TestCase):
@@ -93,25 +94,53 @@ class PackageTests(unittest.TestCase):
     def test_summary_and_visual(self):
         with tempfile.TemporaryDirectory() as td:
             out = Path(td)
+            inv = (
+                "tinfoil inventory (tinfoil.inventory.v1)\n"
+                "host: mzapan  time: 2026-07-20T17:51:22+05:30\n"
+                "summary: explicit=236 tools_yaml_ok=18 tools_yaml_miss=0 upgradable=0 mise=13\n"
+                "ownership: arch-machine=14 omarchy=157 user=65\n"
+                "=== Explicit packages (pacman -Qe) — first 40 ===\n"
+                "1password-beta  8.12.24\n"
+            )
             pkg = build_outbound_package(
                 verb="status",
                 ok=True,
-                result_text="inventory lines\nok",
+                result_text=inv,
                 host="testhost",
                 cwd="/tmp/x",
                 out_dir=out,
+                pr_url="https://github.com/p10ns11y/arch-machine/pull/31",
             )
-            self.assertIn("groxy", pkg.summary.lower())
-            self.assertIn("status", pkg.summary.lower())
-            self.assertIn("╔", pkg.visual_text)  # visual panel
+            self.assertIn("Done: status", pkg.summary)
+            self.assertIn("236 explicit", pkg.summary)
+            self.assertIn("PR: https://github.com/p10ns11y/arch-machine/pull/31", pkg.summary)
+            # No system noise in operator-facing text
+            self.assertNotIn("host=", pkg.summary.lower())
+            self.assertNotIn("mzapan", pkg.summary)
+            self.assertNotIn("cwd", pkg.summary.lower())
+            self.assertNotIn("1password", pkg.summary)
+            self.assertIn("╔", pkg.visual_text)
+            self.assertNotIn("host:", pkg.visual_text.lower())
             self.assertIsNotNone(pkg.visual_path)
             assert pkg.visual_path is not None
             self.assertTrue(pkg.visual_path.is_file())
-            self.assertGreater(pkg.visual_path.stat().st_size, 50)
-            written = pkg.write_files(out / "pack")
-            dm = written["dm_payload"].read_text(encoding="utf-8")
-            self.assertIn("visual", dm.lower())
-            self.assertIn("groxy", dm.lower())
+            dm = pkg.dm_text()
+            self.assertIn("Done: status", dm)
+            self.assertIn("PR:", dm)
+            self.assertNotIn("mzapan", dm)
+            self.assertNotIn("/tmp/x", dm)
+
+    def test_extract_pr_from_result(self):
+        from tools.groxy.package import build_summary_text
+
+        text = build_summary_text(
+            verb="run",
+            ok=True,
+            result_text="Opened https://github.com/p10ns11y/arch-machine/pull/29 for review",
+            pr_url=None,
+        )
+        self.assertIn("pull/29", text)
+        self.assertIn("✓ Done: run", text)
 
 
 class InboundDispatchTests(unittest.TestCase):
@@ -191,18 +220,22 @@ class InboundDispatchTests(unittest.TestCase):
         self.assertIsNotNone(r.host.effect_path)
         assert r.host.effect_path is not None
         self.assertTrue(r.host.effect_path.is_file())
-        self.assertIn("pong", r.host.effect_path.read_text(encoding="utf-8"))
+        effect = r.host.effect_path.read_text(encoding="utf-8")
+        self.assertIn("Reachable", effect)
         self.assertIsNotNone(r.package)
         assert r.package is not None
-        self.assertIn("visual", r.package.dm_text().lower())
+        dm = r.package.dm_text()
+        self.assertIn("Done: ping", dm)
+        self.assertNotIn("host=", dm.lower())
+        self.assertNotIn("cwd", dm.lower())
         self.assertTrue(r.package.visual_text.strip())
         # dry-run send wrote a file
         self.assertTrue(r.send_result and r.send_result.get("ok"))
         sends = list((self.packages / "sends").glob("send-*.txt"))
         self.assertTrue(sends)
         body = sends[0].read_text(encoding="utf-8")
-        self.assertIn("groxy", body.lower())
-        self.assertIn("visual", body.lower())
+        self.assertIn("Done: ping", body)
+        self.assertNotIn("mzapan", body)
 
     def test_high_blast_requires_confirm(self):
         event = {
@@ -264,8 +297,9 @@ class InboundDispatchTests(unittest.TestCase):
         for p in report.processed:
             if p.package and p.package.visual_text:
                 has_visual = True
-                self.assertIn("groxy", (p.package.summary or "").lower())
+                self.assertTrue("Done:" in (p.package.summary or "") or "Failed:" in (p.package.summary or ""))
                 self.assertTrue(p.package.visual_text)
+                self.assertNotIn("host=", (p.package.summary or "").lower())
         self.assertTrue(has_visual or packs, "outbound summary/visual missing")
 
 

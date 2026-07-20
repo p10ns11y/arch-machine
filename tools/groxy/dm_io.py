@@ -123,8 +123,8 @@ class XurlDmIO:
         }
 
     def send_with_media(self, recipient: str, text: str, media_path: Path | None) -> dict[str, Any]:
-        # v1: text DM always; optionally upload media and append media id note.
-        # X DM media attach API varies by tier; we upload + mention path in text if attach unsupported.
+        # Upload visual media for archive/future attach; do not append upload logs to the DM body
+        # (operator DMs stay outcome-first: done bullets + PR, no system noise).
         result: dict[str, Any] = {"media_upload": None}
         if media_path and Path(media_path).is_file():
             up = subprocess.run(
@@ -136,12 +136,8 @@ class XurlDmIO:
             )
             result["media_upload"] = {
                 "ok": up.returncode == 0,
-                "output": ((up.stdout or "") + (up.stderr or "")).strip(),
+                "output": ((up.stdout or "") + (up.stderr or "")).strip()[:500],
             }
-            if up.returncode == 0 and up.stdout:
-                # Append media id hint to text so the package remains self-describing
-                mid = up.stdout.strip().splitlines()[-1][:80]
-                text = f"{text}\n\n[media] {mid}"
         send = self.send_text(recipient, text)
         send.update(result)
         return send

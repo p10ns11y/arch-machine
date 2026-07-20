@@ -39,7 +39,27 @@ status
 !g summarize open ports briefly
 ```
 
-Replies land in the same XChat DM thread as **summary + visual panel** (PNG media is uploaded; panel text is always in the DM body).
+Replies are **outcome-first** (no host/cwd/package dumps):
+
+```text
+✓ Done: status
+• Inventory: 236 explicit packages
+• tools.yaml ok=18 miss=0; upgradable=0
+• Ownership: arch-machine 14 · omarchy 157 · user 65
+PR: https://github.com/p10ns11y/arch-machine/pull/N
+
+╔════════════════════════════════╗
+║ OK    status                   ║
+…
+╚════════════════════════════════╝
+```
+
+PR link sources: `GROXY_PR_URL` env, else `gh pr view` for the current branch, else any PR URL found in the command output.
+
+```bash
+export GROXY_PR_URL="https://github.com/p10ns11y/arch-machine/pull/31"  # optional pin
+./bin/groxy --live poll --reply-to Peramanathan
+```
 
 Install to PATH (optional):
 
