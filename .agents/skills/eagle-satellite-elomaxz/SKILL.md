@@ -210,8 +210,9 @@ cargo build --release --manifest-path crates/archy/Cargo.toml
 
 ## Sources (design thesis)
 
-- Eagle + Satellites: hierarchical swarm control (orchestrator of orchestrators).
-- Offline satellites: fire async → structural work → verify outcome (no constant monitoring).
+- [Eagle + Satellites](https://x.com/Peramanathan/status/2078680221059039361) — hierarchical swarm control (orchestrator of orchestrators).
+- [Offline satellites](https://x.com/Peramanathan/status/2078703537849241742) — fire async → structural work → verify outcome (no constant monitoring).
+- [Structured loops over raw ReAct](https://x.com/Peramanathan/status/2067890630345494578) — outer state machine + bounded inner steps.
 - Elomaxz / Elm TEA: message in, model out, effects as commands — same as `lib/tui`.
 
 Keep the creative loop; give it a **machine graph** with clear edges.

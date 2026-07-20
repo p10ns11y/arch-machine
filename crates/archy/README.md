@@ -31,6 +31,14 @@ Inventory is smart: missing tools → install dry-run; upgrades → pkg dry-run;
 
 **Eagle** = thin top brain. **Satellites** = one domain each. **Messages** = everything that happens.
 
+Design notes (public threads):
+
+- [Eagle + Satellites — orchestrator of orchestrators](https://x.com/Peramanathan/status/2078680221059039361)
+- [Offline satellites — fire → work → verify (no heartbeats)](https://x.com/Peramanathan/status/2078703537849241742)
+- [Structured loops over raw ReAct (outer state machine)](https://x.com/Peramanathan/status/2067890630345494578)
+
+In-repo skill: [eagle-satellite-elomaxz](../../.agents/skills/eagle-satellite-elomaxz/SKILL.md) · guide: [docs/archy.md](../../docs/archy.md).
+
 ```mermaid
 flowchart TB
   subgraph You

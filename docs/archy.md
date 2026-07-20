@@ -5,6 +5,12 @@ It does **not** reimplement package logic in Rust. It **steers** shell scripts a
 
 Code: [`crates/archy/`](../crates/archy/). Agent skill: [eagle-satellite-elomaxz](../.agents/skills/eagle-satellite-elomaxz/SKILL.md).
 
+**Why this shape** (X / design threads):
+
+- [Eagle + Satellites](https://x.com/Peramanathan/status/2078680221059039361) — thin top controller; domains own full sub-flows
+- [Offline satellites](https://x.com/Peramanathan/status/2078703537849241742) — start job async, verify exit later (no constant monitoring)
+- [Structured loops over raw ReAct](https://x.com/Peramanathan/status/2067890630345494578) — named phases + bounded steps
+
 ---
 
 ## What you see
