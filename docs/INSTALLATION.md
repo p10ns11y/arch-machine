@@ -25,20 +25,20 @@ chmod +x install.sh migrate.sh
 # Run migration if you have existing setup (optional)
 ./migrate.sh
 
-# STEP 1 (default / recommended): Thin install ONLY the tinfoil guardian CLI
-# This is fast, installs almost nothing, and gives you the auditor + TUI.
+# STEP 1 (default / recommended): Thin install — shared runtime for backends
 ./install.sh
 # or explicitly:
 ./install.sh --thin
 
-# Now you have:
-#   /usr/local/bin/tinfoil
-#   /usr/share/tinfoil/  (self-contained runtime for tui + profile launches)
+# Runtime tree: /usr/share/tinfoil/  (maintenance/, profiles, modules, …)
+# Main controller is archy (Ratatui entry + loop). Until thin install ships
+# archy on PATH (SN-ARCHY-1), build and run from the checkout:
+make archy
+TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
 
-# Try the CLI immediately:
-tinfoil                  # global audit
-tinfoil tui              # interactive control center (profiles, remediation, evidence)
-tinfoil .                # audit this folder
+# Or call backends directly:
+./maintenance/security-audit.sh
+./maintenance/inventory.sh --json
 
 # STEP 2 (when ready): Full profile install via the same installer or from TUI
 ./install.sh --profile ml-dev     # recommended full ML/AI + ROCm workstation

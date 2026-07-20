@@ -53,8 +53,10 @@ yamllint.log
 nvim.log
 
 
-# keeper build artifacts
+# Rust build artifacts
 modules/security/keeper/target/
+crates/tinfoil-tui/target/
+target/
 
 # agent expand stamps (Grok plugin)
 .agent-expanded

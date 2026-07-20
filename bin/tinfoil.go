@@ -26,7 +26,12 @@ func main() {
 
 	switch args[0] {
 	case "tui", "ui", "menu":
-		// TUI subcommand dispatch (Phase 3: shell+ gum TUI, zero extra Go deps)
+		// Prefer Ratatui control plane (entry + loop); gum is legacy fallback.
+		if runRustTui(args[1:]) {
+			printGoodbye()
+			return
+		}
+		// Legacy: shell + gum TUI
 		tuiScript := findTuiScript()
 		cmd := exec.Command("bash", tuiScript)
 		cmd.Stdout = os.Stdout
@@ -78,6 +83,23 @@ func main() {
 	case "install":
 		handleInstall(args[1:])
 
+	case "inventory", "inv", "list-tools":
+		// Surface-agnostic inventory (shell backend). Preferred over growing Go.
+		// Future: Grok plugin + Rust TUI call maintenance/inventory.sh directly.
+		handleInventory(args[1:])
+
+	case "search", "catalog":
+		// SN-CAT-1: searchable tools.yaml + profile catalog (read-only shell backend).
+		handleShellScript("maintenance/catalog.sh", "catalog", args[1:])
+
+	case "pkg", "actuate":
+		// SN-INV-2: consent-gated update/remove (dry-run default).
+		handleShellScript("maintenance/package-actuate.sh", "pkg", args[1:])
+
+	case "omarchy", "omarchy-status":
+		// SN-OM-1: read-only Omarchy host status (official omarchy CLI when present).
+		handleShellScript("maintenance/omarchy-status.sh", "omarchy", args[1:])
+
 	default:
 		// Backward compat + convenience:
 		//   tinfoil .          → audit current dir
@@ -108,26 +130,32 @@ func printBannerAndHelp() {
 	fmt.Println("  tinfoil [command] [arguments]")
 	fmt.Println()
 	fmt.Println("COMMANDS:")
-	fmt.Println("  tui, ui, menu     Launch the beautiful interactive TUI (recommended)")
-	fmt.Println("  install           Perform profiled installation (equivalent to ./install.sh)")
+	fmt.Println("  inventory, inv    List installed packages/tools (JSON snapshot; read-only)")
+	fmt.Println("  search, catalog   Search tools.yaml + profiles (read-only catalog)")
+	fmt.Println("  pkg, actuate      Update/remove packages (dry-run default; refuse-list)")
+	fmt.Println("  omarchy           Omarchy host status (version/theme/pkg probes; read-only)")
 	fmt.Println("  audit [path]      Run full security audit (global or on a directory)")
+	fmt.Println("  install           Perform profiled installation (equivalent to ./install.sh)")
 	fmt.Println("  vault setup|mount [enc_dir] [mount_point]   Manage encrypted gocryptfs vault")
+	fmt.Println("  tui, ui, menu     Ratatui control plane (archy) or gum fallback")
 	fmt.Println("  version           Show version")
 	fmt.Println("  help              Show this help")
 	fmt.Println()
 	fmt.Println("EXAMPLES:")
-	fmt.Println("  tinfoil tui                    # Full interactive Sentinel experience")
-	fmt.Println("  tinfoil install --profile ml-dev          # Full profiled installation")
-	fmt.Println("  tinfoil install --profile security-dev --dry-run")
+	fmt.Println("  tinfoil inventory              # Explicit pkgs + tools.yaml + mise + upgrades")
+	fmt.Println("  tinfoil inventory --json       # Agent-ready JSON on stdout")
+	fmt.Println("  tinfoil search docker          # Catalog: which tool + profiles")
+	fmt.Println("  tinfoil omarchy                # Omarchy version/theme/update (read-only)")
+	fmt.Println("  tinfoil pkg --update jq        # Dry-run plan (default)")
 	fmt.Println("  tinfoil audit .                # Audit current directory")
-	fmt.Println("  tinfoil vault setup            # Initialize + mount encrypted vault")
+	fmt.Println("  tinfoil install --profile ml-dev --dry-run")
+	fmt.Println("  tinfoil vault setup")
 	fmt.Println()
-	fmt.Println("The TUI is the primary way to drive the advanced capabilities")
-	fmt.Println("(profiles, policy remediation, evidence bundles, maintenance, etc.).")
-	fmt.Println("The CLI gives you direct, scriptable access to the same power.")
-	fmt.Println()
-	fmt.Println("For the full developmental arena experience, start here:")
-	fmt.Println("  tinfoil tui")
+	fmt.Println("Control plane: Ratatui archy (entry + loop) steers shell/Go backends.")
+	fmt.Println("  tinfoil tui                # prefers archy binary, else gum")
+	fmt.Println("  docs/omarchy.md            # Day-1 Omarchy + arch-machine playbook")
+	fmt.Println("  docs/omarchy-commands.md   # Full Omarchy CLI reference")
+	fmt.Println("  /arch-status /arch-audit   # Grok agent-as-TUI when plugin installed")
 }
 
 func runAudit(extraArgs []string) {
@@ -218,12 +246,32 @@ func findScript(scriptName string) string {
 	if path := "/usr/share/tinfoil/" + scriptName; fileExists(path) {
 		return path
 	}
-	// 2. Development mode (when running from repo)
+	// 2. Explicit root overrides (agent / Rust TUI / packaging)
+	for _, env := range []string{"TINFOIL_ROOT", "ARCH_MACHINE_ROOT"} {
+		if root := os.Getenv(env); root != "" {
+			if path := filepath.Join(root, scriptName); fileExists(path) {
+				return path
+			}
+		}
+	}
+	// 3. Development mode: binary next to repo (…/bin/tinfoil → …/script)
 	binDir := filepath.Dir(os.Args[0])
-	if path := filepath.Join(binDir, "..", scriptName); fileExists(path) {
+	if abs, err := filepath.Abs(binDir); err == nil {
+		if path := filepath.Join(abs, "..", scriptName); fileExists(path) {
+			return path
+		}
+	}
+	// 4. Cwd is repo root (common: go build -o /tmp/tinfoil && run from repo)
+	if path := scriptName; fileExists(path) {
 		return path
 	}
+	if wd, err := os.Getwd(); err == nil {
+		if path := filepath.Join(wd, scriptName); fileExists(path) {
+			return path
+		}
+	}
 	fmt.Fprintf(os.Stderr, "❌ Could not find %s\n", scriptName)
+	fmt.Fprintf(os.Stderr, "   Set TINFOIL_ROOT or ARCH_MACHINE_ROOT, or run from the arch-machine repo.\n")
 	os.Exit(1)
 	return ""
 }
@@ -233,7 +281,60 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-// findTuiScript locates the gum-powered interactive TUI (Phase 3)
+// runRustTui execs archy when available (Ratatui control plane / loop controller).
+// Returns true if it handled the request (found and ran, or ran with error exit).
+func runRustTui(extra []string) bool {
+	candidates := []string{}
+	if p, err := exec.LookPath("archy"); err == nil {
+		candidates = append(candidates, p)
+	}
+	// Dev builds relative to repo / this binary
+	binDir := filepath.Dir(os.Args[0])
+	for _, rel := range []string{
+		filepath.Join(binDir, "archy"),
+		filepath.Join(binDir, "..", "crates", "archy", "target", "release", "archy"),
+		filepath.Join(binDir, "..", "crates", "archy", "target", "debug", "archy"),
+		"crates/archy/target/release/archy",
+		"crates/archy/target/debug/archy",
+	} {
+		if fileExists(rel) {
+			if abs, err := filepath.Abs(rel); err == nil {
+				candidates = append(candidates, abs)
+			} else {
+				candidates = append(candidates, rel)
+			}
+		}
+	}
+	if len(candidates) == 0 {
+		return false
+	}
+	bin := candidates[0]
+	cmd := exec.Command(bin, extra...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	env := os.Environ()
+	// Ensure backends resolve
+	if root := os.Getenv("TINFOIL_ROOT"); root == "" {
+		if wd, err := os.Getwd(); err == nil {
+			env = append(env, "TINFOIL_ROOT="+wd)
+		}
+	}
+	cmd.Env = env
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			code := exitErr.ExitCode()
+			if code == 0 || code == 1 || code == 130 {
+				return true
+			}
+		}
+		fmt.Fprintf(os.Stderr, "❌ archy failed: %v (falling back to gum if available)\n", err)
+		return false
+	}
+	return true
+}
+
+// findTuiScript locates the gum-powered interactive TUI (Phase 3, legacy)
 func findTuiScript() string {
 	// 1. Installed system location
 	if path := "/usr/share/tinfoil/lib/tui.sh"; fileExists(path) {
@@ -352,6 +453,35 @@ func printGoodbye() {
 	fmt.Println("The fortress stands stronger because of your vigilance.")
 	fmt.Println()
 	fmt.Println("Stay sharp. The Sentinel is always watching. 🛡️")
+}
+
+// handleInventory dispatches to maintenance/inventory.sh (read-only).
+// Complex UI lives outside Go (Grok plugin / archy).
+func handleInventory(args []string) {
+	handleShellScript("maintenance/inventory.sh", "inventory", args)
+}
+
+// handleShellScript runs a repo maintenance/*.sh backend with args (thin dispatch only).
+func handleShellScript(relPath, label string, args []string) {
+	scriptPath := findScript(relPath)
+	cmd := exec.Command("bash", scriptPath)
+	cmd.Args = append(cmd.Args, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Env = os.Environ()
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			code := exitErr.ExitCode()
+			if code == 0 || code == 1 || code == 130 {
+				return
+			}
+			os.Exit(code)
+		}
+		fmt.Fprintf(os.Stderr, "❌ tinfoil %s failed: %v\n", label, err)
+		os.Exit(1)
+	}
 }
 
 // handleInstall allows the tinfoil CLI to perform full profiled installations

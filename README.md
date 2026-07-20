@@ -1,201 +1,180 @@
 # arch-machine
 
-<img src="tinfoil.jpg" alt="tinfoil" width="140" style="display: block; margin: auto;">
+<img src="tinfoil.jpg" alt="arch-machine" width="140" style="display: block; margin: auto;">
 
-
-Profile-based bootstrap and maintenance system for Arch Linux workstations focused on ML/AI development and security hardening.
+Arch Linux workstation toolkit steered by **`archy`**: thin install first, then optional YAML profiles for ML/AI and security. Shell backends do the work; evidence closes the loop. Works well on Omarchy.
 
 [![CI](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg)](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml)
-[![ShellCheck](https://github.com/p10ns11y/arch-machine/actions/workflows/ci.yml/badge.svg?job=shellcheck)](https://github.com/p10ns11y/arch-machine/actions)
-[![Evidence](https://img.shields.io/badge/evidence-first-blue)](https://github.com/p10ns11y/arch-machine/tree/sentinel#evidence--the-differentiator)
 
-For a more entertaining introduction, see [FUNREADME.md](FUNREADME.md) – where security meets humor.
+For lore and humor, see [FUNREADME.md](FUNREADME.md). Safety: [SAFETY.md](SAFETY.md). Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md). Control-plane guide: [docs/archy.md](docs/archy.md).
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  A[archy UI] -->|steers| B[Shell backends]
+  B --> C[Your machine]
+  B --> D[Evidence logs]
+  D -.->|next steps| A
+```
+
+**archy** shows a menu, runs a script, then highlights the **next** useful action.  
+It does not reimplement pacman logic in Rust.
+
+## What you can use this for
+
+| Goal | Path |
+|------|------|
+| Interactive control plane | `archy` (or `make archy` from this repo) |
+| Full ML/AI workstation | `./install.sh --profile ml-dev` |
+| Security-focused workstation | `./install.sh --profile security-dev` |
+| Light base tools only | `./install.sh --profile minimal` |
+| Inventory / ownership | `./maintenance/inventory.sh --json` (also in archy menu) |
+| Omarchy host status | `./maintenance/omarchy-status.sh` |
+| Search tools & profiles | `./maintenance/catalog.sh docker` |
+| Package change plan (dry-run) | `./maintenance/package-actuate.sh --update jq` |
+| Security audit | `./maintenance/security-audit.sh` |
+| Evidence bundles | `./maintenance/extract-evidence.sh` |
+| Weekly updates + scans | `maintenance/systemd-setup.sh setup` |
+
+Primary target: **Arch Linux** (including Omarchy). Not a multi-distro installer.
 
 ## Prerequisites
 
-- **Arch Linux** (primary target)
-- **Internet access** for downloads
-- **sudo privileges** for system operations
-- **yq** or **jq** for YAML/JSON processing (auto-installed if missing)
+- Arch Linux, network, `sudo`, `git`
+- **Rust / cargo** for `archy` (main controller)
+- `yq` or `jq` when needed (often auto-installed)
 
-## Safety Note
+Review [SAFETY.md](SAFETY.md) before `security-dev`.
 
-The security-dev profile includes security hardening and scans. Review [Safety & Requirements](docs/SECURITY.md) before choosing profiles.
+## Install
 
-## Quick Start (Thin Sentinel First)
+### A — Thin runtime + control plane (recommended first)
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+git clone https://github.com/p10ns11y/arch-machine.git
 cd arch-machine
+chmod +x install.sh
 
-# Make scripts executable
-chmod +x install.sh migrate.sh
-
-# 1. Thin install (default — recommended first step)
-#    Only the tinfoil guardian CLI + TUI. Fast, minimal footprint.
 ./install.sh
-#    (or ./install.sh --thin)
+# same as: ./install.sh --thin
 
-# 2. Use the sentinel immediately
-# Prefer Grok agent-as-TUI (optional plugin; no gum UI required):
-#   ~/.grok/plugins/arch-machine  (see Work/personal/plugins/arch-machine)
-#   /arch-status  /arch-init  /arch-audit  /arch-expand
-#
-tinfoil tui              # interactive menus (audit, profiles, remediation, evidence)
-tinfoil                  # quick global audit
+# Main controller (until SN-ARCHY-1 ships archy on PATH from thin install):
+make archy
+TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
+```
 
-# 3. Later — full hardened workstation (via same installer or from the TUI)
-./install.sh --profile ml-dev
-# or
-./install.sh --profile security-dev
+`./install.sh --thin` installs the shared runtime under `/usr/share/tinfoil/` (backends + profiles). Day-1 interaction is **`archy`**, not the optional Go shim.
 
-# Post-installation (after full profile)
+### B — Full workstation profile
+
+```bash
+./install.sh --list-profiles
+./install.sh --show-profile ml-dev
+./install.sh --profile ml-dev --dry-run
+./install.sh --profile minimal|ml-dev|security-dev
+```
+
+After a full profile:
+
+```bash
+# Log out/in if groups changed (docker, ROCm, …)
 maintenance/systemd-setup.sh setup
 ```
 
-## Installation Profiles
+### Flags
 
-### `minimal`
-Basic development tools (git, python, node, rust) and essential system packages.
+| Flag | Meaning |
+|------|---------|
+| (none) / `--thin` | Thin runtime (default) |
+| `--profile NAME` | Full profile install |
+| `--dry-run` | Full-profile preview (pair with `--profile`) |
+| `--validate` | Readiness checks only |
+| `--tui` | Launch control plane (archy if present, else gum legacy) |
 
-### `ml-dev` (Recommended)
-Everything in `minimal` plus ROCm GPU acceleration, ML/AI environments, and data science packages.
+## Usage by job
 
-Pre-configured Conda environments:
-- **ai_amd**: AI/ML environment with PyTorch, ROCm GPU support, JupyterLab, and essential data science packages (numpy, pandas, scikit-learn, xgboost, etc.)
-- **xai_exp**: Experimental AI environment with similar packages optimized for latest Python versions
+### Control plane
 
-### `security-dev`
-Everything in `minimal` plus Kubernetes security hardening, runtime monitoring, and encrypted storage.
-
-See [Installation Guide](docs/INSTALLATION.md) for detailed profile information and customization options.
-
-## Adapting for Other Distributions
-
-#### Ubuntu/Debian
 ```bash
-# Replace pacman with apt
-sed -i 's/pacman -S/apt install/g' modules/system/install.sh
-
-# Update package names
-# arch-package → debian-package equivalents
-# Example: reflector → apt update
+make archy
+TINFOIL_ROOT="$PWD" ./crates/archy/target/debug/archy
+# after SN-ARCHY-1 / when on PATH:
+archy
 ```
 
-#### Fedora/RHEL/CentOS
-```bash
-# Replace pacman with dnf/yum
-sed -i 's/pacman -S/dnf install/g' modules/system/install.sh
-
-# Update service management
-# systemctl → systemctl (same, but check init system)
+```text
+Home → run job → watch output → NEXT bar → Home
 ```
 
-#### General Adaptation Steps
-1. **Update Package Manager**: Replace `pacman` calls with your distro's package manager
-2. **Service Management**: Verify systemd compatibility (most modern distros use it)
-3. **Package Names**: Update package names to match your distribution
-4. **Paths**: Check `/usr/local/bin`, `/etc/systemd/system` availability
-5. **Dependencies**: Ensure `yq`, `jq`, `curl`, `git` are available
+Keys: ↑↓ select · Enter run · `g` brief · `G`/`p` Grok · `?` help · `q` quit.  
+Simple guide: [docs/archy.md](docs/archy.md) · crate: [crates/archy/README.md](crates/archy/README.md).
 
-#### Testing on Other Distros
+### Backends (scripts archy steers)
+
 ```bash
-# Test package manager detection
+./maintenance/inventory.sh --json
+./maintenance/omarchy-status.sh
+./maintenance/catalog.sh docker
+./maintenance/package-actuate.sh --update jq    # dry-run default
+./maintenance/security-audit.sh
+./maintenance/extract-evidence.sh --dry-run
+```
+
+Omarchy playbook: [docs/omarchy.md](docs/omarchy.md).
+
+### Profiles
+
+- **minimal** — git, mise (python/node/rust), essentials
+- **ml-dev** — + ROCm, conda (`ai_amd`, `xai_exp`), data science
+- **security-dev** — + vault, k8s/security tooling, scanners
+
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/MODULES.md](docs/MODULES.md).
+
+## Verify
+
+```bash
 ./install.sh --validate
-
-# Dry run installation
-./install.sh --profile minimal --dry-run
-
-# Check for missing packages
-grep "pacman -S" modules/system/install.sh
+make validate-profiles
+make archy
+./crates/archy/target/debug/archy --print-root
+./maintenance/extract-evidence.sh --dry-run
 ```
 
-## Maintenance
-
-The system includes automated weekly maintenance for system updates, security scans, and health monitoring.
-
-- **Automated**: Runs weekly via systemd timers
-- **Manual**: Individual maintenance scripts in `maintenance/`
-- **Evidence Extraction**: Generates AI-optimized evidence bundles from logs
-
-See [Maintenance Guide](docs/MAINTENANCE.md) for complete maintenance documentation.
-
-## Interactive TUI (New in 2026 Sentinel)
-
-Launch the beautiful gum-powered vigilant control center:
-
-```bash
-tinfoil tui          # after system install (or go run bin/tinfoil.go tui in dev)
-./install.sh --tui   # during setup
-```
-
-Flows include:
-- 🔍 Full security audit (live vulns, SBOM, Lynis...)
-- 🧹 Policy-guided remediation (ruthless audit → kill, with multiple confirms)
-- 📦 Profile installer with live yq-powered module toggles + dry-run
-- 📜 Evidence extraction, maintenance, log browser (fzf)
-- Humorous self-aware tone: "The Sentinel sees your choices, citizen"
-
-Zero extra deps beyond what's already in the fortress. Pure shell + gum.
-
-## Key Features
-
-- **Modular Installation**: Choose from different profiles
-- **Automated Maintenance**: Weekly system updates and security scans
-- **Backup & Recovery**: Configuration backups with rollback
-- **Log Evidence Extraction**: Token-efficient AI agent integration
-- **Migration Support**: Seamless transition from existing setups
-
-## Project Structure
+## Project layout
 
 ```
 arch-machine/
-├── config/                 # Tool definitions and profiles
-├── modules/                # Installation modules
-├── maintenance/            # Maintenance and automation
-├── lib/                    # Shared libraries
-├── systemd/                # Systemd units
-├── logs/                   # Log files and reports
-└── docs/                   # Detailed documentation
+├── crates/archy/           # MAIN controller — Ratatui entry + loop
+├── maintenance/            # shell backends (iron peak)
+├── install.sh              # thin default; --profile for full
+├── config/profiles/        # minimal | ml-dev | security-dev
+├── modules/                # system, development, ml_ai, security, …
+├── lib/                    # installer, evidence, gum TUI (legacy)
+├── bin/tinfoil.go          # optional thin dispatcher (not the product)
+└── docs/                   # start at docs/INDEX.md
 ```
 
 ## Documentation
 
-- [Safety & Requirements](docs/SECURITY.md) - Important safety information and system requirements
-- [Installation Guide](docs/INSTALLATION.md) - Detailed setup and profiles
-- [Maintenance Guide](docs/MAINTENANCE.md) - System maintenance and automation
-- [Evidence Extraction](docs/EVIDENCE.md) - AI-optimized log processing (legacy content in EVIDENCE-EXTRACTION.md during transition)
-- [Backup Guide](docs/BACKUP.md) - Backup and recovery procedures
-- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
-- [Development](docs/DEVELOPMENT.md) - Contributing and development guide
-- [Author's Motto](AUTHORS-MOTTO.md) - Project philosophy ("Solve your own machine first, then empower others to adapt") — prominently linked from docs/INDEX.md too. Full sentinel lore lives only in [FUNREADME.md](FUNREADME.md).
-
-## Verification
-
-After installation, verify your setup:
-
-```bash
-# Run comprehensive validation
-./install.sh --validate
-
-# Check maintenance status
-maintenance/systemd-setup.sh status
-
-# View recent logs
-tail logs/installer.log
-```
+- [docs/archy.md](docs/archy.md) — control plane in simple English + diagrams (incl. **Grok plugin ↔ archy** cycle)
+- Grok plugin (slash `/arch-*`): [p10ns11y/plugins](https://github.com/p10ns11y/plugins) → `arch-machine/`; local `~/Work/personal/plugins/arch-machine` · `docs/CROSS-REF.md`
+- [docs/INDEX.md](docs/INDEX.md) — architecture index
+- [arch-design/coming-next.md](arch-design/coming-next.md) — backlog
+- [SAFETY.md](SAFETY.md) · [docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/MAINTENANCE.md](docs/MAINTENANCE.md)
+- [docs/omarchy.md](docs/omarchy.md) · [docs/BACKUP.md](docs/BACKUP.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- [AUTHORS-MOTTO.md](AUTHORS-MOTTO.md)
+- Agent skill: `.agents/skills/eagle-satellite-elomaxz/`
 
 ## License
 
-See LICENSE file for details.
+See [LICENSE](LICENSE).
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+1. Fork and branch  
+2. Prefer new capability in `maintenance/*.sh`, surfaces in `crates/archy`  
+3. Verify with the commands above (`make lint` when touching shell/docs)  
+4. Open a pull request  
 
-Please ensure all changes include appropriate logging and error handling.
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
