@@ -10,9 +10,10 @@ pub enum Cmd {
     None,
     /// Fire offline satellite: spawn shell backend, stream lines, later verify exit.
     FireSatellite(SatelliteId),
-    /// Cancel running offline job (Ctrl+C) → Review with cancel exit.
+    /// Ctrl+C: SIGKILL the shell `std::process::Child` job, then Review (exit 1).
     KillJob,
-    /// Esc while job live: kill child and return Home (no orphan process).
+    /// Esc while a job is live: SIGKILL the shell subprocess and return Home
+    /// (does not leave a detached bash/audit process running).
     KillJobAndHome,
     /// Suspend TUI and run interactive Grok (side path).
     LaunchGrok { fullscreen: bool },

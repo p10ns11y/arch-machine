@@ -194,7 +194,8 @@ impl App {
         }
     }
 
-    /// Esc while Running: kill child and return Home (no orphan, no stuck Review).
+    /// Esc while Running: terminate the shell subprocess (`Child::kill`) and
+    /// return Home so the TUI does not claim idle while bash is still running.
     fn kill_job_and_home(&mut self) {
         if let Some(mut j) = self.job.take() {
             j.kill();

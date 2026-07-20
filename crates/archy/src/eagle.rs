@@ -82,7 +82,7 @@ fn update_key(app: &mut App, key: KeyEvent) -> Cmd {
             return Cmd::LaunchGrok { fullscreen: true };
         }
         KeyCode::Esc => {
-            // Live job: never leave an orphan — kill then Home (not silent go_home).
+            // Live shell job: Esc must stop the subprocess, not only switch UI to Home.
             if app.job.is_some() || matches!(app.phase, Phase::Running { .. }) {
                 return Cmd::KillJobAndHome;
             }
@@ -470,7 +470,7 @@ mod tests {
         assert_eq!(
             cmd,
             Cmd::KillJobAndHome,
-            "Esc during Running must kill job, not silent go_home"
+            "Esc during Running must stop the shell subprocess, not only go_home"
         );
     }
 
