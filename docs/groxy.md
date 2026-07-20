@@ -86,6 +86,71 @@ We are **not** building X Account Activity / webhooks / developer-platform inbou
 
 `grok agent --leader` can share one backend among clients; clients still open distinct sessions. See Grok user-guide agent mode.
 
+### stdio (Neovim) vs `acp serve` (WebSocket)
+
+These are **different jobs**. Daily Neovim/avante does **not** need `acp serve`.
+
+```text
+Neovim avante  ──stdio──►  grok agent stdio     (child of nvim, this machine)
+Phone / laptop / other   ──WS──►  grok agent serve  ◄── groxy acp serve
+```
+
+| | **stdio** (avante / CodeCompanion) | **serve** (`groxy acp serve`) |
+|--|------------------------------------|--------------------------------|
+| **Transport** | Child process, pipes | WebSocket (`127.0.0.1:2419` + secret) |
+| **Who starts the agent** | The IDE spawns `grok agent stdio` | Operator keeps a long-lived server |
+| **Lifetime** | One chat ↔ one agent process | Multiple clients can attach to one bind/cwd |
+| **Best for** | Daily coding in Neovim | Remote / multi-client **control** of a workspace |
+
+**Use stdio when:** editing in Neovim, agent should die with the chat, nothing outside the editor needs to drive that session.
+
+**Use `acp serve` when:**
+
+1. **Remote control** — laptop/phone over SSH/Tailscale to a home agent on a fixed project cwd (not spawned by local nvim).  
+2. **Headless / no IDE** — machine runs agent; a thin ACP client or script sends prompts.  
+3. **Shared long-lived agent** — reconnect to one serve process for a workspace without restarting via the editor.  
+4. **Multi-client** — more than one ACP client on the **same** serve bind (stdio is always “this editor’s child”).  
+5. **Separation from notify** — `inject` = XChat status only; **serve** = real control plane when DMs cannot drive the host.
+
+| Path | Job |
+|------|-----|
+| **avante + stdio** | Local IDE agent (primary daily path) |
+| **groxy acp serve** | Optional remote/long-lived control of a cwd |
+| **groxy inject** | Host → XChat notify only (not control) |
+
+### ACP secret: static on disk (rotate on leak)
+
+The serve secret is **not** dynamic per restart. That is intentional for local loopback + clients that must know a stable token.
+
+| Source | Behavior |
+|--------|----------|
+| `~/.local/state/groxy/acp-agent.secret` | Created on first serve; **reused** until deleted (mode `0600`) |
+| `GROK_AGENT_SECRET` / `--secret` | Overrides the file when set |
+| Restart serve alone | **Same** secret (static file) |
+
+**Static is the right default** here: loopback bind, long-lived serve, clients need a stable value. Auto-rotate every boot without a secure handoff only breaks clients. Prefer rotate **on leak** (screenshot, `ps` argv, shared log), not continuous background rotation.
+
+**Harden around leaks:** do not paste secrets into PR screenshots/chat; prefer not exposing secret on process argv if the CLI allows env/file; status may show presence/length only.
+
+**Rotate (incident response):**
+
+```bash
+# 1) stop serve
+pkill -f 'groxy acp serve' 2>/dev/null || true
+pkill -f 'grok agent serve' 2>/dev/null || true
+
+# 2) drop persisted secret (and clear env if you use it)
+rm -f ~/.local/state/groxy/acp-agent.secret
+unset GROK_AGENT_SECRET
+
+# 3) start again → NEW secret written (or pass a fresh one)
+./bin/groxy acp serve --cwd /path/to/workspace
+# optional force:
+# ./bin/groxy acp serve --cwd /path/to/workspace --secret "$(openssl rand -hex 24)"
+```
+
+If `GROK_AGENT_SECRET` is set in systemd user env or shell rc, clear that too or serve keeps the old value. After rotation, **all clients** must use the new secret.
+
 ---
 
 ## inject (notify; optional workspace label)
@@ -353,6 +418,8 @@ There is still **no** link from phone XChat DMs into the Avante buffer unless yo
 | Plugin starts Claude/Gemini instead | `provider` / adapter name points at `grok-acp` |
 | `Unknown notification method: _x.ai/mcp/…` WARN spam | Grok proprietary ACP extensions; avante only handles `session/*` + `fs/*`. Ignore `_x.ai/*` (host hook) or wait for upstream — **not** a broken install |
 | `Sending message to fast!, API key is not yet set` | **Not** a missing XAI key for ACP. Stock avante sets `vim.g.avante_login=false` for ACP providers; `Sidebar:submit_input` then blocks. Host `avante-grok.lua` re-asserts login for ACP (and wraps Providers.setup / submit). Restart nvim after config change; `:AvanteSwitchProvider grok-acp` if needed |
+| Do I need `acp serve` if avante works? | **No** for daily Neovim — avante uses **stdio**. Use serve for remote/long-lived/multi-client control only (see [stdio vs acp serve](#stdio-neovim-vs-acp-serve-websocket)) |
+| Leaked serve secret / rotate | Secret is **static** on disk; restart does not rotate. See [ACP secret](#acp-secret-static-on-disk-rotate-on-leak) |
 | `command not found: grok` | PATH / `~/.grok/bin` in Neovim’s env (`:echo $PATH`) |
 | Auth errors | `grok login` in a real shell; or `XAI_API_KEY` for the child `env` |
 | Wrong project files | Open Neovim with `nvim /path/to/project` so cwd is correct |
