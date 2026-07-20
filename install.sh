@@ -178,7 +178,16 @@ EOF
 # + self-contained runtime tree at /usr/share/tinfoil/ (so tinfoil + tui + future
 # `tinfoil install --profile` or TUI profile flows can work without the original clone).
 # Does not run any heavy module/profile installations (ROCm, k3s, etc).
+# Respects DRY_RUN — never sudo/write when dry-run (archy "Install dry-run" depends on this).
 install_tinfoil_cli() {
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+        echo "[DRY RUN] Would install thin tinfoil CLI sentinel + runtime tree"
+        echo "[DRY RUN]   binary  → /usr/local/bin/tinfoil"
+        echo "[DRY RUN]   runtime → /usr/share/tinfoil/ (lib, config, maintenance, modules, install.sh)"
+        echo "[DRY RUN]   no sudo, no package installs, no file copies"
+        return 0
+    fi
+
     echo "🔨 Installing thin tinfoil CLI sentinel (guardian) + runtime tree..."
     echo "   This is the default (and recommended) first step."
     echo
@@ -567,6 +576,7 @@ main() {
 
     # After a full profile install, also ensure the tinfoil CLI is present/updated
     # (idempotent, cheap, gives the guardian on "full" machines too).
+    # install_tinfoil_cli respects DRY_RUN (preview only — no sudo).
     echo
     install_tinfoil_cli || true
 }
