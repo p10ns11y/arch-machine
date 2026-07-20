@@ -18,6 +18,12 @@ pass() { echo "PASS: $*"; }
 rg -q 'provider\s*=\s*"grok-acp"' "$AVANTE_SPEC" || die "provider is not grok-acp in $AVANTE_SPEC"
 rg -q 'stdio' "$AVANTE_SPEC" || die "acp args must include stdio in $AVANTE_SPEC"
 rg -q 'yetone/avante.nvim' "$AVANTE_SPEC" || die "yetone/avante.nvim not declared in $AVANTE_SPEC"
+# Image #2: Grok proprietary _x.ai/* notifications must be ignored (or documented)
+if rg -q '_x%.ai/|_x\\.ai/' "$AVANTE_SPEC"; then
+  pass "Image #2 mitigation present (_x.ai ignore) in $AVANTE_SPEC"
+else
+  echo "WARN: no _x.ai ignore hook in $AVANTE_SPEC — avante will WARN on Grok MCP notifications" >&2
+fi
 
 command -v nvim >/dev/null || die "nvim not on PATH"
 command -v grok >/dev/null || [[ -x "$HOME/.grok/bin/grok" ]] || die "grok binary not found"

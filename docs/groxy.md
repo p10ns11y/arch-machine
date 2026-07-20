@@ -243,6 +243,22 @@ return {
 - Project rules: put `AGENTS.md` / `avante.md` in the project root so the agent sees them.
 - Switch provider: `:AvanteSwitchProvider grok-acp` (or your name).
 
+**Known interop (avante WARN spam — not a misconfig):**
+
+Grok agent emits **proprietary** JSON-RPC notifications under `_x.ai/*`
+(e.g. `_x.ai/mcp/init_progress`, `_x.ai/mcp/server_status`, `_x.ai/mcp/servers_updated`)
+while MCP servers (xapi, etc.) start. Stock [avante.nvim](https://github.com/yetone/avante.nvim)
+`ACPClient:_handle_notification` only handles `session/*` and `fs/*` and otherwise
+calls `vim.notify("Unknown notification method: …", WARN)`.
+
+| Classification | Details |
+|----------------|---------|
+| **Not** | Wrong provider, missing `grok` PATH, failed build, or broken ACP session |
+| **Is** | Client whitelist vs agent protocol extension (noise; session/tools still work) |
+| Mitigations | (1) Ignore `_x.ai/*` in a small post-setup hook (see host `avante-grok.lua`); (2) wait for upstream avante to drop unknown-method WARNs; (3) optional: trim MCP servers in Grok config if you do not need them in that chat |
+
+Operator re-check: `tools/groxy/scripts/verify-nvim-avante.sh`.
+
 #### Usage in Neovim
 
 | Action | Typical |
@@ -335,6 +351,7 @@ There is still **no** link from phone XChat DMs into the Avante buffer unless yo
 | Symptom | Check |
 |---------|--------|
 | Plugin starts Claude/Gemini instead | `provider` / adapter name points at `grok-acp` |
+| `Unknown notification method: _x.ai/mcp/…` WARN spam | Grok proprietary ACP extensions; avante only handles `session/*` + `fs/*`. Ignore `_x.ai/*` (host hook) or wait for upstream — **not** a broken install |
 | `command not found: grok` | PATH / `~/.grok/bin` in Neovim’s env (`:echo $PATH`) |
 | Auth errors | `grok login` in a real shell; or `XAI_API_KEY` for the child `env` |
 | Wrong project files | Open Neovim with `nvim /path/to/project` so cwd is correct |
