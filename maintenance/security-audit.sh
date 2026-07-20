@@ -10,8 +10,8 @@
 #   supply   — pacman + npm/node_modules (IDE-adjacent) + osv/grype when present
 #   config   — weak setup (Lynis summary, sensitive perms, unlocked/no-password users)
 #
-# Exit policy:
-#   0  no FAIL findings (warnings and skips ok)
+# Exit policy (matches print_summary + --help):
+#   0  clean — no FAIL and no WARN (skips are ok)
 #   1  one or more WARN findings, no FAIL
 #   2  one or more FAIL findings (malware hit, critical lynis, infected files, etc.)
 #
@@ -104,7 +104,7 @@ security-audit.sh — threat-focused host audit (archy-friendly)
   --dry-run         Print planned checks only
 
 Threat areas: malware | ports | supply | config
-Exit: 0=clean, 1=warnings only, 2=failures
+Exit: 0=clean (no warn/fail; skips ok), 1=warn only, 2=fail
 EOF
                 exit 0
                 ;;

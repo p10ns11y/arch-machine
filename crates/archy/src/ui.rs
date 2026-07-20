@@ -158,7 +158,7 @@ fn draw_menu(f: &mut Frame, area: Rect, app: &App, p: Palette) {
 }
 
 /// Severity-aware line colors for eye-comfort light/dark (no neon ANSI dependency).
-/// Prefers audit tags `[x]` fail, `[!]` warn, `[ok]` pass, `##` sections.
+/// Prefers audit tags `[x]` fail, `[!]` warn, `[ok]` pass; SUMMARY block is amber.
 pub fn style_stdio_line(line: &str, p: Palette) -> Style {
     let t = line.trim_start();
     if t.starts_with('▶') || t.starts_with('■') {
@@ -177,17 +177,30 @@ pub fn style_stdio_line(line: &str, p: Palette) -> Style {
     if t.starts_with("[ok]") {
         return p.style_fg(p.sage_lift);
     }
-    if t.starts_with("[·]") || t.starts_with("## ") {
+    if t.starts_with("[·]") {
         return p.style_fg(p.fg_muted);
     }
-    if t.starts_with("## SUMMARY") || t.starts_with("malware=") || t.starts_with("counts ") {
+    // SUMMARY block *before* generic `## ` so the close-out stays highlighted.
+    if t.starts_with("## SUMMARY")
+        || t.starts_with("malware=")
+        || t.starts_with("counts ")
+        || t.starts_with("report=")
+        || t.starts_with("next:")
+    {
         return p.style_bold(p.amber);
     }
-    if t.starts_with("exit=2") || t.contains(" fail=") && t.contains("counts") {
-        return p.style_bold(p.error);
+    // exit=N drives severity (not fail=0 inside counts — that matched clean runs as error).
+    if let Some(rest) = t.strip_prefix("exit=") {
+        let code: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        return match code.as_str() {
+            "2" => p.style_bold(p.error),
+            "1" => p.style_bold(p.warning),
+            "0" => p.style_bold(p.sage_lift),
+            _ => p.style_bold(p.amber),
+        };
     }
-    if t.starts_with("exit=1") {
-        return p.style_bold(p.warning);
+    if t.starts_with("## ") {
+        return p.style_fg(p.fg_muted);
     }
     if t.starts_with('✗')
         || t.contains(" ERROR")
@@ -461,6 +474,31 @@ mod tests {
             assert_eq!(fail.fg, Some(p.error));
             assert_eq!(warn.fg, Some(p.warning));
             assert_eq!(ok.fg, Some(p.sage_lift));
+
+            // SUMMARY highlight order: ## SUMMARY is amber, not muted generic ##
+            let summary = style_stdio_line("## SUMMARY", p);
+            assert_eq!(
+                summary.fg,
+                Some(p.amber),
+                "## SUMMARY must be amber before generic ## mute ({mode:?})"
+            );
+            let section = style_stdio_line("## malware", p);
+            assert_eq!(section.fg, Some(p.fg_muted));
+
+            // counts with fail=0 must NOT be styled as error (false alarm on clean/warn)
+            let counts_clean = style_stdio_line("counts ok=2 warn=0 fail=0 skip=4", p);
+            assert_eq!(
+                counts_clean.fg,
+                Some(p.amber),
+                "fail=0 must not force error color ({mode:?})"
+            );
+            let counts_warn = style_stdio_line("counts ok=2 warn=4 fail=0 skip=1", p);
+            assert_eq!(counts_warn.fg, Some(p.amber));
+
+            // exit= drives severity
+            assert_eq!(style_stdio_line("exit=0  (0=clean 1=warn 2=fail)", p).fg, Some(p.sage_lift));
+            assert_eq!(style_stdio_line("exit=1  (0=clean 1=warn 2=fail)", p).fg, Some(p.warning));
+            assert_eq!(style_stdio_line("exit=2  (0=clean 1=warn 2=fail)", p).fg, Some(p.error));
         }
     }
 
