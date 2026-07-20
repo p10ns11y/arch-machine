@@ -18,6 +18,7 @@ pub enum Cmd {
 }
 
 impl Cmd {
+    #[cfg(test)]
     pub fn is_none(&self) -> bool {
         matches!(self, Cmd::None)
     }
