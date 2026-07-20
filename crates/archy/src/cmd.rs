@@ -10,8 +10,10 @@ pub enum Cmd {
     None,
     /// Fire offline satellite: spawn shell backend, stream lines, later verify exit.
     FireSatellite(SatelliteId),
-    /// Cancel running offline job.
+    /// Cancel running offline job (Ctrl+C) → Review with cancel exit.
     KillJob,
+    /// Esc while job live: kill child and return Home (no orphan process).
+    KillJobAndHome,
     /// Suspend TUI and run interactive Grok (side path).
     LaunchGrok { fullscreen: bool },
     Quit,

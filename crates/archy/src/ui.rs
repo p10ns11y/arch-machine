@@ -54,7 +54,8 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App, p: Palette) {
     let state_style = match state {
         JobState::Running => p.style_bold(p.amber),
         JobState::Ok => p.style_fg(p.sage),
-        JobState::Fail => p.style_bold(p.warning),
+        JobState::Warn => p.style_bold(p.warning),
+        JobState::Fail => p.style_bold(p.error),
         JobState::Idle => p.style_fg(p.fg_muted),
     };
     let copilot = match app.grok_mode {
@@ -413,7 +414,7 @@ fn draw_help(f: &mut Frame, area: Rect, app: &App, p: Palette) {
             p.style_fg(p.fg_muted),
         )),
         Line::from(Span::styled(
-            "  Esc    Home    Ctrl+C cancel/quit    q quit    ? help",
+            "  Esc    cancel+Home if job · else Home   Ctrl+C cancel   q quit   ? help",
             p.style_fg(p.fg),
         )),
         Line::from(""),

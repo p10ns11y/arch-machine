@@ -82,6 +82,10 @@ fn update_key(app: &mut App, key: KeyEvent) -> Cmd {
             return Cmd::LaunchGrok { fullscreen: true };
         }
         KeyCode::Esc => {
+            // Live job: never leave an orphan — kill then Home (not silent go_home).
+            if app.job.is_some() || matches!(app.phase, Phase::Running { .. }) {
+                return Cmd::KillJobAndHome;
+            }
             match nav::esc_effect(app.screen, app.grok_mode) {
                 EscEffect::GoHome => go_home(app),
                 EscEffect::GrokFullToSplit => app.grok_mode = GrokMode::Split,
@@ -443,5 +447,44 @@ mod tests {
             state: KeyEventState::NONE,
         }));
         assert_eq!(app.phase, Phase::Home);
+    }
+
+    #[test]
+    fn esc_while_running_requests_kill_and_home() {
+        let mut app = App::new();
+        app.phase = Phase::Running {
+            sat: SatelliteId::Inventory,
+        };
+        app.screen = Screen::Output;
+        // Simulate a live job handle without spawning: phase alone is enough for Esc.
+        // Also set a dummy job presence via phase path (job optional if phase Running).
+        let cmd = update(
+            &mut app,
+            Msg::Key(KeyEvent {
+                code: KeyCode::Esc,
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            }),
+        );
+        assert_eq!(
+            cmd,
+            Cmd::KillJobAndHome,
+            "Esc during Running must kill job, not silent go_home"
+        );
+    }
+
+    #[test]
+    fn perform_kill_job_and_home_clears_phase() {
+        let mut app = App::new();
+        app.phase = Phase::Running {
+            sat: SatelliteId::AuditGlobal,
+        };
+        app.screen = Screen::Output;
+        app.perform(Cmd::KillJobAndHome);
+        assert_eq!(app.phase, Phase::Home);
+        assert!(app.job.is_none());
+        assert!(app.next_actions.is_empty());
+        assert_eq!(app.screen, Screen::Home);
     }
 }

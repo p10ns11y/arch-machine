@@ -3,11 +3,14 @@
 use crate::app::{Focus, GrokMode, Screen};
 
 /// Short job state for header chrome (at-a-glance).
+/// Exit codes align with security-audit policy: 0 clean, 1 warn, ≥2 fail.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JobState {
     Idle,
     Running,
     Ok,
+    /// Soft non-zero (e.g. audit WARN-only exit=1).
+    Warn,
     Fail,
 }
 
@@ -16,10 +19,10 @@ impl JobState {
         if job_running {
             JobState::Running
         } else if let Some(c) = last_exit {
-            if c == 0 {
-                JobState::Ok
-            } else {
-                JobState::Fail
+            match c {
+                0 => JobState::Ok,
+                1 => JobState::Warn,
+                _ => JobState::Fail,
             }
         } else {
             JobState::Idle
@@ -32,6 +35,7 @@ impl JobState {
             JobState::Idle => "○ idle",
             JobState::Running => "● RUN",
             JobState::Ok => "✓ ok",
+            JobState::Warn => "! warn",
             JobState::Fail => "✗ fail",
         }
     }
@@ -122,9 +126,11 @@ mod tests {
     fn job_state_labels() {
         assert_eq!(JobState::from_runtime(true, None), JobState::Running);
         assert_eq!(JobState::from_runtime(false, Some(0)), JobState::Ok);
-        assert_eq!(JobState::from_runtime(false, Some(1)), JobState::Fail);
+        assert_eq!(JobState::from_runtime(false, Some(1)), JobState::Warn);
+        assert_eq!(JobState::from_runtime(false, Some(2)), JobState::Fail);
         assert_eq!(JobState::from_runtime(false, None), JobState::Idle);
         assert_eq!(JobState::Running.label(), "● RUN");
+        assert_eq!(JobState::Warn.label(), "! warn");
     }
 
     #[test]

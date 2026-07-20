@@ -156,6 +156,7 @@ impl App {
             Cmd::None => {}
             Cmd::Quit => self.should_quit = true,
             Cmd::KillJob => self.kill_job(),
+            Cmd::KillJobAndHome => self.kill_job_and_home(),
             Cmd::LaunchGrok { fullscreen: _ } => {
                 // Flag already set in eagle; main suspends TUI.
                 self.pending_grok_launch = true;
@@ -171,7 +172,7 @@ impl App {
 
     fn fire_satellite(&mut self, id: SatelliteId) {
         if self.job.is_some() {
-            self.status = "Job already running — Ctrl+C to cancel".into();
+            self.status = "Job already running — Esc or Ctrl+C to cancel".into();
             return;
         }
         let ctx = self.sat_context();
@@ -191,6 +192,26 @@ impl App {
                 elapsed_ms: 0,
             });
         }
+    }
+
+    /// Esc while Running: kill child and return Home (no orphan, no stuck Review).
+    fn kill_job_and_home(&mut self) {
+        if let Some(mut j) = self.job.take() {
+            j.kill();
+            self.push_line("■ cancelled (Esc)".into());
+        }
+        self.next_actions.clear();
+        self.action_idx = 0;
+        self.last_exit = Some(1);
+        self.pending_satellite = None;
+        // Home chrome without re-entering Review
+        use crate::fsm::Phase;
+        self.phase = Phase::Home;
+        self.screen = Screen::Home;
+        self.focus = Focus::Main;
+        self.set_breadcrumb(&["Home"]);
+        self.status = format!("cancelled · ready · {}", short_path(&self.root));
+        self.refresh_grok_context();
     }
 
     /// Drain offline satellite channels → Msg (no heartbeats; poll outcome).
