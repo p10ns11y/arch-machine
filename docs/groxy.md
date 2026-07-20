@@ -1,4 +1,7 @@
-# groxy — XChat DM remote control
+# groxy — XChat DM remote control (Python v1 reference)
+
+> **Preferred path:** Rust satellite **`tools/xchat-remote`** (binary `groxy`). See **[xchat-remote.md](xchat-remote.md)**.
+> This page documents the Python v1 reference under `tools/groxy/`.
 
 **groxy** bridges **XChat DMs** ↔ this arch-machine host.
 

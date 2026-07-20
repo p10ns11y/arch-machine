@@ -1,4 +1,4 @@
-.PHONY: lint validate-profiles evidence-smoke eye-comfort-test eye-comfort-generate-check ci-help archy archy-release archy-test groxy-test
+.PHONY: lint validate-profiles evidence-smoke eye-comfort-test eye-comfort-generate-check ci-help archy archy-release archy-test groxy-test xchat-remote-test groxy-python-test
 
 lint:
 	@shellcheck --severity=warning $$(find . -name '*.sh' -not -path './.grok/*' -not -path './logs/*' -not -path './systemd/*' 2>/dev/null) || true
@@ -34,8 +34,12 @@ archy-release:
 archy-test:
 	cargo test --manifest-path crates/archy/Cargo.toml
 
-# XChat DM remote control (groxy)
-groxy-test:
+# XChat DM remote control — Rust satellite (tools/xchat-remote, binary: groxy)
+groxy-test xchat-remote-test:
+	cargo test --manifest-path tools/xchat-remote/Cargo.toml
+
+# Python v1 reference suite (optional)
+groxy-python-test:
 	python3 tools/groxy/tests/test_groxy.py
 
 ci-help:

@@ -78,7 +78,7 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | **Control plane (main)** | `crates/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
-| **XChat remote control** | `bin/groxy` · `tools/groxy/` · `docs/groxy.md` (Python v1; Rust satellite planned — eagle skill) |
+| **XChat remote control** | `tools/xchat-remote` (Rust satellite, binary `groxy`) · `bin/groxy` · `docs/xchat-remote.md` · Python v1 ref `tools/groxy/` |
 | TUI (Elm/gum legacy) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI shim | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
 | Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / schema v1 + ownership tags |
