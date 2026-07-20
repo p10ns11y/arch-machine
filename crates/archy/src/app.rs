@@ -1,14 +1,21 @@
-//! Loop controller — single source of navigation so the operator never gets lost.
+//! Model (xstate *context*) + runtime effect performer.
+//!
+//! Control transitions live in [`crate::eagle`]; this module holds state and
+//! executes [`crate::cmd::Cmd`] (spawn offline satellites, kill, quit flags).
 
-use crate::actions::{self, ActionId, NextAction};
-use crate::jobs::{self, JobEvent, JobKind, RunningJob};
-use crate::nav::{self, EscEffect};
+use crate::actions::NextAction;
+use crate::cmd::Cmd;
+use crate::eagle;
+use crate::fsm::Phase;
+use crate::jobs::{JobEvent, JobKind, RunningJob};
+use crate::msg::Msg;
 use crate::root;
+use crate::satellites::{self, SatelliteId};
 use crate::theme::{self, Palette, ThemeMode};
 use std::path::PathBuf;
 use std::time::Duration;
 
-/// Where the operator is (breadcrumb = path from Home).
+/// Where the operator is (view chrome; kept in sync with [`Phase`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
     Home,
@@ -16,14 +23,11 @@ pub enum Screen {
     Help,
 }
 
-/// Grok dock layout relative to main chrome.
+/// Grok dock layout relative to main chrome (orthogonal region).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GrokMode {
-    /// Only main control plane
     Hidden,
-    /// Main left (~60%), Grok dock right (~40%)
     Split,
-    /// Grok takes the whole body (still keep header breadcrumb)
     Full,
 }
 
@@ -35,8 +39,11 @@ pub enum Focus {
     Actions,
 }
 
+/// Application context (xstate machine context + invoked job handle).
 pub struct App {
     pub root: PathBuf,
+    /// Finite control state (Eagle FSM).
+    pub phase: Phase,
     pub screen: Screen,
     pub grok_mode: GrokMode,
     pub focus: Focus,
@@ -44,48 +51,29 @@ pub struct App {
     pub should_quit: bool,
     pub status: String,
     pub breadcrumb: Vec<String>,
-    /// Light/dark resolved at startup (see theme::detect_theme_mode).
     pub theme: ThemeMode,
 
-    // Output pane
     pub lines: Vec<String>,
     pub scroll: u16,
     pub auto_scroll: bool,
     pub job: Option<RunningJob>,
     pub last_kind: Option<JobKind>,
+    pub last_satellite: Option<SatelliteId>,
     pub last_exit: Option<i32>,
     pub next_actions: Vec<NextAction>,
     pub action_idx: usize,
 
-    // Grok dock (context, not live PTY — launch suspends TUI)
     pub grok_context: String,
     pub grok_prompt: String,
     pub project_path: String,
     pub install_profile: String,
-    /// Default catalog search query (menu entry; agents can extend later)
     pub catalog_query: String,
-    /// Default package for actuate dry-run demo
     pub actuate_pkg: String,
 
-    /// Request outer main to suspend ratatui and run grok
     pub pending_grok_launch: bool,
+    /// Set when FireSatellite is requested; cleared when spawn assigns running.
+    pub pending_satellite: Option<SatelliteId>,
 }
-
-/// Short labels — detail lives in backends/help, not menu walls.
-const MENU: &[&str] = &[
-    "Inventory",
-    "Catalog search",
-    "Omarchy status",
-    "Audit system",
-    "Audit project",
-    "Install dry-run",
-    "Evidence dry-run",
-    "Pkg update dry-run",
-    "Co-pilot brief",
-    "Launch Grok",
-    "Help",
-    "Quit",
-];
 
 impl App {
     pub fn new() -> Self {
@@ -93,6 +81,7 @@ impl App {
         let theme = theme::detect_theme_mode();
         let mut app = Self {
             root: root.clone(),
+            phase: Phase::Home,
             screen: Screen::Home,
             grok_mode: GrokMode::Hidden,
             focus: Focus::Main,
@@ -106,6 +95,7 @@ impl App {
             auto_scroll: true,
             job: None,
             last_kind: None,
+            last_satellite: None,
             last_exit: None,
             next_actions: Vec::new(),
             action_idx: 0,
@@ -116,9 +106,10 @@ impl App {
             catalog_query: "docker".into(),
             actuate_pkg: "jq".into(),
             pending_grok_launch: false,
+            pending_satellite: None,
         };
         app.push_line(format!(
-            "archy · theme={} · Enter run · g brief · ? help",
+            "archy · eagle/TEA · theme={} · Enter run · g brief · ? help",
             app.theme.as_str()
         ));
         app.refresh_grok_context();
@@ -129,13 +120,12 @@ impl App {
         theme::palette(self.theme)
     }
 
-    pub fn menu_items(&self) -> &'static [&'static str] {
-        MENU
+    pub fn menu_items(&self) -> Vec<&'static str> {
+        satellites::menu_labels()
     }
 
-    /// Menu entry count (layout tests / panel height).
     pub fn menu_len() -> usize {
-        MENU.len()
+        satellites::menu_len()
     }
 
     pub fn set_breadcrumb(&mut self, parts: &[&str]) {
@@ -143,7 +133,6 @@ impl App {
     }
 
     pub fn push_line(&mut self, line: String) {
-        // Cap memory
         if self.lines.len() > 8_000 {
             self.lines.drain(0..2_000);
             if self.scroll > 2000 {
@@ -156,254 +145,57 @@ impl App {
         }
     }
 
-    pub fn on_key(&mut self, key: crossterm::event::KeyEvent) {
-        use crossterm::event::{KeyCode, KeyModifiers};
+    /// TEA step: event → transition → effects.
+    pub fn dispatch(&mut self, msg: Msg) -> Cmd {
+        eagle::update(self, msg)
+    }
 
-        if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
-            if self.job.is_some() {
-                self.cancel_job();
-                return;
+    /// Execute effects (xstate invoked services / actions with side effects).
+    pub fn perform(&mut self, cmd: Cmd) {
+        match cmd {
+            Cmd::None => {}
+            Cmd::Quit => self.should_quit = true,
+            Cmd::KillJob => self.kill_job(),
+            Cmd::LaunchGrok { fullscreen: _ } => {
+                // Flag already set in eagle; main suspends TUI.
+                self.pending_grok_launch = true;
             }
-            self.should_quit = true;
-            return;
-        }
-
-        // Global keys
-        match key.code {
-            KeyCode::Char('q') if self.screen == Screen::Home && self.focus == Focus::Main => {
-                self.should_quit = true;
-                return;
-            }
-            KeyCode::Char('?') => {
-                self.screen = Screen::Help;
-                self.set_breadcrumb(&["Home", "Help"]);
-                return;
-            }
-            KeyCode::Char('g') => {
-                self.toggle_grok_brief();
-                return;
-            }
-            KeyCode::Char('G') => {
-                self.prepare_grok_launch(true);
-                return;
-            }
-            KeyCode::Esc => {
-                match nav::esc_effect(self.screen, self.grok_mode) {
-                    EscEffect::GoHome => self.go_home(),
-                    EscEffect::GrokFullToSplit => self.grok_mode = GrokMode::Split,
-                    EscEffect::None => {}
-                }
-                return;
-            }
-            KeyCode::Tab => {
-                self.focus = nav::tab_next_focus(
-                    self.focus,
-                    self.grok_mode,
-                    !self.next_actions.is_empty(),
-                );
-                return;
-            }
-            _ => {}
-        }
-
-        if self.screen == Screen::Help {
-            if matches!(key.code, KeyCode::Esc | KeyCode::Enter | KeyCode::Char('h')) {
-                self.go_home();
-            }
-            return;
-        }
-
-        // Co-pilot brief: Enter launches interactive Grok (split is not a chat pane).
-        if self.focus == Focus::GrokDock {
-            match key.code {
-                KeyCode::Enter | KeyCode::Char(' ') => {
-                    self.prepare_grok_launch(false);
-                    return;
-                }
-                _ => {}
-            }
-        }
-
-        // Next-action keys work whenever suggestions exist (primary bar is always shown).
-        if !self.next_actions.is_empty() {
-            match key.code {
-                KeyCode::Left if self.focus == Focus::Actions => {
-                    self.action_idx = self.action_idx.saturating_sub(1);
-                    return;
-                }
-                KeyCode::Right if self.focus == Focus::Actions => {
-                    if self.action_idx + 1 < self.next_actions.len() {
-                        self.action_idx += 1;
-                    }
-                    return;
-                }
-                KeyCode::Enter if self.focus == Focus::Actions => {
-                    let id = self.next_actions[self.action_idx].id;
-                    self.run_action(id);
-                    return;
-                }
-                KeyCode::Char(c)
-                    if self.next_actions.iter().any(|a| a.key == c)
-                        && !(self.screen == Screen::Home
-                            && self.focus == Focus::Main
-                            && c.is_ascii_digit()) =>
-                {
-                    if let Some(a) = self.next_actions.iter().find(|a| a.key == c).map(|a| a.id)
-                    {
-                        self.run_action(a);
-                        return;
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        // Scroll output
-        if self.focus == Focus::Output || self.screen == Screen::Output {
-            match key.code {
-                KeyCode::Up | KeyCode::Char('k') => {
-                    self.auto_scroll = false;
-                    self.scroll = self.scroll.saturating_sub(1);
-                    return;
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    self.scroll = (self.scroll + 1).min(self.lines.len().saturating_sub(1) as u16);
-                    return;
-                }
-                KeyCode::PageUp => {
-                    self.auto_scroll = false;
-                    self.scroll = self.scroll.saturating_sub(10);
-                    return;
-                }
-                KeyCode::PageDown => {
-                    self.scroll = (self.scroll + 10).min(self.lines.len().saturating_sub(1) as u16);
-                    return;
-                }
-                KeyCode::Char(' ') if self.job.is_none() => {
-                    self.auto_scroll = true;
-                    self.scroll = self.lines.len().saturating_sub(1) as u16;
-                    return;
-                }
-                _ => {}
-            }
-        }
-
-        // Home menu
-        if self.screen == Screen::Home && self.focus == Focus::Main {
-            match key.code {
-                KeyCode::Up | KeyCode::Char('k') => {
-                    self.menu_idx = self.menu_idx.saturating_sub(1);
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    if self.menu_idx + 1 < MENU.len() {
-                        self.menu_idx += 1;
-                    }
-                }
-                KeyCode::Enter | KeyCode::Char(' ') => {
-                    self.activate_menu();
-                }
-                KeyCode::Char(c) if c.is_ascii_digit() => {
-                    let n = c.to_digit(10).unwrap_or(0) as usize;
-                    if n >= 1 && n <= MENU.len() {
-                        self.menu_idx = n - 1;
-                        self.activate_menu();
-                    }
-                }
-                _ => {}
-            }
+            Cmd::FireSatellite(id) => self.fire_satellite(id),
         }
     }
 
-    fn go_home(&mut self) {
-        self.screen = Screen::Home;
-        self.focus = Focus::Main;
-        self.set_breadcrumb(&["Home"]);
-        self.status = format!("ready · {}", short_path(&self.root));
+    pub fn dispatch_key(&mut self, key: crossterm::event::KeyEvent) {
+        let cmd = self.dispatch(Msg::Key(key));
+        self.perform(cmd);
     }
 
-    fn activate_menu(&mut self) {
-        match self.menu_idx {
-            0 => self.start_job(JobKind::Inventory, "Inventory", jobs::build_inventory(&self.root)),
-            1 => self.start_job(
-                JobKind::Catalog,
-                &format!("Catalog search '{}'", self.catalog_query),
-                jobs::build_catalog(&self.root, &self.catalog_query),
-            ),
-            2 => self.start_job(
-                JobKind::OmarchyStatus,
-                "Omarchy status",
-                jobs::build_omarchy_status(&self.root),
-            ),
-            3 => self.start_job(
-                JobKind::AuditGlobal,
-                "Audit global",
-                jobs::build_audit_global(&self.root),
-            ),
-            4 => self.start_job(
-                JobKind::AuditProject,
-                &format!("Audit {}", self.project_path),
-                jobs::build_audit_project(&self.root, &self.project_path),
-            ),
-            5 => self.start_job(
-                JobKind::InstallDryRun,
-                &format!("Install {} --dry-run", self.install_profile),
-                jobs::build_install_dry(&self.root, &self.install_profile),
-            ),
-            6 => self.start_job(
-                JobKind::Evidence,
-                "Evidence dry-run",
-                jobs::build_evidence(&self.root),
-            ),
-            7 => self.start_job(
-                JobKind::ActuateDry,
-                &format!("Actuate update {} --dry-run", self.actuate_pkg),
-                jobs::build_actuate_update_dry(&self.root, &self.actuate_pkg),
-            ),
-            8 => self.toggle_grok_brief(),
-            9 => self.prepare_grok_launch(true),
-            10 => {
-                self.screen = Screen::Help;
-                self.set_breadcrumb(&["Home", "Help"]);
-            }
-            11 => self.should_quit = true,
-            _ => {}
-        }
-    }
-
-    pub fn start_job(&mut self, kind: JobKind, title: &str, cmd: std::process::Command) {
+    fn fire_satellite(&mut self, id: SatelliteId) {
         if self.job.is_some() {
             self.status = "Job already running — Ctrl+C to cancel".into();
             return;
         }
-        self.lines.clear();
-        self.scroll = 0;
-        self.auto_scroll = true;
-        self.last_exit = None;
-        self.next_actions.clear();
-        self.screen = Screen::Output;
-        self.focus = Focus::Output;
-        self.set_breadcrumb(&["Home", kind.label()]);
-        self.push_line(format!("▶ starting: {title}"));
-        self.push_line(format!("  kind={}  root={}", kind.label(), self.root.display()));
-        self.push_line(String::new());
-        self.status = format!("running: {title}");
-        self.last_kind = Some(kind);
+        let ctx = self.sat_context();
+        let title = satellites::title(id, &ctx);
+        let cmd = satellites::build(id, &ctx);
+        eagle::assign_running(self, id, &title);
         self.job = Some(RunningJob::spawn(cmd));
-        self.refresh_grok_context();
     }
 
-    pub fn cancel_job(&mut self) {
+    fn kill_job(&mut self) {
         if let Some(mut j) = self.job.take() {
             j.kill();
             self.push_line("■ cancelled".into());
             self.status = "cancelled".into();
-            self.finish_job_ui(1);
+            let _ = self.dispatch(Msg::JobFinished {
+                code: 1,
+                elapsed_ms: 0,
+            });
         }
     }
 
+    /// Drain offline satellite channels → Msg (no heartbeats; poll outcome).
     pub fn tick(&mut self) {
-        // Drain job events
-        let mut finished_code: Option<i32> = None;
+        let mut finished: Option<(i32, u128)> = None;
         let mut spawn_fail: Option<String> = None;
         let mut lines_buf = Vec::new();
 
@@ -414,238 +206,111 @@ impl App {
                     JobEvent::SpawnFailed(e) => spawn_fail = Some(e),
                 }
             }
-            if finished_code.is_none() {
+            if finished.is_none() {
                 if let Some(code) = job.poll_exit() {
-                    // Drain remaining lines briefly
                     thread_sleep_drain(job, &mut lines_buf);
-                    finished_code = Some(code);
+                    let elapsed = job.started.elapsed().as_millis();
+                    finished = Some((code, elapsed));
                 }
             }
         }
 
         for l in lines_buf {
-            self.push_line(l);
+            let _ = self.dispatch(Msg::JobLine(l));
         }
 
         if let Some(e) = spawn_fail {
-            self.push_line(format!("✗ spawn failed: {e}"));
-            self.job = None;
-            self.finish_job_ui(1);
+            let cmd = self.dispatch(Msg::JobSpawnFailed(e));
+            self.perform(cmd);
             return;
         }
 
-        if let Some(code) = finished_code {
-            let elapsed = self
-                .job
-                .as_ref()
-                .map(|j| j.started.elapsed().as_millis())
-                .unwrap_or(0);
-            self.job = None;
-            self.push_line(String::new());
-            self.push_line(format!(
-                "■ finished exit={code} elapsed={elapsed}ms"
-            ));
-            self.status = format!("done exit={code}");
-            self.finish_job_ui(code);
+        if let Some((code, elapsed_ms)) = finished {
+            let cmd = self.dispatch(Msg::JobFinished { code, elapsed_ms });
+            self.perform(cmd);
         }
     }
 
-    fn finish_job_ui(&mut self, code: i32) {
-        self.last_exit = Some(code);
-        if let Some(kind) = self.last_kind {
-            let hints = actions::JobHints::from_lines(&self.lines);
-            self.next_actions = actions::suggest_with_hints(kind, code, &hints);
-            self.action_idx = 0;
-            self.focus = Focus::Actions;
-            self.refresh_grok_context();
+    pub fn sat_context(&self) -> satellites::SatContext<'_> {
+        satellites::SatContext {
+            root: &self.root,
+            catalog_query: &self.catalog_query,
+            project_path: &self.project_path,
+            install_profile: &self.install_profile,
+            actuate_pkg: &self.actuate_pkg,
         }
     }
 
-    /// Toggle co-pilot briefing split (not a live chat). Opening focuses the brief.
-    fn toggle_grok_brief(&mut self) {
-        self.grok_mode = nav::toggle_grok_mode(self.grok_mode);
-        self.refresh_grok_context();
-        match self.grok_mode {
-            GrokMode::Hidden => {
-                if self.focus == Focus::GrokDock {
-                    self.focus = Focus::Main;
-                }
-                self.status = "brief:off".into();
-            }
-            GrokMode::Split | GrokMode::Full => {
-                self.focus = Focus::GrokDock;
-                self.status = "brief:on · Enter=launch".into();
-            }
-        }
-    }
-
-    fn refresh_grok_context(&mut self) {
+    pub fn refresh_grok_context(&mut self) {
         let tail: Vec<&str> = self.lines.iter().rev().take(40).map(|s| s.as_str()).collect();
         let mut t = tail;
         t.reverse();
         let exit = self
             .last_exit
             .map(|c| c.to_string())
-            .unwrap_or_else(|| {
-                if self.job.is_some() {
-                    "running".into()
-                } else {
-                    "—".into()
-                }
-            });
-        let kind = self.last_kind.map(|k| k.label()).unwrap_or("none");
+            .unwrap_or_else(|| if self.job.is_some() { "…".into() } else { "—".into() });
+        let sat = self
+            .last_satellite
+            .map(|s| s.label())
+            .unwrap_or("—");
         self.grok_context = format!(
-            "archy co-pilot session\n\
-             surface: archy (Ratatui control plane)\n\
-             root: {}\n\
-             last_job: {kind}\n\
-             exit: {exit}\n\
-             profile_default: {}\n\
-             catalog_query: {}\n\
-             actuate_pkg: {}\n\
-             \n--- output tail ---\n{}",
+            "archy phase={} sat={} exit={}\nroot={}\n\n--- stdio tail ---\n{}",
+            self.phase.label(),
+            sat,
+            exit,
             self.root.display(),
-            self.install_profile,
-            self.catalog_query,
-            self.actuate_pkg,
             t.join("\n")
         );
     }
 
-    /// Job-aware one-liner the operator (or Grok) should act on next.
     pub fn suggested_grok_ask(&self) -> String {
-        let exit = self.last_exit;
-        match self.last_kind {
-            None => {
-                "Inventory this Omarchy host, then propose the safest next dry-run action."
-                    .into()
-            }
-            Some(JobKind::Inventory) => {
-                if exit == Some(0) {
-                    "From this inventory: flag drift vs omarchy-baseline and tools.yaml; suggest one dry-run fix."
-                        .into()
-                } else {
-                    "Inventory failed — diagnose the backend error and a safe re-run.".into()
-                }
-            }
-            Some(JobKind::Catalog) => {
-                format!(
-                    "Catalog search for '{}': recommend install/update dry-run or skip.",
-                    self.catalog_query
-                )
-            }
-            Some(JobKind::OmarchyStatus) => {
-                "Read Omarchy status: theme/version/pkg probes — any action needed?".into()
-            }
-            Some(JobKind::AuditGlobal) | Some(JobKind::AuditProject) => {
-                if exit == Some(0) {
-                    "Summarize audit findings; rank remediations; prefer dry-run / non-destructive first."
-                        .into()
-                } else {
-                    "Audit exited non-zero — explain failures and the safest next step.".into()
-                }
-            }
-            Some(JobKind::InstallDryRun) => {
-                format!(
-                    "Review install --profile {} --dry-run plan; call out risks before any apply.",
-                    self.install_profile
-                )
-            }
-            Some(JobKind::Evidence) => {
-                "Evidence dry-run finished — what should we include or fix before a real extract?"
-                    .into()
-            }
-            Some(JobKind::ActuateDry) => {
-                format!(
-                    "Package actuate dry-run for '{}': confirm plan, refuse-list, Omarchy alt path.",
-                    self.actuate_pkg
-                )
-            }
-        }
-    }
-
-    pub fn prepare_grok_launch(&mut self, fullscreen_hint: bool) {
-        self.refresh_grok_context();
-        if fullscreen_hint {
-            self.grok_mode = GrokMode::Full;
-        } else if self.grok_mode == GrokMode::Hidden {
-            self.grok_mode = GrokMode::Split;
-        }
-        self.pending_grok_launch = true;
-        self.status = "launching Grok (TUI suspends)…".into();
-    }
-
-    pub fn run_action(&mut self, id: ActionId) {
-        match id {
-            ActionId::BackHome => self.go_home(),
-            ActionId::ReRun => {
-                if let Some(kind) = self.last_kind {
-                    match kind {
-                        JobKind::Inventory => self.activate_menu_index(0),
-                        JobKind::Catalog => self.activate_menu_index(1),
-                        JobKind::OmarchyStatus => self.activate_menu_index(2),
-                        JobKind::AuditGlobal => self.activate_menu_index(3),
-                        JobKind::AuditProject => self.activate_menu_index(4),
-                        JobKind::InstallDryRun => self.activate_menu_index(5),
-                        JobKind::Evidence => self.activate_menu_index(6),
-                        JobKind::ActuateDry => self.activate_menu_index(7),
-                    }
-                }
-            }
-            ActionId::OpenInventory => self.activate_menu_index(0),
-            ActionId::RunAudit => self.activate_menu_index(3),
-            ActionId::RunEvidence => self.activate_menu_index(6),
-            ActionId::InstallDry => self.activate_menu_index(5),
-            ActionId::ActuateDry => self.activate_menu_index(7),
-            ActionId::LaunchGrok => self.prepare_grok_launch(false),
-        }
-    }
-
-    fn activate_menu_index(&mut self, idx: usize) {
-        self.menu_idx = idx;
-        // Don't change home selection permanently for re-run from output
-        let saved_screen = self.screen;
-        self.activate_menu();
-        if matches!(idx, 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7) {
-            // job started
-            let _ = saved_screen;
-        }
+        let sat = self.last_satellite.or_else(|| {
+            self.last_kind.map(SatelliteId::from_job_kind)
+        });
+        let Some(id) = sat else {
+            return "Orient on this arch-machine host; suggest the next dry-run maintenance step."
+                .into();
+        };
+        let tail = self
+            .lines
+            .iter()
+            .rev()
+            .take(20)
+            .cloned()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>()
+            .join("\n");
+        satellites::grok_ask(id, self.last_exit, &self.sat_context(), &tail)
     }
 
     pub fn grok_launch_command(&self) -> Option<std::process::Command> {
-        let grok = which::which("grok")
-            .or_else(|_| which::which("grok-build"))
-            .ok()?;
+        let grok = which::which("grok").ok()?;
         let mut c = std::process::Command::new(grok);
         c.current_dir(&self.root);
-        // Pass session root + standing orders + job-aware ask for agents that honor env.
-        c.env("TINFOIL_ROOT", &self.root);
         c.env("ARCHY_ROOT", &self.root);
-        c.env("TINFOIL_GROK_CONTEXT_HINT", &self.grok_prompt);
+        c.env("TINFOIL_ROOT", &self.root);
         c.env("ARCHY_GROK_ASK", self.suggested_grok_ask());
         c.env(
             "ARCHY_GROK_CONTEXT_FILE",
             self.root.join("logs/archy-grok-context.txt"),
         );
-        // Interactive: inherit stdio when suspended
         Some(c)
     }
 }
 
 fn default_grok_prompt() -> String {
-    "You are co-piloting arch-machine via archy on Omarchy. \
-     Read logs/archy-grok-context.txt for session tail. \
-     Use inventory, audit, and evidence. Prefer dry-run. \
-     Suggest next fix actions; do not invent package state."
+    "You are co-pilot for arch-machine/archy. Prefer dry-run, evidence, and explicit next steps."
         .into()
 }
 
 fn short_path(p: &std::path::Path) -> String {
     let s = p.display().to_string();
-    if s.len() > 36 {
-        format!("…{}", &s[s.len() - 34..])
-    } else {
+    if s.len() <= 48 {
         s
+    } else {
+        format!("…{}", &s[s.len() - 45..])
     }
 }
 
@@ -659,3 +324,4 @@ fn thread_sleep_drain(job: &RunningJob, buf: &mut Vec<String>) {
         std::thread::sleep(Duration::from_millis(5));
     }
 }
+

@@ -70,16 +70,38 @@ TINFOIL_ROOT=$PWD cargo run --manifest-path crates/archy/Cargo.toml -- --grok-sp
 | Evidence | `extract-evidence.sh --dry-run` |
 | Actuate dry-run | `package-actuate.sh` |
 
-## Architecture
+## Architecture — Eagle + Satellites (TEA / xstate-inspired)
 
 ```
-archy (ratatui)           ← entry + loop + sparse chrome
-    ├── theme.rs          → light/dark eye-comfort palettes + detection
-    ├── nav.rs            → pure focus/job-state transitions
-    ├── jobs.rs           → spawn bash / tinfoil / install.sh
-    ├── actions.rs        → primary NEXT + secondaries
-    └── co-pilot brief    → context file + suspend → grok → resume
+  Key / JobLine / JobFinished
+              │
+              ▼
+        ┌───────────┐
+        │   Eagle   │  fsm::Phase + eagle::update(msg) → Cmd
+        │  (TEA)    │  routes only — no domain builders
+        └─────┬─────┘
+              │ Cmd::FireSatellite | KillJob | LaunchGrok | Quit
+              ▼
+   satellites/*  (Inventory, Catalog, Omarchy, Audit, Install, …)
+              │  each owns: build Command + finish → NEXT plan
+              ▼
+        jobs.rs   offline runner: fire → stream lines → poll exit
 ```
+
+| Piece | Role (xstate analogy) |
+|-------|------------------------|
+| `fsm::Phase` | Finite **states** (Home / Help / Running / Review) |
+| `msg::Msg` | **Events** |
+| `App` fields | **Context** |
+| `eagle::update` | Transition table + assigns |
+| `cmd::Cmd` | **Actions** / invoked services |
+| `satellites` | Domain orchestrators (offline when jobs) |
+| `main` loop | Interprets Cmd (spawn, kill, suspend Grok) |
+
+**Phases:** `Home → (Fire) → Running → (JobFinished) → Review → (NEXT / Esc) → Home`  
+Offline satellites: no heartbeats — trigger, structural shell work, verify exit + stdio.
+
+Gum TEA (`lib/tui`) is the same discipline in bash; this crate mirrors it in Rust.
 
 **Iron peak:** JSON/scripts under `maintenance/`. This crate only steers.
 

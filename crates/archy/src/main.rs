@@ -7,9 +7,14 @@
 
 mod actions;
 mod app;
+mod cmd;
+mod eagle;
+mod fsm;
 mod jobs;
+mod msg;
 mod nav;
 mod root;
+mod satellites;
 mod theme;
 mod ui;
 
@@ -99,7 +104,7 @@ fn run_loop(
             if let Event::Key(key) = event::read()? {
                 // crossterm 0.28: only Press
                 if key.kind == KeyEventKind::Press {
-                    app.on_key(key);
+                    app.dispatch_key(key);
                 }
             }
         }

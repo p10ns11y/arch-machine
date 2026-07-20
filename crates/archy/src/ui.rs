@@ -72,6 +72,8 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App, p: Palette) {
         Span::raw("  "),
         Span::styled(copilot, p.style_fg(p.clay)),
         Span::raw("  "),
+        Span::styled(app.phase.label(), p.style_fg(p.teal)),
+        Span::raw("  "),
         Span::styled(app.theme.as_str(), p.style_fg(p.fg_muted)),
     ]);
 
