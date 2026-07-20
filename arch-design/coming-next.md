@@ -70,7 +70,7 @@ flowchart LR
 | Profiles | B+ | YAML compose; harness asserts module.category | `config/profiles/*.yaml`, SN-3 harness |
 | Evidence | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
 | Remediation policy | A | Repo applies own 6-step policy | `policies/security-remediation.md` |
-| CI | B | shellcheck, go, yaml, evidence smoke; **groxy tests local-only** | `.github/workflows/ci.yml`; gap SN-GROXY-2 |
+| CI | B+ | shellcheck, go, yaml, evidence smoke; **groxy + archy + keeper cargo test** | `.github/workflows/ci.yml`; SN-GROXY-2 |
 | Agent skills | B+ | Symlinked skills + overlays | `AGENTS.md`, `.agents/` |
 
 ## §2 System map today
@@ -431,18 +431,19 @@ flowchart LR
 
 **Verify:** `make groxy-test` · `./bin/groxy acp explain` · `./bin/groxy --dry-run inject "ping" --session-label test`
 
-### SN-GROXY-2 · CI `cargo test` for groxy — **next**
+### SN-GROXY-2 · CI `cargo test` for groxy — **landed (PR follow-up)**
 
-**Problem:** `make groxy-test` is local-only; CI can ship regressions on inject/ACP helpers unnoticed.
+**Problem:** `make groxy-test` was local-only; CI could ship regressions on inject/ACP helpers unnoticed.
 
 | File | Work |
 |------|------|
-| `.github/workflows/ci.yml` | Job or step: `cargo test --manifest-path tools/groxy/Cargo.toml` |
-| `AGENTS.md` verify block | Already lists groxy; keep as gate |
+| `.github/workflows/ci.yml` | Job `groxy`: `make groxy-test` |
+| `tools/groxy` host-bound test | `resolve_grok_binary_finds_real_executable` **skips** when `grok` absent (ubuntu CI) |
+| `acp_remote` secret | CSPRNG via `/dev/urandom` (static file until operator rotates) |
 
-**Done when:** CI fails on red `tools/groxy` tests on default PR branches.
+**Done when:** CI fails on red `tools/groxy` tests on default PR branches. **(Met.)**
 
-**Verify:** Open PR touching `tools/groxy` → CI green; break a test → CI red.
+**Verify:** PR CI job `groxy` green; host with grok still exercises full resolve test.
 
 ### SN-GROXY-3 · Session registry + inbound addressing — **parked**
 
@@ -511,7 +512,7 @@ gantt
   SN-2 gum freeze         :sn2, 2026-07-18, 1d
   section Remote groxy
   SN-GROXY-1 inject ACP   :done, gx1, 2026-07-18, 3d
-  SN-GROXY-2 CI cargo     :gx2, 2026-07-20, 2d
+  SN-GROXY-2 CI cargo     :done, gx2, 2026-07-20, 1d
   SN-GROXY-3 registry     :gx3, after gx2, 14d
   section Keeper
   SN-KEEP-1 dogfood drill :k1, 2026-07-18, 3d
@@ -550,7 +551,8 @@ gantt
 | SN-INV-2 actuate dry-run | `maintenance/package-actuate.sh` + refuse-list |
 | SN-3 profile harness | `scripts/profile-validation-harness.sh` (module.category) |
 | Loop controller name | `archy` (was tinfoil-tui) |
-| **SN-GROXY-1** inject + ACP; drop DM poll | `tools/groxy`, `docs/groxy.md`; commits `bc67c8e`…`dd2019c` |
+| **SN-GROXY-1** inject + ACP; drop DM poll | `tools/groxy`, `docs/groxy.md`; branch `feat/groxy-xchat-remote` |
+| **SN-GROXY-2** CI groxy tests | `.github/workflows/ci.yml` job `groxy`; host-`grok` test skips on CI |
 | Multi-session routing + `--session-label` | `docs/groxy.md`, `outcome_package` session tag |
 | Neovim ACP setup (avante / CodeCompanion) | `docs/groxy.md` IDE section; `scripts/verify-nvim-avante.sh` |
 

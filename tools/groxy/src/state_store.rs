@@ -20,7 +20,7 @@ pub struct PendingConfirmGrant {
 pub struct GroxyState {
     pub seen_event_ids: VecDeque<String>,
     pub pending_confirms: BTreeMap<String, PendingConfirmGrant>,
-    pub last_poll_at_unix: Option<f64>,
+    // last_poll_at removed with live DM poll (SN-GROXY-1); old JSON keys ignored on load
 }
 
 impl GroxyState {
@@ -87,13 +87,11 @@ pub fn save_state(path: &Path, state: &GroxyState) -> std::io::Result<()> {
     struct Wire<'a> {
         seen_event_ids: Vec<&'a String>,
         pending: &'a BTreeMap<String, PendingConfirmGrant>,
-        last_poll_at: Option<f64>,
     }
     let seen: Vec<&String> = state.seen_event_ids.iter().collect();
     let wire = Wire {
         seen_event_ids: seen,
         pending: &state.pending_confirms,
-        last_poll_at: state.last_poll_at_unix,
     };
     // Also accept reading old python shape
     let _ = BTreeSet::<String>::new();
@@ -126,8 +124,7 @@ pub fn load_state_compatible(path: &Path) -> GroxyState {
             }
         }
     }
-    if let Some(last) = value.get("last_poll_at").and_then(|v| v.as_f64()) {
-        state.last_poll_at_unix = Some(last);
-    }
+    // Ignore legacy last_poll_at from poll-era state files
+    let _ = value.get("last_poll_at");
     state
 }

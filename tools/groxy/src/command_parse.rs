@@ -5,6 +5,11 @@ use regex::Regex;
 use std::sync::OnceLock;
 
 /// Verbs that are safe to run without an extra confirm step.
+///
+/// **Watch (`run`):** operator-local inject may spawn `grok -p` with
+/// `run_terminal_cmd` (deny only `rm*` / `sudo*`). That is acceptable while
+/// inject is host-initiated. **Reclassify `run` as high-blast (or tighten tools)
+/// before any inbound DM control path returns** (SN-GROXY-3 / review follow-up).
 const SAFE_VERBS: &[&str] = &[
     "help", "ping", "status", "inventory", "audit", "omarchy", "run", "confirm", "whoami",
 ];

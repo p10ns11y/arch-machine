@@ -189,6 +189,8 @@ pub fn run_host_job(
                 effect_log_path: Some(path),
             }
         }
+        // Operator-local inject path: freeform → grok -p. Not high-blast today;
+        // reclassify / tighten tools before inbound DM control (see command_parse).
         "run" => {
             if arguments.trim().is_empty() {
                 return HostJobResult {

@@ -127,6 +127,7 @@ The serve secret is **not** dynamic per restart. That is intentional for local l
 | `~/.local/state/groxy/acp-agent.secret` | Created on first serve; **reused** until deleted (mode `0600`) |
 | `GROK_AGENT_SECRET` / `--secret` | Overrides the file when set |
 | Restart serve alone | **Same** secret (static file) |
+| Generation | CSPRNG (`/dev/urandom`); not time+pid |
 
 **Static is the right default** here: loopback bind, long-lived serve, clients need a stable value. Auto-rotate every boot without a secure handoff only breaks clients. Prefer rotate **on leak** (screenshot, `ps` argv, shared log), not continuous background rotation.
 
