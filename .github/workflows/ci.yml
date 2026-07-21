@@ -10,7 +10,7 @@ jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - name: Run shellcheck (excluding legacy)
         run: |
           find . -name '*.sh' -not -path './.grok/*' -not -path './logs/*' -not -path './systemd/*' | xargs shellcheck --severity=warning || true
@@ -18,7 +18,7 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - name: yamllint (config + profiles)
         run: |
           pip install yamllint -q
@@ -27,7 +27,7 @@ jobs:
   go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '1.22'
@@ -39,7 +39,7 @@ jobs:
   profile-validation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - name: Profile validation harness (stub — exercises yaml + module symbols)
         run: |
           echo "Phase 4 harness: would validate every profile includes[] has matching install_<module> and module dir"
@@ -49,7 +49,7 @@ jobs:
   evidence-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - name: Evidence bundle smoke test
         run: |
           ./maintenance/extract-evidence.sh --dry-run 2>/dev/null || echo "Evidence smoke (uses sample logs/)"
@@ -58,7 +58,7 @@ jobs:
   markdownlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - name: markdownlint (relaxed for humor/docs)
         run: |
           npm install -g markdownlint-cli 2>/dev/null || true
@@ -68,7 +68,7 @@ jobs:
   eye-comfort:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - name: Schedule unit tests
         run: make eye-comfort-test
       - name: Generated package SoT check
@@ -78,7 +78,7 @@ jobs:
   keeper:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (tools/keeper)
         run: cargo test --manifest-path tools/keeper/Cargo.toml
@@ -87,7 +87,7 @@ jobs:
   archy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (tools/archy)
         run: make archy-test
@@ -97,7 +97,7 @@ jobs:
   groxy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (tools/groxy)
         run: make groxy-test
