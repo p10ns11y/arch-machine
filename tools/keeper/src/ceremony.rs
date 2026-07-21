@@ -15,8 +15,8 @@
 
 use crate::crypto::{
     generate_pq_keypair, generate_root, open_hybrid, open_under_root, seal_hybrid, seal_under_root,
-    shamir_combine, shamir_split, wrap_with_passphrase, ShareJson, CANARY_PLAINTEXT,
-    HYBRID_ALGORITHM,
+    shamir_combine, shamir_split, unwrap_with_passphrase, wrap_with_passphrase, ShareJson,
+    CANARY_PLAINTEXT, HYBRID_ALGORITHM,
 };
 use crate::factors::{
     machine_fingerprint, release_shares_from_confirmations, seal_share_for_device, Confirmation,
@@ -504,6 +504,110 @@ pub fn get_secret(root: &Path, passphrase: &str, name: &str) -> Result<String, C
     open_named(root, &r, name)
 }
 
+/// List named sealed secrets (no unlock).
+pub fn list_secret_names(root: &Path) -> Result<Vec<String>, CeremonyError> {
+    let dir = root.join("secrets");
+    let Ok(rd) = std::fs::read_dir(&dir) else {
+        return Ok(vec![]);
+    };
+    let mut names: Vec<String> = rd
+        .flatten()
+        .filter_map(|e| {
+            let n = e.file_name().into_string().ok()?;
+            n.strip_suffix(".sealed.json").map(|s| s.to_string())
+        })
+        .collect();
+    names.sort();
+    Ok(names)
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PassphraseChangeResult {
+    pub ok: bool,
+    pub path: &'static str,
+    pub escrow_rewritten: bool,
+    pub secrets_intact: bool,
+    pub hint: &'static str,
+}
+
+/// Change passphrase **without re-splitting root** (secrets stay under same PQ seals).
+/// Needs current passphrase + this device (daily path). Escrow unchanged.
+pub fn change_passphrase(
+    root: &Path,
+    old_passphrase: &str,
+    new_passphrase: &str,
+) -> Result<PassphraseChangeResult, CeremonyError> {
+    if new_passphrase.is_empty() {
+        return Err(CeremonyError::Msg("new passphrase required".into()));
+    }
+    if new_passphrase == old_passphrase {
+        return Err(CeremonyError::Msg("new passphrase must differ from old".into()));
+    }
+    // Prove we can open with old path, then re-wrap only the passphrase share.
+    let _r = unlock_daily(root, old_passphrase)?;
+    let wrap = read_passphrase_wrap(root)?;
+    let share_data = unwrap_with_passphrase(&wrap, old_passphrase)
+        .map_err(|e| CeremonyError::Crypto(e))?;
+    let new_wrap = wrap_with_passphrase(&share_data, wrap.share_id, new_passphrase)?;
+    write_passphrase_wrap(root, &new_wrap)?;
+    // Verify new path opens
+    let _ = unlock_daily(root, new_passphrase)?;
+    Ok(PassphraseChangeResult {
+        ok: true,
+        path: "rewrap-passphrase-share",
+        escrow_rewritten: false,
+        secrets_intact: true,
+        hint: "escrow + device shares unchanged; use NEW passphrase for daily get/put",
+    })
+}
+
+/// Set a **new** passphrase when the old one is forgotten (same machine).
+/// Reconstructs root with offline escrow + device, re-splits shares, rewrites escrow.
+/// Named secrets remain open under the same root after re-split.
+pub fn reset_passphrase_with_escrow(
+    root: &Path,
+    escrow_path: &Path,
+    new_passphrase: &str,
+) -> Result<PassphraseChangeResult, CeremonyError> {
+    if new_passphrase.is_empty() {
+        return Err(CeremonyError::Msg("new passphrase required".into()));
+    }
+    let meta = read_meta(root)?.ok_or_else(|| CeremonyError::Msg("no vault".into()))?;
+    let r = unlock_with_escrow(root, escrow_path)?;
+    let k = effective_threshold(meta.k, meta.n)?;
+    let n = meta.n.max(DEFAULT_N);
+    // Only n=3 simple path without yubi here; yubi-enrolled vaults need enroll path after.
+    if yubi_blob_exists(root) {
+        return Err(CeremonyError::Msg(
+            "reset-passphrase: YubiKey enrolled — use rebind + enroll-yubikey instead (this release)"
+                .into(),
+        ));
+    }
+    let shares = shamir_split(&r, k, n)?;
+    let pass_share = &shares[0];
+    let offline_share = &shares[1];
+    let device_share = &shares[2];
+    let wrap = wrap_with_passphrase(&pass_share.data, pass_share.id, new_passphrase)?;
+    write_passphrase_wrap(root, &wrap)?;
+    write_escrow(escrow_path, &ShareJson::from(offline_share))?;
+    let fp = machine_fingerprint();
+    let dev_blob = seal_share_for_device(device_share, &fp)?;
+    write_device_blob(root, &dev_blob)?;
+    let mut meta = meta;
+    meta.drill_proven = false;
+    meta.last_drill_at = None;
+    write_meta(root, &meta)?;
+    let _ = unlock_daily(root, new_passphrase)?;
+    Ok(PassphraseChangeResult {
+        ok: true,
+        path: "escrow+device→resplit→new-passphrase",
+        escrow_rewritten: true,
+        secrets_intact: true,
+        hint: "copy NEW escrow offline; run recover once; daily get uses NEW passphrase",
+    })
+}
+
 /// Get without passphrase: offline escrow + device (same as recover path).
 pub fn get_secret_with_escrow(
     root: &Path,
@@ -925,6 +1029,55 @@ mod tests {
         let err = refuse_yubi_mock_with_secrets(&root);
         std::env::remove_var("KEEPER_YUBI_MOCK_SECRET");
         assert!(err.is_err(), "expected refuse when mock+secrets");
+    }
+
+    #[test]
+    fn change_passphrase_keeps_secrets_and_escrow() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        let old = "old-passphrase-xx";
+        let new = "new-passphrase-yy";
+        init_vault(&root, old, &escrow).unwrap();
+        put_secret(&root, old, "demo", "secret-payload").unwrap();
+        let escrow_before = std::fs::read_to_string(&escrow).unwrap();
+
+        let res = change_passphrase(&root, old, new).unwrap();
+        assert!(res.ok);
+        assert!(!res.escrow_rewritten);
+        assert!(res.secrets_intact);
+
+        assert_eq!(get_secret(&root, new, "demo").unwrap(), "secret-payload");
+        assert!(get_secret(&root, old, "demo").is_err());
+        // Escrow file unchanged
+        assert_eq!(std::fs::read_to_string(&escrow).unwrap(), escrow_before);
+        // Escrow path still opens without new passphrase
+        assert_eq!(
+            get_secret_with_escrow(&root, &escrow, "demo").unwrap(),
+            "secret-payload"
+        );
+    }
+
+    #[test]
+    fn reset_passphrase_with_escrow_forgets_old() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        let old = "forgot-this-pass-xx";
+        let new = "brand-new-pass-yy";
+        init_vault(&root, old, &escrow).unwrap();
+        put_secret(&root, old, "demo", "still-here").unwrap();
+
+        let res = reset_passphrase_with_escrow(&root, &escrow, new).unwrap();
+        assert!(res.ok);
+        assert!(res.escrow_rewritten);
+        assert_eq!(get_secret(&root, new, "demo").unwrap(), "still-here");
+        assert!(get_secret(&root, old, "demo").is_err());
+        assert_eq!(
+            get_secret_with_escrow(&root, &escrow, "demo").unwrap(),
+            "still-here"
+        );
+        assert!(!status(&root).unwrap().healthy); // drill cleared
     }
 
     #[test]

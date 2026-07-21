@@ -209,13 +209,26 @@ keeper yubi-probe   # expect soloYubiRejected
 | **Secure onboard + menu** | `keeper` / `keeper loop` / `keeper loop --practice` |
 | Create vault | `init --escrow PATH` |
 | Store secret | `put NAME` (prompt) or `put NAME --file PATH` |
-| Daily read | `get NAME` |
-| Forgot passphrase | `get NAME --escrow PATH` |
+| Daily read | `get NAME` (passphrase + device) |
+| No passphrase (same machine) | `get NAME --escrow PATH` · loop: **`get-escrow NAME`** |
 | Prove recover | `recover --escrow PATH` then `status` |
+| Change passphrase (know old) | `passwd` · loop: **`passwd`** — secrets + escrow stay |
+| Forgot passphrase | `passwd-reset --escrow PATH` · loop: **`passwd-reset`** — rewrites escrow |
 | New machine | `rebind --escrow PATH` then `recover` |
 | Add YubiKey | `enroll-yubikey --escrow PATH` |
 | Strong read | `get NAME --yubi` |
 | Solo-Yubi safety check | `yubi-probe` |
+
+### Loop quick reference
+
+```text
+keeper> list
+keeper> get mfa              # prompts passphrase
+keeper> get-escrow mfa       # NO passphrase (needs offline escrow file)
+keeper> passwd               # change passphrase; secrets kept
+keeper> passwd-reset         # forgot P; escrow+device → new P (copy new escrow)
+keeper> help
+```
 
 Environment:
 

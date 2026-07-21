@@ -1,8 +1,9 @@
 //! CLI for keeper. Passphrase via env/file or interactive non-echo prompts (never argv).
 
 use crate::ceremony::{
-    drill, enroll_yubikey, get_secret, get_secret_with_escrow, get_secret_yubi_device,
-    get_secret_yubi_escrow, init_vault, put_secret, rebind_device, status, try_unlock_yubi_only,
+    change_passphrase, drill, enroll_yubikey, get_secret, get_secret_with_escrow,
+    get_secret_yubi_device, get_secret_yubi_escrow, init_vault, list_secret_names, put_secret,
+    rebind_device, reset_passphrase_with_escrow, status, try_unlock_yubi_only,
 };
 use crate::interactive::{
     escrow_under_home, run_interactive_session, run_loop, run_onboard, ScriptedIo, TtyIo,
@@ -107,6 +108,24 @@ pub enum Commands {
         root: Option<PathBuf>,
         #[arg(long, default_value_t = DEFAULT_SLOT)]
         yubi_slot: u8,
+    },
+    /// List named secrets (no unlock)
+    List {
+        #[arg(long, env = "KEEPER_ROOT")]
+        root: Option<PathBuf>,
+    },
+    /// Change passphrase (know current). Secrets + escrow unchanged.
+    Passwd {
+        #[arg(long, env = "KEEPER_ROOT")]
+        root: Option<PathBuf>,
+    },
+    /// Forgot passphrase: escrow + device → set new passphrase (rewrites escrow)
+    #[command(name = "passwd-reset")]
+    PasswdReset {
+        #[arg(long)]
+        escrow: PathBuf,
+        #[arg(long, env = "KEEPER_ROOT")]
+        root: Option<PathBuf>,
     },
     /// Enroll YubiKey as strong hardware share (re-splits to any-2-of-4; rewrites escrow)
     EnrollYubikey {
@@ -367,6 +386,64 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
             .map_err(|e| e.to_string())?;
             if escrow_under_home(&escrow) {
                 eprintln!("warning: rewrite escrow is under $HOME — copy OFF laptop");
+            }
+            println!("{}", serde_json::to_string_pretty(&res).unwrap());
+            Ok(ExitCode::SUCCESS)
+        }
+        Some(Commands::List { root }) => {
+            let root = resolve_root(root);
+            let names = list_secret_names(&root).map_err(|e| e.to_string())?;
+            for n in names {
+                println!("{n}");
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Some(Commands::Passwd { root }) => {
+            let root = resolve_root(root);
+            let old = read_passphrase()?;
+            // Prefer interactive new passphrase (never on argv)
+            let new = if atty_stdin() {
+                let a = rpassword::prompt_password("New passphrase (not echoed): ")
+                    .map_err(|e| e.to_string())?;
+                let b = rpassword::prompt_password("Confirm new passphrase: ")
+                    .map_err(|e| e.to_string())?;
+                if a != b {
+                    return Err("new passphrases do not match".into());
+                }
+                a
+            } else if let Ok(p) = std::env::var("KEEPER_NEW_PASSPHRASE") {
+                p
+            } else {
+                return Err(
+                    "set KEEPER_NEW_PASSPHRASE (automation) or run in a TTY for prompts".into(),
+                );
+            };
+            let res = change_passphrase(&root, &old, &new).map_err(|e| e.to_string())?;
+            println!("{}", serde_json::to_string_pretty(&res).unwrap());
+            Ok(ExitCode::SUCCESS)
+        }
+        Some(Commands::PasswdReset { escrow, root }) => {
+            let root = resolve_root(root);
+            let new = if atty_stdin() {
+                let a = rpassword::prompt_password("New passphrase (not echoed): ")
+                    .map_err(|e| e.to_string())?;
+                let b = rpassword::prompt_password("Confirm new passphrase: ")
+                    .map_err(|e| e.to_string())?;
+                if a != b {
+                    return Err("new passphrases do not match".into());
+                }
+                a
+            } else if let Ok(p) = std::env::var("KEEPER_NEW_PASSPHRASE") {
+                p
+            } else {
+                return Err(
+                    "set KEEPER_NEW_PASSPHRASE (automation) or run in a TTY for prompts".into(),
+                );
+            };
+            let res =
+                reset_passphrase_with_escrow(&root, &escrow, &new).map_err(|e| e.to_string())?;
+            if escrow_under_home(&escrow) {
+                eprintln!("warning: new escrow is under $HOME — copy OFF laptop");
             }
             println!("{}", serde_json::to_string_pretty(&res).unwrap());
             Ok(ExitCode::SUCCESS)

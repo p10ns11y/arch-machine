@@ -4,7 +4,8 @@
 //! [`SecretIo`] trait (TTY non-echo in production; scripted injectors in tests).
 
 use crate::ceremony::{
-    drill, get_secret, get_secret_with_escrow, init_vault, put_secret, rebind_device, status,
+    change_passphrase, drill, get_secret, get_secret_with_escrow, init_vault, list_secret_names,
+    put_secret, rebind_device, reset_passphrase_with_escrow, status,
 };
 use serde_json::json;
 use std::io::{self, BufRead, Write};
@@ -241,8 +242,12 @@ pub fn run_onboard(
     }
 
     io.print_line("")?;
-    io.print_line("Onboard complete. Prefer: keeper loop  (or this menu next).")?;
-    io.print_line("Never put secrets on the shell command line.")?;
+    io.print_line("Onboard complete.")?;
+    io.print_line(&format!("  Secret name stored: {name}"))?;
+    io.print_line("  In loop:  get <name>           (needs passphrase + device)")?;
+    io.print_line("            get-escrow <name>    (no passphrase; offline + device)")?;
+    io.print_line("            list                 (names only)")?;
+    io.print_line("  Never put secrets on the shell command line.")?;
 
     Ok(OnboardResult {
         root,
@@ -254,34 +259,71 @@ pub fn run_onboard(
     })
 }
 
+/// Split loop line into argv-like tokens (whitespace; no shell expansion).
+fn loop_tokens(line: &str) -> Vec<&str> {
+    line.split_whitespace().collect()
+}
+
+fn resolve_escrow(escrow: &Option<PathBuf>, io: &mut dyn SecretIo) -> Result<PathBuf, String> {
+    match escrow {
+        Some(p) => Ok(p.clone()),
+        None => {
+            let s = io.read_line("escrow path: ")?;
+            if s.is_empty() {
+                return Err("escrow path required".into());
+            }
+            Ok(PathBuf::from(s))
+        }
+    }
+}
+
+fn loop_help(io: &mut dyn SecretIo) -> Result<(), String> {
+    io.print_line("Commands (first word only; optional name after):")?;
+    io.print_line("  help | ?")?;
+    io.print_line("  status")?;
+    io.print_line("  list                          secret names (no unlock)")?;
+    io.print_line("  get [name]                    passphrase + device")?;
+    io.print_line("  get-escrow [name]             offline escrow + device (NO passphrase)")?;
+    io.print_line("  put [name]                    store (prompts passphrase + value)")?;
+    io.print_line("  recover                       drill offline+device → healthy")?;
+    io.print_line("  rebind                        new machine reseal (P+escrow)")?;
+    io.print_line("  passwd                        change passphrase (know old; secrets kept)")?;
+    io.print_line("  passwd-reset                  forgot passphrase: escrow+device → new P")?;
+    io.print_line("  quit | exit | q")?;
+    io.print_line("")?;
+    io.print_line("Examples:")?;
+    io.print_line("  get mfa")?;
+    io.print_line("  get-escrow mfa          ← no passphrase")?;
+    io.print_line("  get                     ← prompts for name then passphrase")?;
+    Ok(())
+}
+
 /// Interactive command menu after onboard (or for existing vaults).
-/// Commands: status | get | put | recover | rebind | help | quit
 pub fn run_loop(
     io: &mut dyn SecretIo,
     root: PathBuf,
     escrow: Option<PathBuf>,
 ) -> Result<(), String> {
     io.print_line("keeper loop — type help · secrets via prompts only · quit to exit")?;
+    if let Some(ref e) = escrow {
+        io.print_line(&format!("  escrow (for get-escrow / recover): {e:?}"))?;
+    }
     loop {
-        let cmd = io.read_line("keeper> ")?;
-        let cmd = cmd.trim();
-        if cmd.is_empty() {
+        let line = io.read_line("keeper> ")?;
+        let line = line.trim();
+        if line.is_empty() {
             continue;
         }
+        let tokens = loop_tokens(line);
+        let cmd = tokens[0];
+        let arg1 = tokens.get(1).map(|s| (*s).to_string());
+
         match cmd {
             "quit" | "exit" | "q" => {
                 io.print_line("bye")?;
                 return Ok(());
             }
-            "help" | "?" => {
-                io.print_line("  status              vault health (healthy ≠ open)")?;
-                io.print_line("  get                 read secret (passphrase prompt)")?;
-                io.print_line("  get-escrow          read via offline escrow (no passphrase)")?;
-                io.print_line("  put                 store secret (name + non-echo value)")?;
-                io.print_line("  recover             drill offline+device → healthy")?;
-                io.print_line("  rebind              new machine: P+escrow reseal device")?;
-                io.print_line("  quit                leave loop")?;
-            }
+            "help" | "?" => loop_help(io)?,
             "status" => {
                 let st = status(&root).map_err(|e| e.to_string())?;
                 let body = serde_json::to_string_pretty(&json!({
@@ -295,32 +337,85 @@ pub fn run_loop(
                     "remember": st.remember,
                     "storeOffline": st.store_offline,
                     "free": st.free,
-                    "note": "healthy only means recover drill worked once",
+                    "note": "healthy only means recover drill worked once — not an open session",
                 }))
                 .map_err(|e| e.to_string())?;
                 io.print_line(&body)?;
             }
+            "list" | "ls" => {
+                let names = list_secret_names(&root).map_err(|e| e.to_string())?;
+                if names.is_empty() {
+                    io.print_line("(no named secrets)")?;
+                } else {
+                    for n in names {
+                        io.print_line(&n)?;
+                    }
+                }
+            }
             "get" => {
-                let name = io.read_line("name: ")?;
+                // Reject mistaken CLI-style flags here so UX is clear
+                if arg1.as_deref() == Some("--escrow") || arg1.as_deref() == Some("-e") {
+                    io.print_line("use: get-escrow [name]   (not get --escrow)")?;
+                    continue;
+                }
+                if arg1.as_deref() == Some("--help") || arg1.as_deref() == Some("-h") {
+                    io.print_line("get [name]  — prompts passphrase; uses this device")?;
+                    io.print_line("forgot passphrase?  get-escrow [name]")?;
+                    continue;
+                }
+                let name = match arg1 {
+                    Some(n) => n,
+                    None => io.read_line("name: ")?,
+                };
+                if name.is_empty() {
+                    io.print_line("error: name required")?;
+                    continue;
+                }
                 let pass = io.read_secret("Passphrase: ")?;
                 match get_secret(&root, &pass, &name) {
                     Ok(v) => io.print_line(&v)?,
-                    Err(e) => io.print_line(&format!("error: {e}"))?,
+                    Err(e) => {
+                        io.print_line(&format!("error: {e}"))?;
+                        io.print_line("hint: forgot passphrase?  get-escrow {name}")?;
+                        io.print_line("      change passphrase?  passwd  (if you know old)")?;
+                        io.print_line("      reset via escrow?   passwd-reset")?;
+                    }
                 }
             }
-            "get-escrow" => {
-                let esc = match &escrow {
-                    Some(p) => p.clone(),
-                    None => PathBuf::from(io.read_line("escrow path: ")?),
+            "get-escrow" | "getescrow" => {
+                let name = match arg1 {
+                    Some(n) if n != "--help" && n != "-h" => n,
+                    _ if arg1.as_deref() == Some("--help") || arg1.as_deref() == Some("-h") => {
+                        io.print_line("get-escrow [name]  — offline escrow + device; NO passphrase")?;
+                        continue;
+                    }
+                    _ => io.read_line("name: ")?,
                 };
-                let name = io.read_line("name: ")?;
+                if name.is_empty() {
+                    io.print_line("error: name required")?;
+                    continue;
+                }
+                let esc = match resolve_escrow(&escrow, io) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        io.print_line(&format!("error: {e}"))?;
+                        continue;
+                    }
+                };
                 match get_secret_with_escrow(&root, &esc, &name) {
                     Ok(v) => io.print_line(&v)?,
                     Err(e) => io.print_line(&format!("error: {e}"))?,
                 }
             }
             "put" => {
-                let name = io.read_line("name: ")?;
+                let name = match arg1 {
+                    Some(n) => n,
+                    None => io.read_line("name: ")?,
+                };
+                if name.is_empty() {
+                    io.print_line("error: name required")?;
+                    continue;
+                }
                 let pass = io.read_secret("Passphrase: ")?;
                 let val = io.read_secret("Secret value (not echoed): ")?;
                 match put_secret(&root, &pass, &name, &val) {
@@ -328,10 +423,13 @@ pub fn run_loop(
                     Err(e) => io.print_line(&format!("error: {e}"))?,
                 }
             }
-            "recover" => {
-                let esc = match &escrow {
-                    Some(p) => p.clone(),
-                    None => PathBuf::from(io.read_line("escrow path: ")?),
+            "recover" | "drill" => {
+                let esc = match resolve_escrow(&escrow, io) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        io.print_line(&format!("error: {e}"))?;
+                        continue;
+                    }
                 };
                 match drill(&root, &esc) {
                     Ok(dr) => {
@@ -345,9 +443,12 @@ pub fn run_loop(
                 }
             }
             "rebind" => {
-                let esc = match &escrow {
-                    Some(p) => p.clone(),
-                    None => PathBuf::from(io.read_line("escrow path: ")?),
+                let esc = match resolve_escrow(&escrow, io) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        io.print_line(&format!("error: {e}"))?;
+                        continue;
+                    }
                 };
                 let pass = io.read_secret("Passphrase (rebind needs P+escrow): ")?;
                 match rebind_device(&root, &pass, &esc, None, None) {
@@ -359,7 +460,54 @@ pub fn run_loop(
                     Err(e) => io.print_line(&format!("error: {e}"))?,
                 }
             }
-            other => io.print_line(&format!("unknown command: {other} (help)"))?,
+            "passwd" | "change-passphrase" => {
+                io.print_line("Change passphrase (know current). Secrets + escrow stay intact.")?;
+                let old = io.read_secret("Current passphrase: ")?;
+                let new1 = io.read_secret("New passphrase: ")?;
+                let new2 = io.read_secret("Confirm new passphrase: ")?;
+                if new1 != new2 {
+                    io.print_line("error: new passphrases do not match")?;
+                    continue;
+                }
+                match change_passphrase(&root, &old, &new1) {
+                    Ok(r) => {
+                        let body = serde_json::to_string_pretty(&r).map_err(|e| e.to_string())?;
+                        io.print_line(&body)?;
+                    }
+                    Err(e) => io.print_line(&format!("error: {e}"))?,
+                }
+            }
+            "passwd-reset" | "reset-passphrase" => {
+                io.print_line(
+                    "Forgot passphrase: need offline escrow + this device. Escrow is rewritten.",
+                )?;
+                let esc = match resolve_escrow(&escrow, io) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        io.print_line(&format!("error: {e}"))?;
+                        continue;
+                    }
+                };
+                let new1 = io.read_secret("New passphrase: ")?;
+                let new2 = io.read_secret("Confirm new passphrase: ")?;
+                if new1 != new2 {
+                    io.print_line("error: new passphrases do not match")?;
+                    continue;
+                }
+                match reset_passphrase_with_escrow(&root, &esc, &new1) {
+                    Ok(r) => {
+                        let body = serde_json::to_string_pretty(&r).map_err(|e| e.to_string())?;
+                        io.print_line(&body)?;
+                        io.print_line("Copy NEW escrow offline; run recover once.")?;
+                    }
+                    Err(e) => io.print_line(&format!("error: {e}"))?,
+                }
+            }
+            other => {
+                io.print_line(&format!("unknown command: {other}"))?;
+                io.print_line("  tip: use first word only — e.g.  get mfa   or  get-escrow mfa")?;
+                io.print_line("  type help for full list")?;
+            }
         }
     }
 }
@@ -459,10 +607,10 @@ mod tests {
 
         let mut io = ScriptedIo::new(
             vec![
-                "get".into(),
-                "x".into(),
-                "put".into(),
-                "y".into(),
+                "get x".into(), // one-line name
+                "put y".into(),
+                "get-escrow x".into(), // no passphrase
+                "list".into(),
                 "status".into(),
                 "quit".into(),
             ],
@@ -472,9 +620,33 @@ mod tests {
                 "two".into(),          // put value
             ],
         );
-        run_loop(&mut io, root.clone(), Some(escrow)).unwrap();
+        run_loop(&mut io, root.clone(), Some(escrow.clone())).unwrap();
         assert_eq!(get_secret(&root, "loop-pass-xx", "y").unwrap(), "two");
         assert!(io.output.iter().any(|l| l.contains("\"healthy\"")));
+        assert!(io.output.iter().any(|l| l.trim() == "one")); // get-escrow printed secret
+        assert!(io.output.iter().any(|l| l == "x" || l.contains("x")));
+    }
+
+    #[test]
+    fn loop_passwd_and_get_escrow_without_pass() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("escrow.json");
+        init_vault(&root, "old-pass-xx", &escrow).unwrap();
+        put_secret(&root, "old-pass-xx", "mfa", "tok").unwrap();
+
+        let mut io = ScriptedIo::new(
+            vec!["passwd".into(), "get-escrow mfa".into(), "quit".into()],
+            vec![
+                "old-pass-xx".into(),
+                "new-pass-yy".into(),
+                "new-pass-yy".into(),
+            ],
+        );
+        run_loop(&mut io, root.clone(), Some(escrow.clone())).unwrap();
+        assert_eq!(get_secret(&root, "new-pass-yy", "mfa").unwrap(), "tok");
+        assert!(get_secret(&root, "old-pass-xx", "mfa").is_err());
+        assert!(io.output.iter().any(|l| l.trim() == "tok"));
     }
 
     #[test]
