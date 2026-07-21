@@ -2,11 +2,11 @@
 
 **Audience:** You · implementer · agents  
 **Style:** Short words. Diagrams over prose. Optimism grounded in evidence.  
-**Contract:** [keeper architecture](./keeper.md) · [THREAT-MODEL](../modules/security/keeper/docs/THREAT-MODEL.md)  
+**Contract:** [keeper architecture](./keeper.md) · [THREAT-MODEL](../tools/keeper/docs/THREAT-MODEL.md)  
 **Method:** [stellar-roadmap](../.agents/skills/stellar-roadmap/SKILL.md) · collab-finder blueprint style  
 **Parent backlog:** [coming-next.md](./coming-next.md)
 
-*Last updated: 2026-07-18 · PR #28 on sentinel*
+*Last updated: 2026-07-21 · PATH · rebind · loop shipped*
 
 ---
 
@@ -51,7 +51,7 @@ flowchart TB
 
 ---
 
-## 1. Scorecard — what landed (PR #28)
+## 1. Scorecard — what landed
 
 ```mermaid
 flowchart LR
@@ -61,10 +61,11 @@ flowchart LR
     A3[PQ hybrid]
     A4[k floor]
     A5[IP ban]
+    A6[PATH install]
+    A7[rebind]
+    A8[interactive loop]
   end
-  subgraph next["Open B/C"]
-    B1[PATH install]
-    B2[CI cargo]
+  subgraph next["Open"]
     B3[fprintd]
     B4[places]
   end
@@ -73,15 +74,18 @@ flowchart LR
 
 | Area | Grade | One line | Evidence |
 |------|-------|----------|----------|
-| Ceremony CLI | A | init/put/get/status/recover | `src/ceremony.rs`, `cli.rs` |
-| Threshold | A | k=3 n=4 enforced | `crypto.rs`, tests |
+| Ceremony CLI | A | init/put/get/status/recover/rebind/loop | `ceremony.rs`, `cli.rs`, `interactive.rs` |
+| Threshold | A | **k=2 n=3** default (any 2 of P/O/D); optional n=4 Yubi | `crypto.rs`, tests |
 | PQ seal | A | ML-KEM-768 + AES-GCM | `crypto.rs` |
 | Downgrade resist | A | effective_threshold | unit tests |
-| Docs | A- | threat + ceremony + location | `docs/*` |
-| Agent expand | B+ | `--agent-expand` cargo check | `modules/security/install.sh` |
-| Install UX | C | cargo only | README |
-| CI | C | not in vigil CI yet | workflows |
+| Docs | A | threat + ceremony + operator + README | `docs/*`, README |
+| Agent expand | A | release build + `~/.local/bin/keeper` | `modules/security/install.sh` |
+| Device rebind | A | P+O → reseal device; old fp fails | `rebind_device` |
+| Interactive loop | A | non-echo onboard; no argv secrets | `keeper loop` |
+| CI | A | keeper job in CI | `.github/workflows/ci.yml` |
 | Extra factors | — | fprintd/GPS deferred | THREAT-MODEL |
+
+**Historical note:** Early drafts mentioned k=3 + knowledge factor. That is **not** the shipped default. Trust OPERATOR-MODEL + README.
 
 **Plain rule:** Healthy status means the offline drill already worked once.
 
@@ -98,17 +102,18 @@ See [keeper.md §2](./keeper.md) — CLI → crypto plane → `KEEPER_ROOT` + es
 ```mermaid
 stateDiagram-v2
   [*] --> Uninitialized
-  Uninitialized --> Initialized: init
+  Uninitialized --> Initialized: init / loop onboard
   Initialized --> DrillPending: put secrets before drill
-  DrillPending --> Healthy: recover offline+device+knowledge
-  Healthy --> Healthy: get with passphrase+device+knowledge
-  Healthy --> DrillPending: optional re-drill
+  DrillPending --> Healthy: recover offline+device
+  Healthy --> Healthy: get with passphrase+device
+  Healthy --> DrillPending: rebind or re-drill
 ```
 
 | Path | Shares | Opens |
 |------|--------|-------|
-| Daily | passphrase + device + knowledge | secrets |
-| Drill/recover | offline + device + knowledge | canary → healthy |
+| Daily | passphrase + device | secrets |
+| Drill/recover | offline + device | canary → healthy |
+| New machine | passphrase + offline → rebind → new device | resealed vault |
 
 ---
 
@@ -166,7 +171,7 @@ flowchart TD
 
 ## 7. Blueprint cards
 
-### SN-KEEP-1 · Dogfood recover drill (no new code)
+### SN-KEEP-1 · Dogfood recover drill (no new code) · **operator process**
 
 **Problem:** Ceremony only real if operator runs recover without passphrase on a live escrow.
 
@@ -179,14 +184,14 @@ flowchart LR
 
 | File | Work |
 |------|------|
-| `modules/security/keeper/README.md` | already documents path |
+| `tools/keeper/README.md` | already documents path |
 | operator escrow path | store offline share off-laptop |
 
 **Done when:** `status` reports healthy after no-passphrase recover; canary open.
 
 **Verify:**
 ```bash
-cd modules/security/keeper
+cd tools/keeper
 export KEEPER_ROOT=/tmp/keeper-dogfood KEEPER_PASSPHRASE=… KEEPER_KNOWLEDGE=…
 cargo run --quiet -- init --escrow /tmp/keeper-escrow.json
 cargo run --quiet -- put demo --value 'x'
@@ -195,26 +200,26 @@ cargo run --quiet -- recover --escrow /tmp/keeper-escrow.json
 cargo run --quiet -- status   # healthy
 ```
 
-### SN-KEEP-2 · CI cargo test job
+### SN-KEEP-2 · CI cargo test job · **shipped**
 
 **Problem:** Shamir/PQ regressions only caught locally.
 
 ```mermaid
 flowchart LR
   pr[PR to sentinel] --> ci[GitHub Actions]
-  ci --> test[cargo test --manifest-path modules/security/keeper/Cargo.toml]
+  ci --> test[cargo test --manifest-path tools/keeper/Cargo.toml]
 ```
 
 | File | Work |
 |------|------|
 | `.github/workflows/ci.yml` | add `keeper` job (stable Rust) |
-| `modules/security/keeper/` | keep tests offline/no network |
+| `tools/keeper/` | keep tests offline/no network |
 
 **Done when:** CI red if `cargo test` fails on keeper.
 
 **Verify:** open PR with deliberate test fail → job fails; revert.
 
-### SN-KEEP-3 · Install to PATH (`~/.local/bin/keeper`)
+### SN-KEEP-3 · Install to PATH (`~/.local/bin/keeper`) · **shipped**
 
 **Problem:** `cargo run` friction kills dogfood.
 
@@ -227,13 +232,13 @@ flowchart LR
 | File | Work |
 |------|------|
 | `modules/security/install.sh` | `--agent-expand` optional install release binary |
-| `modules/security/keeper/README.md` | PATH install section |
+| `tools/keeper/README.md` | PATH install section |
 
 **Done when:** `command -v keeper` after expand/install; `keeper status` works.
 
 **Verify:** expand security --yes on clean env; `keeper --help`
 
-### SN-KEEP-4 · Device re-bind ceremony
+### SN-KEEP-4 · Device re-bind ceremony · **shipped** (`keeper rebind`)
 
 **Problem:** Reimage / new machine breaks device share without guided re-seal.
 

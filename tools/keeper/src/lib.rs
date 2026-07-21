@@ -4,5 +4,6 @@ pub mod ceremony;
 pub mod cli;
 pub mod crypto;
 pub mod factors;
+pub mod interactive;
 pub mod store;
 pub mod yubi;

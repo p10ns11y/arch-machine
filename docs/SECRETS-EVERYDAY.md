@@ -50,7 +50,7 @@ flowchart LR
 
 **Honest bound:** lose two of the three and the secrets are gone. Crypto cannot invent a key from vacuum. Cloud-only “recovery email” is not self-sufficient if the vendor locks you out.
 
-Full protocol for this repo’s tool: [keeper OPERATOR-MODEL](../modules/security/keeper/docs/OPERATOR-MODEL.md).
+Full protocol for this repo’s tool: [keeper OPERATOR-MODEL](../tools/keeper/docs/OPERATOR-MODEL.md).
 
 ---
 
@@ -159,10 +159,10 @@ This repository ships **keeper**: simple **any-2-of-3** threshold vault with hyb
 
 Paths and bounds:
 
-- [OPERATOR-MODEL.md](../modules/security/keeper/docs/OPERATOR-MODEL.md) — remember / store / free  
-- [THREAT-MODEL.md](../modules/security/keeper/docs/THREAT-MODEL.md) — adversaries and invariants  
-- [RECOVERY-CEREMONY.md](../modules/security/keeper/docs/RECOVERY-CEREMONY.md) — init / drill  
-- [keeper README](../modules/security/keeper/README.md) — build and CLI  
+- [OPERATOR-MODEL.md](../tools/keeper/docs/OPERATOR-MODEL.md) — remember / store / free  
+- [THREAT-MODEL.md](../tools/keeper/docs/THREAT-MODEL.md) — adversaries and invariants  
+- [RECOVERY-CEREMONY.md](../tools/keeper/docs/RECOVERY-CEREMONY.md) — init / drill  
+- [keeper README](../tools/keeper/README.md) — build and CLI  
 
 Keeper is **one** implementation of the one-card model—not a requirement to adopt the rest of arch-machine. You may use another vault that obeys the same card (one secret, one offline kit, device free, open only at use).
 

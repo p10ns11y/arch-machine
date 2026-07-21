@@ -1,17 +1,19 @@
 # Keeper — architecture design (arch-machine)
 
 **Audience:** operators · implementers · agents  
-**Contract:** [THREAT-MODEL](../modules/security/keeper/docs/THREAT-MODEL.md) · [RECOVERY-CEREMONY](../modules/security/keeper/docs/RECOVERY-CEREMONY.md) · [LOCATION](../modules/security/keeper/docs/LOCATION.md)  
+**Contract:** [THREAT-MODEL](../tools/keeper/docs/THREAT-MODEL.md) · [RECOVERY-CEREMONY](../tools/keeper/docs/RECOVERY-CEREMONY.md) · [LOCATION](../tools/keeper/docs/LOCATION.md)  
 **Backlog:** [coming-next-keeper.md](./coming-next-keeper.md) · parent [coming-next.md](./coming-next.md)  
 **Method:** stellar-roadmap · evidence columns · diagrams over prose  
 
-*Last updated: 2026-07-18 · PR #28*
+*Last updated: 2026-07-21 · PATH install · rebind · interactive loop*
 
 ---
 
 ## 0. Mission
 
 Hold high-value secrets under **any 2 of 3** (passphrase · offline · device): **one** secret to remember, **one** file offline, device free — survive passphrase loss without a second knowledge password or IP theater.
+
+**Shipped default:** k=2 n=3. Knowledge factor is **not** required. Optional YubiKey expands to any-2-of-4.
 
 ---
 
@@ -25,7 +27,7 @@ flowchart TB
     W3[agent ops surface]
   end
   subgraph kernel["Keeper kernel — root & seal"]
-    K1[Shamir k=3 n=4]
+    K1[Shamir k=2 n=3]
     K2[hybrid ML-KEM-768 + AES-GCM]
     K3[effective_threshold floor]
   end
@@ -55,7 +57,7 @@ flowchart TB
 
 ---
 
-## 1. Scorecard (PR #28)
+## 1. Scorecard (current)
 
 ```mermaid
 flowchart LR
@@ -64,28 +66,29 @@ flowchart LR
     S2[recover drill no-passphrase]
     S3[PQ seal]
     S4[k floor]
-    S5[agent-expand]
+    S5[PATH install expand]
+    S6[rebind]
+    S7[interactive loop]
   end
   subgraph open["Next altitude"]
     O1[fprintd factor]
     O2[trusted places]
-    O3[install PATH binary]
-    O4[CI cargo test]
   end
   shipped --> open
 ```
 
 | Area | Grade | One line | Evidence |
 |------|-------|----------|----------|
-| Shamir k=3 n=4 | A | Primitive-safe GF; 4 roles | `crypto.rs`, tests |
+| Shamir k=2 n=3 (default) | A | any 2 of P/O/D; optional n=4 Yubi | `crypto.rs`, `ceremony.rs`, tests |
 | Confirmation ≠ root | A | Factors gate share open only | `factors.rs`, THREAT-MODEL |
-| No-passphrase drill | A | offline+device+knowledge mandatory | `ceremony.rs`, README |
+| No-passphrase drill | A | offline+device | `ceremony.rs`, README |
 | PQ hybrid seal | A | ML-KEM-768 + AES-GCM + HKDF | `crypto.rs`, sealed blobs |
-| meta.k downgrade | A | `effective_threshold` floors k | `91826cb` / `2612f3f` |
+| meta.k downgrade | A | `effective_threshold` floors k | unit tests |
 | ISP IP trust | A | weight 0; reject | `factors.rs`, LOCATION.md |
-| Grok expand hook | B+ | `--agent-expand` + stamp | `modules/security/install.sh` |
-| Binary on PATH | C | cargo run only today | no `install` target yet |
-| CI cargo | C | local `cargo test` only | not in `.github/workflows` |
+| Grok expand + PATH | A | `--agent-expand` release install `~/.local/bin/keeper` | `modules/security/install.sh` |
+| Device rebind | A | P+O reconstruct; reseal device; old fp fails | `rebind_device`, tests |
+| Interactive loop | A | non-echo prompts; no argv secrets | `interactive.rs`, CLI `loop` |
+| CI cargo | A | `keeper` job in workflows | `.github/workflows/ci.yml` |
 | fprintd / GPS | — | deferred | THREAT-MODEL out of scope |
 
 **Plain rule:** If disk can lower k, or confirmation alone opens secrets, the design is broken.
@@ -96,7 +99,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  subgraph cli["CLI — modules/security/keeper"]
+  subgraph cli["CLI — tools/keeper"]
     Init[init]
     Put[put]
     Get[get]
@@ -104,10 +107,9 @@ flowchart TB
     Recover[recover / drill]
   end
   subgraph crypto["Crypto plane"]
-    Shamir[Shamir shares]
+    Shamir[Shamir shares k=2]
     Scrypt[scrypt wraps]
     DevSeal[device HKDF seal]
-    KnowSeal[knowledge scrypt seal]
     PQ[ML-KEM-768 encaps]
     AEAD[AES-256-GCM]
   end
@@ -115,7 +117,6 @@ flowchart TB
     Meta[meta.json]
     PassW[passphrase wrap]
     DevB[device share blob]
-    KnowB[knowledge share blob]
     PQek[pq encapsulation key]
     PQdk[pq dk wrap]
     Canary[canary sealed]
@@ -127,20 +128,18 @@ flowchart TB
   Init --> Shamir
   Shamir --> PassW
   Shamir --> DevB
-  Shamir --> KnowB
   Shamir --> Escrow
   Put --> PQ
   PQ --> AEAD
   AEAD --> Secs
   Recover --> Escrow
   Recover --> DevB
-  Recover --> KnowB
   Recover --> Canary
   Status --> Meta
   Status --> Canary
 ```
 
-**Paths:** crate `modules/security/keeper/` · agent expand via Grok plugin `am-expand security --yes`.
+**Paths:** crate `tools/keeper/` · `keeper loop` interactive UX · agent expand installs PATH binary via `modules/security/install.sh --agent-expand`.
 
 ---
 
@@ -154,11 +153,10 @@ sequenceDiagram
   participant CLI as keeper CLI
   participant Disk as KEEPER_ROOT
   participant Shamir as reconstruct
-  Op->>CLI: get name (passphrase + knowledge env)
+  Op->>CLI: get name (passphrase prompt or env)
   CLI->>Disk: open passphrase wrap
   CLI->>Disk: open device share
-  CLI->>Disk: open knowledge share
-  CLI->>Shamir: k=3 shares
+  CLI->>Shamir: k=2 shares
   Shamir->>CLI: root R
   CLI->>Disk: unwrap PQ dk + open sealed secret
   CLI->>Op: secret (stdout only when intentional)
@@ -175,8 +173,8 @@ sequenceDiagram
   participant Shamir as reconstruct
   Op->>CLI: recover --escrow path
   CLI->>Esc: load offline share
-  CLI->>Disk: device + knowledge shares
-  CLI->>Shamir: offline + device + knowledge
+  CLI->>Disk: device share
+  CLI->>Shamir: offline + device
   Shamir->>CLI: root R
   CLI->>Disk: open canary (prove drill)
   CLI->>Disk: status becomes healthy
@@ -186,7 +184,8 @@ sequenceDiagram
 |-------|------|----------|
 | `factors` | share seals, fingerprint, IP reject | derive root from confirmations |
 | `crypto` | Shamir, scrypt, PQ hybrid | lower k from untrusted meta alone |
-| `ceremony` | init/put/get/recover/status | skip drill gate for healthy |
+| `ceremony` | init/put/get/recover/rebind/status | skip drill gate for healthy |
+| `interactive` | non-echo onboard loop | put secrets on argv |
 | `store` | JSON/blob paths | put secrets on argv in docs |
 
 ---
@@ -199,25 +198,24 @@ flowchart LR
   S1[share passphrase]
   S2[share offline]
   S3[share device]
-  S4[share knowledge]
+  S4[share yubi optional]
   R --- S1
   R --- S2
   R --- S3
-  R --- S4
-  S1 --> Daily[daily: P+D+K]
-  S2 --> Drill[drill: O+D+K]
+  R -.-> S4
+  S1 --> Daily[daily: P+D]
+  S2 --> Drill[drill: O+D]
   S3 --> Daily
   S3 --> Drill
-  S4 --> Daily
-  S4 --> Drill
+  S4 --> Strong[strong: Y+D]
 ```
 
 | Role | Seal | Typical release |
 |------|------|-----------------|
 | passphrase | scrypt wrap | daily |
-| offline | plaintext escrow file (operator custody) | recover only |
+| offline | plaintext escrow file (operator custody) | recover / rebind |
 | device | HKDF(machine fingerprint) | daily + recover |
-| knowledge | scrypt on normalized answer | daily + recover |
+| yubikey (optional) | HMAC-SHA1 challenge-response | strong get; never alone |
 
 ---
 
@@ -231,7 +229,7 @@ flowchart LR
   subgraph expand["Consent expand"]
     AM[Grok /arch-expand security --yes]
     Hook[install.sh --agent-expand]
-    Cargo[cargo check keeper]
+    Cargo[cargo build --release + install PATH]
   end
   subgraph full["Full profile — later"]
     Prof[install.sh --profile security-dev]
@@ -242,14 +240,14 @@ flowchart LR
   Prof -.->|sudo k3s etc| full
 ```
 
-Agent surface prefers **Grok plugin** over `tinfoil tui` for expand. Full k3s remains profile path (never default thin).
+Agent surface prefers **Grok plugin** over `tinfoil tui` for expand. Expand installs `keeper` to `~/.local/bin`. Full k3s remains profile path (never default thin). Primary secure UX is **CLI interactive loop** (not Waybar/archy panel).
 
 ---
 
 ## 6. Module layout
 
 ```
-modules/security/keeper/
+tools/keeper/
   Cargo.toml
   README.md
   docs/
@@ -279,8 +277,8 @@ modules/security/keeper/
 
 | Source | Use |
 |--------|-----|
-| `modules/security/keeper/README.md` | Operator quick start |
-| `modules/security/keeper/docs/*` | Threat, ceremony, location ban |
+| `tools/keeper/README.md` | Operator quick start |
+| `tools/keeper/docs/*` | Threat, ceremony, location ban |
 | `arch-design/coming-next-keeper.md` | SN-KEEP-* backlog |
 | `Work/personal/plugins/arch-machine` | Grok agent-as-TUI expand |
 | collab-finder batch-2 blueprints | Card format |

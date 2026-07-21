@@ -8,12 +8,22 @@ mkdir -p "$SCRATCH"
 export PATH="${HOME}/.grok/bin:${PATH}"
 export GROK_SCRATCH="$SCRATCH"
 
-AVANTE_SPEC="${AVANTE_SPEC:-$HOME/.config/nvim/lua/plugins/avante-grok.lua}"
+# Prefer explicit AVANTE_SPEC; else in-tree extras SoT; else host Lazy path.
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_IN_TREE_SPEC="${_SCRIPT_DIR}/../extras/neovim/plugins/grok-acp-plugin/avante-grok.lua"
+if [[ -z "${AVANTE_SPEC:-}" ]]; then
+  if [[ -f "$_IN_TREE_SPEC" ]]; then
+    AVANTE_SPEC="$_IN_TREE_SPEC"
+  else
+    AVANTE_SPEC="$HOME/.config/nvim/lua/plugins/avante-grok.lua"
+  fi
+fi
 VERIFY_LUA="${VERIFY_LUA:-}"
 
 die() { echo "FAIL: $*" >&2; exit 1; }
 pass() { echo "PASS: $*"; }
 
+echo "using AVANTE_SPEC=$AVANTE_SPEC"
 [[ -f "$AVANTE_SPEC" ]] || die "missing avante plugin spec: $AVANTE_SPEC"
 rg -q 'provider\s*=\s*"grok-acp"' "$AVANTE_SPEC" || die "provider is not grok-acp in $AVANTE_SPEC"
 rg -q 'stdio' "$AVANTE_SPEC" || die "acp args must include stdio in $AVANTE_SPEC"

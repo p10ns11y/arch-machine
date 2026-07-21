@@ -44,4 +44,4 @@ ci-help:
 # Keeper threshold vault tests (also intended for CI — see PR #28 if workflow scope blocks push)
 .PHONY: keeper-test
 keeper-test:
-	cargo test --manifest-path modules/security/keeper/Cargo.toml
+	cargo test --manifest-path tools/keeper/Cargo.toml

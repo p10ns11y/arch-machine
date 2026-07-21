@@ -22,7 +22,7 @@ Local-first secrets holder with **threshold recovery (any 2 of enrolled factors:
 3. **No-passphrase drill/recover:** **offline + device** or **YubiKey + device** (strong); status non-healthy until drill once.
 4. **Policy floor:** reconstruction uses `effective_threshold(meta.k, meta.n) = max(meta.k, DEFAULT_K=2)` — unauthenticated disk metadata cannot unlock with a single factor.
 5. **No secrets on argv** in happy-path docs; tests may use env `KEEPER_PASSPHRASE` / files. `KEEPER_YUBI_MOCK_SECRET` is refused when the vault already has named secrets.
-6. **Implementation language:** Rust (`modules/security/keeper` crate).
+6. **Implementation language:** Rust (`tools/keeper` crate).
 7. **Hybrid PQ sealed secrets:** **ML-KEM-768 + AES-256-GCM via HKDF-SHA256** (FIPS 203 KEM). Threshold root/share wrap remains classical.
 8. **Breaking change:** pre-PQ classical-only sealed blobs (v1) and pre-multifactor layouts are rejected / not supported.
 

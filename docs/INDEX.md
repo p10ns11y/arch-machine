@@ -41,6 +41,7 @@ flowchart TD
 |-------|----------------|-------|
 | **Control plane** | Menu, live output, next steps | `tools/archy` |
 | **Remote surfaces** | Host→XChat notify + ACP control | `tools/groxy` |
+| **Threshold vault** | MFA / break-glass secrets (any 2 of 3) | `tools/keeper` |
 | **Backends** | Real inventory, audit, install | `maintenance/`, `install.sh` |
 | **Profiles / modules** | What a full install may add | `config/profiles/`, `modules/` |
 | **Evidence** | JSON/TOON for agents | `logs/`, `lib/evidence.sh` |
@@ -86,6 +87,7 @@ flowchart LR
 |-------|-----|
 | Control plane | [archy.md](archy.md) · [tools/archy/README.md](../tools/archy/README.md) |
 | Remote surfaces (inject + ACP; **Neovim ACP setup**) | [groxy.md](groxy.md) · [tools/groxy/README.md](../tools/groxy/README.md) |
+| Threshold vault | [tools/keeper/README.md](../tools/keeper/README.md) · [arch-design/keeper.md](../arch-design/keeper.md) |
 | Install | [INSTALLATION.md](INSTALLATION.md) |
 | Maintenance | [MAINTENANCE.md](MAINTENANCE.md) |
 | Modules / profiles | [MODULES.md](MODULES.md) · profiles under `config/profiles/` |
@@ -102,6 +104,7 @@ flowchart LR
 
 - `tools/archy/` — **main** operator UI (Ratatui, Eagle FSM, satellites)
 - `tools/groxy/` — remote surfaces: inject notify + ACP serve (binary `groxy`)
+- `tools/keeper/` — threshold secrets vault (binary `keeper`; install via security expand)
 - `maintenance/` — shell backends (iron peak)
 - `install.sh` + `lib/` — thin default; `--profile` for full
 - `modules/` — installable capabilities (`install_<name>()`)
@@ -129,6 +132,7 @@ make lint
 make validate-profiles
 cargo test --manifest-path tools/archy/Cargo.toml
 cargo test --manifest-path tools/groxy/Cargo.toml   # or: make groxy-test
+cargo test --manifest-path tools/keeper/Cargo.toml  # or: make keeper-test
 ./install.sh --thin --validate   # or --dry-run with a profile
 ./maintenance/extract-evidence.sh --dry-run
 ```
