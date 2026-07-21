@@ -95,6 +95,7 @@ src/outcome_package.rs  short XChat text (done bullets + PR)
 src/dm_adapter.rs     xurl send (live) or dry-run files
 src/state_store.rs    seen event ids (dedupe)
 scripts/              operator checks (e.g. Neovim avante)
+extras/neovim/plugins/grok-acp-plugin/   Lazy spec for Grok ACP **stdio** (avante)
 ```
 
 Same **Eagle** idea as archy: a thin top path routes work; host scripts and Grok do the real job.

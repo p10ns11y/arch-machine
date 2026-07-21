@@ -309,10 +309,33 @@ grok agent stdio --help   # or: grok agent --help
 
 [avante.nvim](https://github.com/yetone/avante.nvim) supports **ACP providers** via `acp_providers` + `provider = "…"`.
 
-#### lazy.nvim
+**In-tree representative Lazy spec (SoT example for Grok ACP stdio):**
+
+```text
+tools/groxy/extras/neovim/plugins/grok-acp-plugin/
+  README.md
+  avante-grok.lua          # full host-hardened Lazy spec
+```
+
+Copy or symlink onto the machine:
+
+```bash
+cp tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua \
+  ~/.config/nvim/lua/plugins/avante-grok.lua
+# or: ln -sfn "$(pwd)/tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua" \
+#        ~/.config/nvim/lua/plugins/avante-grok.lua
+```
+
+That file is the **representative use case** for daily Neovim + Grok: spawn **`grok agent … stdio`**.  
+It is **not** a Grok CLI slash-plugin; it is a Neovim Lazy module. Details:  
+[tools/groxy/extras/neovim/plugins/grok-acp-plugin/README.md](../tools/groxy/extras/neovim/plugins/grok-acp-plugin/README.md).
+
+#### Minimal lazy.nvim (bootstrap only)
+
+For a bare-minimum start, the core opts look like this (prefer the full in-tree file above for login/`_x.ai` harden):
 
 ```lua
--- ~/.config/nvim/lua/plugins/avante-grok.lua  (or merge into your lazy specs)
+-- Minimal sketch — full SoT: tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua
 return {
   "yetone/avante.nvim",
   event = "VeryLazy",
@@ -333,15 +356,11 @@ return {
           -- "--always-approve",
           "stdio",
         },
-        env = {
-          -- Prefer logged-in CLI auth; or set key if you use API path:
-          -- XAI_API_KEY = os.getenv("XAI_API_KEY"),
-        },
+        env = {},
       },
     },
     behaviour = {
       acp_follow_agent_locations = true,
-      -- auto_approve_tool_permissions = true,  -- or false / list of tools
     },
   },
 }
@@ -351,7 +370,7 @@ return {
 
 - Prefer **`grok agent stdio`** for Neovim (plugin spawns the agent).  
   `groxy acp serve` is WebSocket-oriented; most Neovim plugins use **stdio** ACP, not WS.  
-- Absolute command if needed: `command = vim.fn.expand("~/.grok/bin/grok")`.  
+- Absolute command if needed: `command = vim.fn.expand("~/.grok/bin/grok")` (in-tree spec falls back).  
 - Project rules: put `AGENTS.md` / `avante.md` in the project root.  
 - Switch provider: `:AvanteSwitchProvider grok-acp`.
 
@@ -366,9 +385,17 @@ only handles `session/*` and `fs/*` and otherwise warns `Unknown notification me
 |----------------|---------|
 | **Not** | Wrong provider, missing `grok` PATH, failed build, or broken ACP session |
 | **Is** | Client whitelist vs agent protocol extension (noise; session/tools still work) |
-| Mitigations | (1) Ignore `_x.ai/*` in a host post-setup hook; (2) wait for upstream; (3) trim MCP servers if unused in that chat |
+| Mitigations | (1) Ignore `_x.ai/*` in host post-setup (in-tree `avante-grok.lua` does this); (2) wait for upstream; (3) trim MCP servers if unused |
 
-Operator re-check: `tools/groxy/scripts/verify-nvim-avante.sh`.
+Operator re-check:
+
+```bash
+# packaged example
+AVANTE_SPEC=tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua \
+  ./tools/groxy/scripts/verify-nvim-avante.sh
+# or host copy (default)
+./tools/groxy/scripts/verify-nvim-avante.sh
+```
 
 #### Usage in Neovim
 
