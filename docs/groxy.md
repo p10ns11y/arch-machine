@@ -317,17 +317,20 @@ tools/groxy/extras/neovim/plugins/grok-acp-plugin/
   avante-grok.lua          # full host-hardened Lazy spec
 ```
 
-Copy or symlink onto the machine:
+**Publish:** stay **in arch-machine only** until host patches shrink or land upstream — not a standalone Lazy plugin yet.
+
+**Prefer symlink** so the host always tracks SoT:
 
 ```bash
-cp tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua \
+ln -sfn "$(pwd)/tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua" \
   ~/.config/nvim/lua/plugins/avante-grok.lua
-# or: ln -sfn "$(pwd)/tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua" \
-#        ~/.config/nvim/lua/plugins/avante-grok.lua
+# or copy after each pull:
+# cp tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lua \
+#   ~/.config/nvim/lua/plugins/avante-grok.lua
 ```
 
 That file is the **representative use case** for daily Neovim + Grok: spawn **`grok agent … stdio`**.  
-It is **not** a Grok CLI slash-plugin; it is a Neovim Lazy module. Details:  
+It is **not** a Grok CLI slash-plugin; it is a Neovim Lazy module. The full SoT **pins** `yetone/avante.nvim` by commit (re-test before bumping) and batches `git check-ignore --stdin` for selection. Details:  
 [tools/groxy/extras/neovim/plugins/grok-acp-plugin/README.md](../tools/groxy/extras/neovim/plugins/grok-acp-plugin/README.md).
 
 #### Minimal lazy.nvim (bootstrap only)
@@ -385,7 +388,7 @@ only handles `session/*` and `fs/*` and otherwise warns `Unknown notification me
 |----------------|---------|
 | **Not** | Wrong provider, missing `grok` PATH, failed build, or broken ACP session |
 | **Is** | Client whitelist vs agent protocol extension (noise; session/tools still work) |
-| Mitigations | (1) **Consume** `_x.ai/*` in host post-setup (in-tree `avante-grok.lua`: progress/status UI + `:GrokMcpStatus`); (2) wait for upstream whitelist; (3) trim MCP servers if unused |
+| Mitigations | (1) **Consume** `_x.ai/*` in host post-setup (in-tree `avante-grok.lua`: throttled progress/status UI + suppress generic `session_notification` cards + `:GrokMcpStatus`); (2) wait for upstream whitelist; (3) trim MCP servers if unused |
 
 Operator re-check:
 

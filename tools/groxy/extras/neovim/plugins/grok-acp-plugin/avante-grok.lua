@@ -23,7 +23,11 @@ return {
   {
     "yetone/avante.nvim",
     event = "VeryLazy",
+    -- Pin deliberately (review): floating `version = false` alone tracks tip and
+    -- can break our host patches. Bump commit after re-testing ACP stdio.
+    -- Verified: release-v0.1-32-gff3fc33 (ff3fc33) on host 2026-07-21.
     version = false,
+    commit = "ff3fc33b7deeb35a277a211d95d6f2b599fbdf19", -- pin: re-test before bumping
     build = "make",
     dependencies = {
       "nvim-lua/plenary.nvim",
@@ -187,6 +191,58 @@ return {
             return (Utils.get_project_root and Utils.get_project_root()) or (vim.uv.cwd() or ".")
           end
 
+          ---@param root string
+          ---@return { ignore: string[], negate: string[] }
+          local function gitignore_patterns(root)
+            local gi = root .. "/.gitignore"
+            local cached = gitignore_cache[gi]
+            if cached then
+              return cached
+            end
+            local ignore, negate = {}, {}
+            if Utils.parse_gitignore then
+              ignore, negate = Utils.parse_gitignore(gi)
+            end
+            ignore = ignore or {}
+            vim.list_extend(ignore, {
+              "%.git",
+              "node_modules",
+              "target",
+              "%.worktree",
+              "__pycache__",
+              "%.direnv",
+            })
+            cached = { ignore = ignore, negate = negate or {} }
+            gitignore_cache[gi] = cached
+            return cached
+          end
+
+          ---@param abs_path string
+          ---@return string
+          local function to_rel(abs_path)
+            local root = project_root()
+            if Utils.make_relative_path then
+              return Utils.make_relative_path(abs_path, root)
+            end
+            return abs_path
+          end
+
+          --- Fallback single-path check (no git or batch miss)
+          ---@param abs_path string
+          ---@return boolean
+          local function is_gitignored_fallback(abs_path)
+            if not abs_path or abs_path == "" then
+              return true
+            end
+            local root = project_root()
+            local rel = to_rel(abs_path)
+            local pat = gitignore_patterns(root)
+            if Utils.is_ignored then
+              return Utils.is_ignored(rel, pat.ignore, pat.negate)
+            end
+            return false
+          end
+
           ---@param abs_path string
           ---@return boolean  true if path should be excluded from selection
           local function is_gitignored(abs_path)
@@ -194,25 +250,12 @@ return {
               return true
             end
             local root = project_root()
-            local rel = abs_path
-            if Utils.make_relative_path then
-              rel = Utils.make_relative_path(abs_path, root)
-            end
-            -- Prefer git (handles nested rules, negation, dir patterns correctly)
+            local rel = to_rel(abs_path)
             if vim.fn.executable("git") == 1 then
-              vim.fn.system({
-                "git",
-                "-C",
-                root,
-                "check-ignore",
-                "-q",
-                "--",
-                rel,
-              })
+              vim.fn.system({ "git", "-C", root, "check-ignore", "-q", "--", rel })
               if vim.v.shell_error == 0 then
                 return true
               end
-              -- Also try with trailing slash for directories
               if vim.fn.isdirectory(abs_path) == 1 then
                 vim.fn.system({
                   "git",
@@ -227,44 +270,60 @@ return {
                   return true
                 end
               end
+              return false
             end
-            -- Fallback: parse root .gitignore + always-skip noise
-            local gi = root .. "/.gitignore"
-            local cached = gitignore_cache[gi]
-            if not cached then
-              local ignore, negate = {}, {}
-              if Utils.parse_gitignore then
-                ignore, negate = Utils.parse_gitignore(gi)
-              end
-              ignore = ignore or {}
-              -- Always skip common junk even if not listed
-              vim.list_extend(ignore, {
-                "%.git",
-                "node_modules",
-                "target",
-                "%.worktree",
-                "__pycache__",
-                "%.direnv",
-              })
-              cached = { ignore = ignore, negate = negate or {} }
-              gitignore_cache[gi] = cached
-            end
-            if Utils.is_ignored then
-              return Utils.is_ignored(rel, cached.ignore, cached.negate)
-            end
-            return false
+            return is_gitignored_fallback(abs_path)
           end
 
+          --- Batch filter via `git check-ignore --stdin` (one process for N paths).
           ---@param paths string[]
           ---@return string[], integer
           local function filter_gitignored(paths)
+            local root = project_root()
             local kept, dropped = {}, 0
-            for _, p in ipairs(paths or {}) do
+            if not paths or #paths == 0 then
+              return kept, 0
+            end
+
+            ---@type string[]
+            local abs_list = {}
+            ---@type string[]
+            local rel_list = {}
+            for _, p in ipairs(paths) do
               local abs = Utils.to_absolute_path and Utils.to_absolute_path(p) or p
-              if is_gitignored(abs) then
+              abs_list[#abs_list + 1] = abs
+              rel_list[#rel_list + 1] = to_rel(abs)
+            end
+
+            if vim.fn.executable("git") == 1 and #rel_list > 0 then
+              -- One process: stdin paths → stdout ignored paths (exit 0/1 both OK)
+              local ignored_out = vim.fn.systemlist(
+                { "git", "-C", root, "check-ignore", "--stdin" },
+                table.concat(rel_list, "\n") .. "\n"
+              )
+              local ignored_set = {}
+              for _, line in ipairs(ignored_out or {}) do
+                if line ~= "" then
+                  ignored_set[line] = true
+                  ignored_set[line:gsub("/$", "")] = true
+                end
+              end
+              for i, abs in ipairs(abs_list) do
+                local rel = rel_list[i]
+                if ignored_set[rel] or ignored_set[rel:gsub("/$", "")] or ignored_set[rel .. "/"] then
+                  dropped = dropped + 1
+                else
+                  kept[#kept + 1] = abs
+                end
+              end
+              return kept, dropped
+            end
+
+            for _, abs in ipairs(abs_list) do
+              if is_gitignored_fallback(abs) then
                 dropped = dropped + 1
               else
-                table.insert(kept, abs)
+                kept[#kept + 1] = abs
               end
             end
             return kept, dropped
@@ -284,22 +343,13 @@ return {
             end
           end
 
-          -- Folder add: drop gitignored members
+          -- Folder add: drop gitignored members (one `git check-ignore --stdin`)
           if type(FileSelector.process_directory) == "function" then
             local orig_proc = FileSelector.process_directory
             ---@diagnostic disable-next-line: duplicate-set-field
             function FileSelector:process_directory(absolute_path)
-              local before = #self.selected_filepaths
               orig_proc(self, absolute_path)
-              local kept = {}
-              local dropped = 0
-              for _, p in ipairs(self.selected_filepaths) do
-                if is_gitignored(p) then
-                  dropped = dropped + 1
-                else
-                  table.insert(kept, p)
-                end
-              end
+              local kept, dropped = filter_gitignored(self.selected_filepaths)
               if dropped > 0 then
                 self.selected_filepaths = kept
                 self:emit("update")
@@ -312,7 +362,6 @@ return {
                   vim.log.levels.INFO
                 )
               end
-              local _ = before
             end
           end
 
@@ -355,22 +404,30 @@ return {
             end
           end
 
-          -- Picker listing: never offer gitignored paths
+          -- Picker listing: never offer gitignored paths (batched)
           if type(FileSelector.get_filepaths) == "function" then
             local orig_list = FileSelector.get_filepaths
             ---@diagnostic disable-next-line: duplicate-set-field
             function FileSelector:get_filepaths()
               local list = orig_list(self) or {}
+              if #list == 0 then
+                return list
+              end
               local root = project_root()
-              local out = {}
+              ---@type string[]
+              local abs_for_check = {}
+              ---@type table<string, string>  abs -> original list entry (may keep trailing /)
+              local abs_to_orig = {}
               for _, rel in ipairs(list) do
-                local path = rel
-                -- dirs end with /
                 local bare = rel:gsub("/$", "")
                 local abs = Utils.to_absolute_path and Utils.to_absolute_path(bare) or (root .. "/" .. bare)
-                if not is_gitignored(abs) then
-                  table.insert(out, path)
-                end
+                abs_for_check[#abs_for_check + 1] = abs
+                abs_to_orig[abs] = rel
+              end
+              local kept_abs = filter_gitignored(abs_for_check)
+              local out = {}
+              for _, abs in ipairs(kept_abs) do
+                out[#out + 1] = abs_to_orig[abs] or abs
               end
               return out
             end
@@ -932,15 +989,110 @@ return {
         return p
       end
 
-      --- Throttle noisy progress echoes (ms)
-      local last_progress_echo = 0
-      local PROGRESS_THROTTLE_MS = 400
+      --- Toast throttle: same signature within window → drop; coalesce latest
+      local toast_last = {} ---@type table<string, number>
+      local TOAST_THROTTLE_MS = 2500
+      local last_echo_ms = 0
+      local ECHO_THROTTLE_MS = 600
+      local session_note_count = 0
+      local session_note_flush = nil ---@type any
+
+      local function now_ms()
+        if vim.uv and vim.uv.now then
+          return vim.uv.now()
+        end
+        if vim.loop and vim.loop.now then
+          return vim.loop.now()
+        end
+        return os.time() * 1000
+      end
+
+      --- Method / kind names that are not operator-readable (Image #1 spam).
+      local GENERIC_LABELS = {
+        session_notification = true,
+        notification = true,
+        ["mcp/session_notification"] = true,
+        ["mcp/init_progress"] = true,
+        ["mcp/server_status"] = true,
+        ["mcp/servers_updated"] = true,
+        ["_x.ai/session_notification"] = true,
+        ["Grok ACP"] = true, -- old title; never use as body
+      }
+
+      ---@param s string|nil
+      ---@return boolean
+      local function is_generic_label(s)
+        if not s or s == "" then
+          return true
+        end
+        local t = tostring(s):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+        if GENERIC_LABELS[t] then
+          return true
+        end
+        -- bare method suffixes / snake_case event names with no human text
+        if t:match("^[%w_./]+$") and (t:find("notification", 1, true) or t:find("progress", 1, true)) then
+          return true
+        end
+        return false
+      end
+
+      ---@param title string
+      ---@param body string
+      ---@param lvl integer
+      ---@param force boolean|nil
+      local function notify_throttled(title, body, lvl, force)
+        body = (body or ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+        title = (title or "Grok"):gsub("%s+", " ")
+        -- Never toast empty / generic-only payloads
+        if is_generic_label(body) then
+          return
+        end
+        if is_generic_label(title) and body == title then
+          return
+        end
+        -- Prefer human titles; rewrite legacy "Grok ACP" + method-name body
+        if title == "Grok ACP" or title == "" then
+          title = "Grok"
+        end
+        local sig = title .. "\0" .. body .. "\0" .. tostring(lvl)
+        local t = now_ms()
+        if not force and toast_last[sig] and (t - toast_last[sig]) < TOAST_THROTTLE_MS then
+          return
+        end
+        toast_last[sig] = t
+        -- Cap toast map growth
+        local n = 0
+        for _ in pairs(toast_last) do
+          n = n + 1
+        end
+        if n > 64 then
+          toast_last = { [sig] = t }
+        end
+        vim.schedule(function()
+          vim.notify(body, lvl, { title = title })
+        end)
+      end
+
+      ---@param line string
+      local function echo_throttled(line)
+        local t = now_ms()
+        if t - last_echo_ms < ECHO_THROTTLE_MS then
+          return
+        end
+        last_echo_ms = t
+        vim.schedule(function()
+          vim.api.nvim_echo({ { line, "Comment" } }, false, {})
+        end)
+      end
 
       ---@param method string
       ---@param params table|nil
       local function handle_xai_notification(method, params)
         params = type(params) == "table" and params or {}
-        local suffix = method:match("^_x%.ai/(.+)$")
+        local suffix = method:match("^_x%.ai/(.+)$") or method
+        if method:match("^_x%.ai/") then
+          suffix = method:match("^_x%.ai/(.+)$")
+        end
         if not suffix then
           return false
         end
@@ -950,7 +1102,50 @@ return {
         state.last_method = method
         local now = os.time()
 
-        -- MCP init progress: quiet statusline-style echo (not WARN toast flood)
+        -- High-frequency session noise: coalesce, never N identical toasts
+        if suffix == "session_notification" or suffix:find("session_notification", 1, true) then
+          session_note_count = session_note_count + 1
+          local msg = xai_pick_message(params)
+            or params.text
+            or params.content
+            or params.summary
+          if type(msg) == "table" then
+            msg = msg.text or msg.message or vim.inspect(msg)
+          end
+          local kind = params.kind or params.type or params.category
+          state.last_session_note = {
+            kind = kind,
+            message = msg,
+            count = session_note_count,
+            at = now,
+          }
+          -- Meaningful human text only → throttled toast; never method-name cards
+          if msg and not is_generic_label(tostring(msg)) then
+            local title = "Grok"
+            if kind and not is_generic_label(tostring(kind)) then
+              title = "Grok · " .. tostring(kind)
+            end
+            notify_throttled(title, tostring(msg), vim.log.levels.INFO, false)
+          else
+            -- Pure noise: delayed cmdline echo summary (no popup stack)
+            if session_note_flush then
+              pcall(vim.fn.timer_stop, session_note_flush)
+            end
+            session_note_flush = vim.fn.timer_start(2000, function()
+              session_note_flush = nil
+              local n = session_note_count
+              session_note_count = 0
+              if n > 3 then
+                -- Only surface a quiet echo when there was real volume
+                echo_throttled(string.format("Grok session: %d quiet update(s)", n))
+              end
+            end)
+          end
+          vim.g.grok_acp_mcp = state
+          return true
+        end
+
+        -- MCP init progress: echo only (throttled)
         if suffix == "mcp/init_progress" or suffix:find("init_progress", 1, true) then
           local msg = xai_pick_message(params) or "starting"
           local pct = xai_pick_progress(params)
@@ -966,66 +1161,51 @@ return {
             state.servers[server].status = "starting"
             state.servers[server].at = now
           end
-          local t = vim.uv and vim.uv.now() or (vim.loop and vim.loop.now()) or 0
-          if t - last_progress_echo >= PROGRESS_THROTTLE_MS then
-            last_progress_echo = t
-            local line = "Grok MCP"
-            if server then
-              line = line .. " · " .. tostring(server)
-            end
-            line = line .. ": " .. tostring(msg)
-            if pct then
-              line = line .. " (" .. tostring(pct) .. ")"
-            end
-            vim.schedule(function()
-              vim.api.nvim_echo({ { line, "Comment" } }, false, {})
-            end)
+          local line = "Grok MCP"
+          if server then
+            line = line .. " · " .. tostring(server)
           end
+          line = line .. ": " .. tostring(msg)
+          if pct then
+            line = line .. " (" .. tostring(pct) .. ")"
+          end
+          echo_throttled(line)
           vim.g.grok_acp_mcp = state
           return true
         end
 
-        -- Single server status transition
+        -- Single server status: toast only on meaningful transitions
         if suffix == "mcp/server_status" or suffix:find("server_status", 1, true) then
           local name = xai_pick_name(params) or "server"
           local st = params.status or params.state or params.phase or "unknown"
+          local prev = state.servers[name] and state.servers[name].status
           state.servers[name] = {
             status = st,
             detail = xai_pick_message(params),
             at = now,
           }
-          local lvl = vim.log.levels.INFO
           local st_l = tostring(st):lower()
+          local detail = xai_pick_message(params)
+          local body = detail and string.format("%s → %s — %s", name, st, detail)
+            or string.format("%s → %s", name, st)
           if st_l:find("err") or st_l:find("fail") or st_l:find("disconnect") then
-            lvl = vim.log.levels.WARN
-          elseif st_l:find("ready") or st_l:find("ok") or st_l:find("connected") or st_l == "running" then
-            lvl = vim.log.levels.INFO
+            notify_throttled("Grok MCP", body, vim.log.levels.WARN, true)
+          elseif prev ~= st and (st_l:find("ready") or st_l:find("ok") or st_l:find("connected") or st_l == "running") then
+            notify_throttled("Grok MCP", body, vim.log.levels.INFO, false)
           else
-            lvl = vim.log.levels.DEBUG
-          end
-          if lvl ~= vim.log.levels.DEBUG then
-            local detail = xai_pick_message(params)
-            vim.schedule(function()
-              vim.notify(
-                detail and string.format("Grok MCP · %s: %s — %s", name, st, detail)
-                  or string.format("Grok MCP · %s: %s", name, st),
-                lvl,
-                { title = "Grok ACP" }
-              )
-            end)
+            echo_throttled("Grok MCP · " .. body)
           end
           vim.g.grok_acp_mcp = state
           return true
         end
 
-        -- Full server list refresh
+        -- Full server list refresh (one toast)
         if suffix == "mcp/servers_updated" or suffix:find("servers_updated", 1, true) then
           local list = params.servers or params.items or params.list or {}
           if type(list) == "table" then
             for _, s in ipairs(list) do
               if type(s) == "string" then
                 state.servers[s] = state.servers[s] or { status = "ready", at = now }
-                state.servers[s].status = state.servers[s].status or "ready"
                 state.servers[s].at = now
               elseif type(s) == "table" then
                 local name = s.name or s.id or s.server or "?"
@@ -1037,7 +1217,6 @@ return {
               end
             end
           end
-          -- Also accept map form { [name] = status }
           if type(params.by_name) == "table" then
             for name, st in pairs(params.by_name) do
               state.servers[tostring(name)] = {
@@ -1051,33 +1230,31 @@ return {
           for _ in pairs(state.servers) do
             n = n + 1
           end
-          vim.schedule(function()
-            vim.notify(
-              n > 0 and string.format("Grok MCP: %d server(s) connected", n) or "Grok MCP: server list updated",
-              vim.log.levels.INFO,
-              { title = "Grok ACP" }
-            )
-          end)
+          notify_throttled(
+            "Grok MCP",
+            n > 0 and string.format("%d server(s) connected", n) or "server list updated",
+            vim.log.levels.INFO,
+            false
+          )
           vim.g.grok_acp_mcp = state
           return true
         end
 
-        -- PR / system-style structured notifications (kind/title/body — changelog)
-        if suffix:find("^pr/", 1) or suffix:find("notification", 1, true) or params.kind or params.title then
-          local title = params.title or params.kind or suffix
-          local body = params.body or params.message or params.detail
-          vim.schedule(function()
-            vim.notify(
-              body and (tostring(title) .. ": " .. tostring(body)) or tostring(title),
-              vim.log.levels.INFO,
-              { title = "Grok ACP" }
-            )
-          end)
+        -- PR / system structured (kind/title/body)
+        if suffix:find("^pr/", 1) or params.kind or params.title then
+          local kind = params.kind or suffix
+          local title = "Grok · " .. tostring(kind)
+          local body = params.body or params.message or params.detail or params.title
+          if body and tostring(body) ~= tostring(kind) then
+            notify_throttled(title, tostring(body), vim.log.levels.INFO, false)
+          else
+            echo_throttled(title)
+          end
           vim.g.grok_acp_mcp = state
           return true
         end
 
-        -- Unknown _x.ai/* : keep quiet (no WARN), store last for :GrokMcpStatus
+        -- Unknown _x.ai/* : quiet store
         state.last_unknown = { method = method, params = params, at = now }
         vim.g.grok_acp_mcp = state
         return true
