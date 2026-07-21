@@ -139,6 +139,16 @@ pub fn init_vault(
     passphrase: &str,
     escrow_path: &Path,
 ) -> Result<InitResult, CeremonyError> {
+    init_vault_with_fingerprint(root, passphrase, escrow_path, None)
+}
+
+/// Init with optional device fingerprint override (tests / rebind simulation).
+pub fn init_vault_with_fingerprint(
+    root: &Path,
+    passphrase: &str,
+    escrow_path: &Path,
+    device_fingerprint: Option<&[u8]>,
+) -> Result<InitResult, CeremonyError> {
     let k = DEFAULT_K;
     let n = DEFAULT_N;
     if passphrase.is_empty() {
@@ -159,8 +169,14 @@ pub fn init_vault(
     write_passphrase_wrap(root, &wrap)?;
     write_escrow(escrow_path, &ShareJson::from(offline_share))?;
 
-    let fp = machine_fingerprint();
-    let dev_blob = seal_share_for_device(device_share, &fp)?;
+    let live;
+    let fp: &[u8] = if let Some(f) = device_fingerprint {
+        f
+    } else {
+        live = machine_fingerprint();
+        &live
+    };
+    let dev_blob = seal_share_for_device(device_share, fp)?;
     write_device_blob(root, &dev_blob)?;
 
     let (pq_seed, pq_ek) = generate_pq_keypair();
@@ -415,13 +431,22 @@ pub fn refuse_yubi_mock_with_secrets(root: &Path) -> Result<(), CeremonyError> {
 
 /// Daily unlock: passphrase + this machine (k=2).
 pub fn unlock_daily(root: &Path, passphrase: &str) -> Result<Vec<u8>, CeremonyError> {
+    unlock_daily_with_fingerprint(root, passphrase, None)
+}
+
+/// Daily unlock with optional device fingerprint override (tests / rebind).
+pub fn unlock_daily_with_fingerprint(
+    root: &Path,
+    passphrase: &str,
+    fingerprint: Option<&[u8]>,
+) -> Result<Vec<u8>, CeremonyError> {
     reconstruct_root(
         root,
         &[
             Confirmation::Passphrase(passphrase.into()),
             Confirmation::Device,
         ],
-        None,
+        fingerprint,
     )
 }
 
@@ -605,6 +630,107 @@ pub fn recover_with_confirmations(
     fingerprint_override: Option<&[u8]>,
 ) -> Result<Vec<u8>, CeremonyError> {
     reconstruct_root(root, confirmations, fingerprint_override)
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RebindResult {
+    pub ok: bool,
+    pub k: u8,
+    pub n: u8,
+    pub model: &'static str,
+    pub drill_proven: bool,
+    pub path: &'static str,
+    pub hint: &'static str,
+}
+
+/// Re-bind device share after reimage / new machine.
+///
+/// Reconstructs root with **passphrase + offline escrow** (no old device needed),
+/// re-splits shares, seals the device share to the new fingerprint, rewrites escrow.
+/// Clears drill_proven — operator must recover once on the new binding.
+///
+/// If YubiKey is enrolled, `yubi` backend is required to reseal the hardware share.
+pub fn rebind_device(
+    root: &Path,
+    passphrase: &str,
+    escrow_path: &Path,
+    new_fingerprint: Option<&[u8]>,
+    yubi: Option<&dyn YubiChallenge>,
+) -> Result<RebindResult, CeremonyError> {
+    if passphrase.is_empty() {
+        return Err(CeremonyError::Msg("rebind: passphrase required".into()));
+    }
+    let meta = read_meta(root)?.ok_or_else(|| CeremonyError::Msg("rebind: no vault".into()))?;
+    let yubi_enrolled = yubi_blob_exists(root) || meta.factors.iter().any(|f| f == "yubikey");
+    if yubi_enrolled && yubi.is_none() {
+        return Err(CeremonyError::Msg(
+            "rebind: YubiKey enrolled — pass yubi backend (enroll path uses ykchalresp)"
+                .into(),
+        ));
+    }
+
+    // New machine path: P + O (old device fingerprint is gone)
+    let r = unlock_passphrase_and_escrow(root, passphrase, escrow_path)?;
+
+    let k = effective_threshold(meta.k, meta.n)?;
+    let n = if yubi_enrolled { 4u8 } else { meta.n.max(DEFAULT_N) };
+    let shares = shamir_split(&r, k, n)?;
+    let pass_share = &shares[0];
+    let offline_share = &shares[1];
+    let device_share = &shares[2];
+
+    let wrap = wrap_with_passphrase(&pass_share.data, pass_share.id, passphrase)?;
+    write_passphrase_wrap(root, &wrap)?;
+    write_escrow(escrow_path, &ShareJson::from(offline_share))?;
+
+    let live;
+    let fp: &[u8] = if let Some(f) = new_fingerprint {
+        f
+    } else {
+        live = machine_fingerprint();
+        &live
+    };
+    let dev_blob = seal_share_for_device(device_share, fp)?;
+    write_device_blob(root, &dev_blob)?;
+
+    if yubi_enrolled {
+        let backend = yubi.expect("checked above");
+        let yubi_share = &shares[3];
+        let yubi_blob = seal_share_for_yubi(yubi_share, backend)?;
+        write_yubi_blob(root, &yubi_blob)?;
+    }
+
+    let mut meta = meta;
+    meta.k = k;
+    meta.n = n;
+    meta.drill_proven = false;
+    meta.last_drill_at = None;
+    if yubi_enrolled {
+        meta.factors = vec![
+            "passphrase".into(),
+            "offline".into(),
+            "device".into(),
+            "yubikey".into(),
+        ];
+    } else {
+        meta.factors = vec![
+            "passphrase".into(),
+            "offline".into(),
+            "device".into(),
+        ];
+    }
+    write_meta(root, &meta)?;
+
+    Ok(RebindResult {
+        ok: true,
+        k,
+        n,
+        model: model_label(yubi_enrolled),
+        drill_proven: false,
+        path: "passphrase+offline→reseal-device",
+        hint: "copy NEW escrow offline; then recover --escrow once; old device binding no longer opens",
+    })
 }
 
 #[cfg(test)]
@@ -799,5 +925,85 @@ mod tests {
         let err = refuse_yubi_mock_with_secrets(&root);
         std::env::remove_var("KEEPER_YUBI_MOCK_SECRET");
         assert!(err.is_err(), "expected refuse when mock+secrets");
+    }
+
+    #[test]
+    fn rebind_device_new_fingerprint_old_fails() {
+        use crate::factors::fingerprint_from_components;
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        let pass = "rebind-passphrase-xx";
+        let fp_a = fingerprint_from_components(&[b"machine-A-old"]);
+        let fp_b = fingerprint_from_components(&[b"machine-B-new"]);
+
+        init_vault_with_fingerprint(&root, pass, &escrow, Some(&fp_a)).unwrap();
+        // put uses live machine fingerprint for daily unlock — so use unlock path with override
+        // Store secret by reconstructing with A and sealing under PQ
+        {
+            let r = unlock_daily_with_fingerprint(&root, pass, Some(&fp_a)).unwrap();
+            let ek = ek_bytes(&root).unwrap();
+            let sealed = seal_hybrid(&ek, b"mfa-after-rebind").unwrap();
+            write_secret(&root, "demo", &sealed).unwrap();
+            let _ = r;
+        }
+
+        // Old binding works
+        assert!(unlock_daily_with_fingerprint(&root, pass, Some(&fp_a)).is_ok());
+        // New binding not yet
+        assert!(unlock_daily_with_fingerprint(&root, pass, Some(&fp_b)).is_err());
+
+        let rb = rebind_device(&root, pass, &escrow, Some(&fp_b), None).unwrap();
+        assert!(rb.ok);
+        assert!(!rb.drill_proven);
+        assert!(!status(&root).unwrap().healthy);
+
+        // New device binding + passphrase works
+        let r = unlock_daily_with_fingerprint(&root, pass, Some(&fp_b)).unwrap();
+        assert_eq!(
+            open_named(&root, &r, "demo").unwrap(),
+            "mfa-after-rebind"
+        );
+
+        // Old device fingerprint no longer opens with passphrase
+        assert!(
+            unlock_daily_with_fingerprint(&root, pass, Some(&fp_a)).is_err(),
+            "old device binding must fail after rebind"
+        );
+
+        // Escrow + new device works (after we would need device confirm with fp_b)
+        let r2 = reconstruct_root(
+            &root,
+            &[
+                Confirmation::OfflineFile {
+                    path: escrow.clone(),
+                },
+                Confirmation::Device,
+            ],
+            Some(&fp_b),
+        )
+        .unwrap();
+        assert_eq!(r2.len(), 32);
+
+        // Escrow + old device fails
+        assert!(reconstruct_root(
+            &root,
+            &[
+                Confirmation::OfflineFile {
+                    path: escrow.clone(),
+                },
+                Confirmation::Device,
+            ],
+            Some(&fp_a),
+        )
+        .is_err());
+
+        // Drill with escrow still needs live fp for unlock_with_escrow — use reconstruct path
+        // Mark drill via meta after canary open with P+O (independent of device)
+        let r3 = unlock_passphrase_and_escrow(&root, pass, &escrow).unwrap();
+        let seed = pq_seed_from_root(&root, &r3).unwrap();
+        let canary = read_canary(&root).unwrap();
+        let plain = open_hybrid(&seed, &canary).unwrap();
+        assert_eq!(plain, CANARY_PLAINTEXT.as_bytes());
     }
 }

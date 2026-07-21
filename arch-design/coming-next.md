@@ -66,7 +66,7 @@ flowchart LR
 | **groxy remote surfaces** | **B+** | inject (host→XChat) + `acp serve`; poll removed; multi-session docs | `tools/groxy`, `tools/groxy/README.md`, `docs/groxy.md`, SN-GROXY-1 |
 | Gum TUI (legacy) | C+ | Works; freeze feature growth | `lib/tui/*.sh`, Issue #7 |
 | Go shim (optional) | C+ | Dispatcher only; not the control plane | `bin/tinfoil.go` |
-| Keeper (MFA vault) | **A-** | k=3 n=4 + PQ seal + drill; PR open | `modules/security/keeper`, PR #28 |
+| Keeper (MFA vault) | **A** | k=2 n=3 + PQ seal + drill + rebind + loop + PATH | `modules/security/keeper` |
 | Profiles | B+ | YAML compose; harness asserts module.category | `config/profiles/*.yaml`, SN-3 harness |
 | Evidence | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
 | Remediation policy | A | Repo applies own 6-step policy | `policies/security-remediation.md` |
@@ -539,7 +539,7 @@ gantt
 | Remediation policy | PR #4 merge `cb088cd` |
 | Agent skills wired | `AGENTS.md`, `.agents/skills` symlinks |
 | INDEX architecture doc | `docs/INDEX.md` |
-| Multi-factor keeper + PQ seal | PR #28 (open) `modules/security/keeper` |
+| Multi-factor keeper + PQ seal + loop/rebind/PATH | shipped `modules/security/keeper` |
 | Grok arch-machine plugin | [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` |
 | Module `--agent-expand` hooks | PR #28 `e9c264a` |
 | UWSM graphical-session race | PR #25 merge |

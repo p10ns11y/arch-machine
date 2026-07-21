@@ -115,16 +115,29 @@ That is the real bound. Anything claiming “remember nothing, store nothing, su
 2. **One** offline artifact.  
 3. Device free.  
 4. Public IP / GeoIP never a factor.  
-5. No secrets on CLI argv.  
-6. Disk cannot lower k below 2.
+5. No secrets on CLI argv (prefer `keeper loop` / non-echo prompts / `--file`).  
+6. Disk cannot lower k below 2.  
+7. `healthy` only means recover drill worked once — not an open session.
+
+---
+
+## Preferred UX: interactive loop
+
+```bash
+keeper loop --practice   # first time
+keeper                   # onboard or menu; secrets via prompts only
+```
+
+Passphrase and secret values are read with **non-echo** prompts. They never need to sit in shell history. Env/`KEEPER_PASSPHRASE_FILE` remain for automation only.
 
 ---
 
 ## Init checklist (once)
 
-1. `export KEEPER_PASSPHRASE=…` (strong; or store **only** that one string in a password manager).  
-2. `keeper init --escrow ~/Desktop/keeper-escrow.json`  
-3. **Copy escrow off the machine** (USB). Delete local copy if you want.  
-4. `keeper put …`  
+1. Prefer `keeper loop` (prompts for passphrase) **or** `export KEEPER_PASSPHRASE=…` / passphrase file.  
+2. `keeper init --escrow /run/media/$USER/USB/keeper-escrow.json` (USB path, not only Desktop).  
+3. **Copy escrow off the machine** (second offline place).  
+4. `keeper put …` (prompt or `--file`, not `--value`).  
 5. `keeper recover --escrow /media/usb/…` once → healthy.  
-6. Daily: only passphrase for `get`/`put`.
+6. Daily: only passphrase for `get`/`put` (or Yubi strong path).  
+7. Reimage / new PC: restore vault files → `keeper rebind --escrow …` → copy new escrow → `recover` once.

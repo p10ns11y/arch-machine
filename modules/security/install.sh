@@ -583,14 +583,36 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo "agent-expand: security module at $_mod_dir"
       if [[ -f "$_mod_dir/keeper/Cargo.toml" ]]; then
         if ! command -v cargo >/dev/null 2>&1; then
-          echo "cargo required for security --agent-expand (keeper check)" >&2
+          echo "cargo required for security --agent-expand (keeper build+install)" >&2
           exit 1
         fi
         # Fail closed: do not stamp success when keeper does not build
-        (cd "$_mod_dir/keeper" && cargo check --quiet) || {
-          echo "error: cargo check failed for keeper — not writing .agent-expanded" >&2
+        echo "building keeper (release)…"
+        (cd "$_mod_dir/keeper" && cargo build --release --quiet) || {
+          echo "error: cargo build --release failed for keeper — not writing .agent-expanded" >&2
           exit 1
         }
+        _keeper_bin="$_mod_dir/keeper/target/release/keeper"
+        if [[ ! -x "$_keeper_bin" ]]; then
+          echo "error: missing $_keeper_bin after release build" >&2
+          exit 1
+        fi
+        _bindir="${KEEPER_INSTALL_BIN:-$HOME/.local/bin}"
+        mkdir -p "$_bindir"
+        install -m 755 "$_keeper_bin" "$_bindir/keeper" || {
+          echo "error: install keeper to $_bindir failed" >&2
+          exit 1
+        }
+        echo "installed: $_bindir/keeper"
+        if ! command -v keeper >/dev/null 2>&1; then
+          echo "note: ensure $_bindir is on PATH (e.g. export PATH=\"$_bindir:\$PATH\")"
+        else
+          echo "verify: $(command -v keeper)"
+          keeper --help >/dev/null || {
+            echo "error: installed keeper --help failed" >&2
+            exit 1
+          }
+        fi
       fi
       date -Iseconds >"$_mod_dir/.agent-expanded"
       echo "wrote $_mod_dir/.agent-expanded"
@@ -598,7 +620,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       exit 0
       ;;
     -h|--help)
-      echo "Usage: $0 --agent-expand   # consent-gated module prep for agent TUI"
+      echo "Usage: $0 --agent-expand   # consent-gated module prep; builds+installs keeper to ~/.local/bin"
       exit 0
       ;;
     *)

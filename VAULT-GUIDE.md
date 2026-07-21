@@ -151,7 +151,9 @@ For **new** secrets and MFA recovery codes, prefer the **keeper** CLI in this re
 
 - Path: `modules/security/keeper/`
 - Docs: `modules/security/keeper/docs/` (threat model, recovery ceremony, location policy)
-- Commands: `cargo run --manifest-path modules/security/keeper/Cargo.toml -- init|put|get|status|drill` (or `target/release/keeper` after `cargo build --release`)
+- Install: `./modules/security/install.sh --agent-expand` → `~/.local/bin/keeper`
+- Preferred: `keeper loop --practice` then `keeper` / `keeper loop` (non-echo prompts; no secrets on argv)
+- Also: `keeper init|put|get|status|recover|rebind`
 - Health requires a successful **drill** (recover without primary passphrase using offline escrow + device share).
 - **Public ISP IP / GeoIP are not trust signals** (see `docs/LOCATION.md`).
 

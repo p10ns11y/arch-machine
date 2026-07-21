@@ -221,3 +221,150 @@ fn cli_enroll_yubi_mock_strong_get_and_solo_fail() {
         "enroll must clear drill: {st_body}"
     );
 }
+
+#[test]
+fn cli_loop_script_onboard_healthy_no_env_passphrase() {
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("vault-onboard");
+    let escrow = dir.path().join("escrow-onboard.json");
+    let script = dir.path().join("onboard.json");
+    // lines: secret name only; secrets: pass, confirm, secret value
+    // No KEEPER_PASSPHRASE in env — all via scripted secret prompts
+    std::fs::write(
+        &script,
+        r#"{
+          "practice": true,
+          "lines": ["demo"],
+          "secrets": ["script-pass-xx", "script-pass-xx", "demo-from-script"]
+        }"#,
+    )
+    .unwrap();
+
+    let out = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .env_remove("KEEPER_PASSPHRASE_FILE")
+        .args([
+            "loop",
+            "--practice",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+            "--script",
+            script.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "loop script: stderr={} stdout={}",
+        String::from_utf8_lossy(&out.stderr),
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let body = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        body.contains("\"healthy\": true") || body.contains("\"healthy\":true"),
+        "expected healthy: {body}"
+    );
+    assert!(body.contains("demo"));
+    // Secret material must not appear as argv (we never passed it) — and not as a bare CLI arg
+    let cmdline_like = format!("{:?}", out);
+    assert!(!cmdline_like.contains("--value"));
+
+    let get = bin()
+        .env("KEEPER_PASSPHRASE", "script-pass-xx")
+        .args(["get", "demo", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(get.status.success(), "{}", String::from_utf8_lossy(&get.stderr));
+    assert_eq!(
+        String::from_utf8_lossy(&get.stdout).trim(),
+        "demo-from-script"
+    );
+}
+
+#[test]
+fn cli_rebind_rewrites_device_binding() {
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("vault-rebind");
+    let escrow = dir.path().join("escrow-rebind.json");
+    let pass = "cli-rebind-pass-xx";
+
+    let init = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "init",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(init.status.success(), "{}", String::from_utf8_lossy(&init.stderr));
+
+    let secret_file = dir.path().join("secret.txt");
+    std::fs::write(&secret_file, "rebind-payload").unwrap();
+    let put = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "put",
+            "demo",
+            "--file",
+            secret_file.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(put.status.success(), "{}", String::from_utf8_lossy(&put.stderr));
+
+    let device_before = std::fs::read_to_string(root.join("shares/device.sealed.json")).unwrap();
+
+    let rb = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "rebind",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        rb.status.success(),
+        "rebind: {}",
+        String::from_utf8_lossy(&rb.stderr)
+    );
+    let rb_body = String::from_utf8_lossy(&rb.stdout);
+    assert!(rb_body.contains("reseal-device") || rb_body.contains("\"ok\": true"));
+    assert!(
+        rb_body.contains("\"drillProven\": false") || rb_body.contains("\"drillProven\":false")
+    );
+
+    let device_after = std::fs::read_to_string(root.join("shares/device.sealed.json")).unwrap();
+    assert_ne!(
+        device_before, device_after,
+        "device blob must change after rebind"
+    );
+
+    // Daily get still works on this machine (rebind to live fingerprint)
+    let get = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args(["get", "demo", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(get.status.success(), "{}", String::from_utf8_lossy(&get.stderr));
+    assert_eq!(
+        String::from_utf8_lossy(&get.stdout).trim(),
+        "rebind-payload"
+    );
+
+    // Recover drill required again
+    let st = bin()
+        .args(["status", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(st.status.code(), Some(2));
+}

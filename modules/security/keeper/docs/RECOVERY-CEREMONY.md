@@ -18,12 +18,20 @@
 
 `offline` escrow + `device` → open canary or secrets (`get --escrow`).
 
-## New machine
+## New machine / reimage (`rebind`)
 
-Vault directory + `passphrase` + `offline` escrow (no device share required for reconstruct).
+1. Restore vault directory onto the new host.
+2. Present **passphrase + offline escrow** (old device fingerprint is gone).
+3. Run `keeper rebind --escrow PATH` — reconstructs root, re-splits, seals **device** share to the **new** fingerprint, rewrites escrow.
+4. Copy the **new** escrow offline; old USB copy is obsolete.
+5. `keeper recover --escrow PATH` once → healthy on the new binding.
+6. Old device binding no longer opens with passphrase (or escrow) as if still current.
+
+Until rebind, passphrase+offline still reconstruct root (unlock for migration), but daily passphrase+device fails on the new fingerprint.
 
 ## Rules
 
 - Confirmation **releases a share**; it never KDFs the root alone.
 - Public ISP IP / GeoIP confirmations are **rejected**.
-- Healthy ≠ unlocked session; get still needs P or escrow.
+- Healthy ≠ unlocked session; get still needs P or escrow (or strong Yubi path).
+- Prefer `keeper loop` so secrets never appear on argv / shell history.
