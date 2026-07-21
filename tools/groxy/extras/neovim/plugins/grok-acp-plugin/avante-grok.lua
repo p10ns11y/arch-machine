@@ -10,11 +10,10 @@
 -- Neovim Lazy *spec* that spawns:  grok agent … stdio
 -- Daily path does NOT need `groxy acp serve` (that is WebSocket / remote).
 --
--- Image/WARN note: Grok agent emits proprietary JSON-RPC notifications
--- (`_x.ai/mcp/init_progress`, `_x.ai/mcp/server_status`, `_x.ai/mcp/servers_updated`, …).
--- stock avante ACPClient only handles session/* and fs/* and otherwise
--- `vim.notify("Unknown notification method: …", WARN)`. That is protocol-
--- extension noise, not a broken provider/PATH. We ignore `_x.ai/*` below.
+-- Grok proprietary ACP notifications (`_x.ai/*`): stock avante only handles
+-- session/* and fs/* and otherwise WARNs. We **consume** known methods for UI
+-- (progress / server status / server list / structured toasts) instead of
+-- ignoring or spamming Unknown notification method.
 --
 -- Invalid-buffer toast (nvim_buf_get_name in vim.schedule):
 -- Stock avante often calls nvim_buf_get_name on a stale code.bufnr after ACP
@@ -884,8 +883,246 @@ return {
         end
       end
 
-      -- Ignore Grok proprietary ACP extensions (WARN spam).
-      -- Stock avante: acp_client.lua _handle_notification whitelist = session/* + fs/*.
+      -- Consume Grok proprietary ACP extensions (`_x.ai/*`) for operator UI.
+      -- Stock avante: acp_client.lua whitelist = session/* + fs/* only → WARN spam.
+      ---------------------------------------------------------------------------
+      -- State (also usable by statusline / which-key): vim.g.grok_acp_mcp
+      ---------------------------------------------------------------------------
+      vim.g.grok_acp_mcp = vim.g.grok_acp_mcp
+        or {
+          servers = {}, -- name -> { status, detail, at }
+          last_progress = nil, -- { message, progress, server, at }
+          ready = false,
+          last_method = nil,
+          event_count = 0,
+        }
+
+      ---@param params table|nil
+      ---@return string|nil
+      local function xai_pick_name(params)
+        if type(params) ~= "table" then
+          return nil
+        end
+        return params.name or params.server or params.serverName or params.id or params.server_id
+      end
+
+      ---@param params table|nil
+      ---@return string|nil
+      local function xai_pick_message(params)
+        if type(params) ~= "table" then
+          return nil
+        end
+        return params.message
+          or params.body
+          or params.status_message
+          or params.detail
+          or params.title
+      end
+
+      ---@param params table|nil
+      ---@return number|string|nil
+      local function xai_pick_progress(params)
+        if type(params) ~= "table" then
+          return nil
+        end
+        local p = params.progress or params.percent or params.fraction or params.pct
+        if type(p) == "number" and p > 0 and p <= 1 then
+          return string.format("%d%%", math.floor(p * 100 + 0.5))
+        end
+        return p
+      end
+
+      --- Throttle noisy progress echoes (ms)
+      local last_progress_echo = 0
+      local PROGRESS_THROTTLE_MS = 400
+
+      ---@param method string
+      ---@param params table|nil
+      local function handle_xai_notification(method, params)
+        params = type(params) == "table" and params or {}
+        local suffix = method:match("^_x%.ai/(.+)$")
+        if not suffix then
+          return false
+        end
+
+        local state = vim.g.grok_acp_mcp
+        state.event_count = (state.event_count or 0) + 1
+        state.last_method = method
+        local now = os.time()
+
+        -- MCP init progress: quiet statusline-style echo (not WARN toast flood)
+        if suffix == "mcp/init_progress" or suffix:find("init_progress", 1, true) then
+          local msg = xai_pick_message(params) or "starting"
+          local pct = xai_pick_progress(params)
+          local server = xai_pick_name(params)
+          state.last_progress = {
+            message = msg,
+            progress = pct,
+            server = server,
+            at = now,
+          }
+          if server then
+            state.servers[server] = state.servers[server] or { status = "starting", at = now }
+            state.servers[server].status = "starting"
+            state.servers[server].at = now
+          end
+          local t = vim.uv and vim.uv.now() or (vim.loop and vim.loop.now()) or 0
+          if t - last_progress_echo >= PROGRESS_THROTTLE_MS then
+            last_progress_echo = t
+            local line = "Grok MCP"
+            if server then
+              line = line .. " · " .. tostring(server)
+            end
+            line = line .. ": " .. tostring(msg)
+            if pct then
+              line = line .. " (" .. tostring(pct) .. ")"
+            end
+            vim.schedule(function()
+              vim.api.nvim_echo({ { line, "Comment" } }, false, {})
+            end)
+          end
+          vim.g.grok_acp_mcp = state
+          return true
+        end
+
+        -- Single server status transition
+        if suffix == "mcp/server_status" or suffix:find("server_status", 1, true) then
+          local name = xai_pick_name(params) or "server"
+          local st = params.status or params.state or params.phase or "unknown"
+          state.servers[name] = {
+            status = st,
+            detail = xai_pick_message(params),
+            at = now,
+          }
+          local lvl = vim.log.levels.INFO
+          local st_l = tostring(st):lower()
+          if st_l:find("err") or st_l:find("fail") or st_l:find("disconnect") then
+            lvl = vim.log.levels.WARN
+          elseif st_l:find("ready") or st_l:find("ok") or st_l:find("connected") or st_l == "running" then
+            lvl = vim.log.levels.INFO
+          else
+            lvl = vim.log.levels.DEBUG
+          end
+          if lvl ~= vim.log.levels.DEBUG then
+            local detail = xai_pick_message(params)
+            vim.schedule(function()
+              vim.notify(
+                detail and string.format("Grok MCP · %s: %s — %s", name, st, detail)
+                  or string.format("Grok MCP · %s: %s", name, st),
+                lvl,
+                { title = "Grok ACP" }
+              )
+            end)
+          end
+          vim.g.grok_acp_mcp = state
+          return true
+        end
+
+        -- Full server list refresh
+        if suffix == "mcp/servers_updated" or suffix:find("servers_updated", 1, true) then
+          local list = params.servers or params.items or params.list or {}
+          if type(list) == "table" then
+            for _, s in ipairs(list) do
+              if type(s) == "string" then
+                state.servers[s] = state.servers[s] or { status = "ready", at = now }
+                state.servers[s].status = state.servers[s].status or "ready"
+                state.servers[s].at = now
+              elseif type(s) == "table" then
+                local name = s.name or s.id or s.server or "?"
+                state.servers[name] = {
+                  status = s.status or s.state or "ready",
+                  detail = s.message or s.detail,
+                  at = now,
+                }
+              end
+            end
+          end
+          -- Also accept map form { [name] = status }
+          if type(params.by_name) == "table" then
+            for name, st in pairs(params.by_name) do
+              state.servers[tostring(name)] = {
+                status = type(st) == "table" and (st.status or st.state) or st,
+                at = now,
+              }
+            end
+          end
+          state.ready = true
+          local n = 0
+          for _ in pairs(state.servers) do
+            n = n + 1
+          end
+          vim.schedule(function()
+            vim.notify(
+              n > 0 and string.format("Grok MCP: %d server(s) connected", n) or "Grok MCP: server list updated",
+              vim.log.levels.INFO,
+              { title = "Grok ACP" }
+            )
+          end)
+          vim.g.grok_acp_mcp = state
+          return true
+        end
+
+        -- PR / system-style structured notifications (kind/title/body — changelog)
+        if suffix:find("^pr/", 1) or suffix:find("notification", 1, true) or params.kind or params.title then
+          local title = params.title or params.kind or suffix
+          local body = params.body or params.message or params.detail
+          vim.schedule(function()
+            vim.notify(
+              body and (tostring(title) .. ": " .. tostring(body)) or tostring(title),
+              vim.log.levels.INFO,
+              { title = "Grok ACP" }
+            )
+          end)
+          vim.g.grok_acp_mcp = state
+          return true
+        end
+
+        -- Unknown _x.ai/* : keep quiet (no WARN), store last for :GrokMcpStatus
+        state.last_unknown = { method = method, params = params, at = now }
+        vim.g.grok_acp_mcp = state
+        return true
+      end
+
+      vim.api.nvim_create_user_command("GrokMcpStatus", function()
+        local state = vim.g.grok_acp_mcp or {}
+        local lines = {
+          "Grok ACP MCP state",
+          "  events: " .. tostring(state.event_count or 0),
+          "  ready: " .. tostring(state.ready),
+          "  last_method: " .. tostring(state.last_method),
+        }
+        if state.last_progress then
+          local p = state.last_progress
+          lines[#lines + 1] = string.format(
+            "  last_progress: %s %s %s",
+            tostring(p.server or ""),
+            tostring(p.message or ""),
+            tostring(p.progress or "")
+          )
+        end
+        lines[#lines + 1] = "  servers:"
+        local servers = state.servers or {}
+        local names = vim.tbl_keys(servers)
+        table.sort(names)
+        if #names == 0 then
+          lines[#lines + 1] = "    (none yet — open an Avante chat to connect)"
+        else
+          for _, name in ipairs(names) do
+            local s = servers[name]
+            lines[#lines + 1] = string.format(
+              "    - %s: %s%s",
+              name,
+              tostring(s.status or "?"),
+              s.detail and (" — " .. tostring(s.detail)) or ""
+            )
+          end
+        end
+        if state.last_unknown then
+          lines[#lines + 1] = "  last_unknown: " .. tostring(state.last_unknown.method)
+        end
+        vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "Grok MCP" })
+      end, { desc = "Show Grok ACP MCP server/progress state from _x.ai/* notifications" })
+
       local ok_acp, ACPClient = pcall(require, "avante.libs.acp_client")
       if ok_acp and type(ACPClient) == "table" and type(ACPClient._handle_notification) == "function" then
         local original = ACPClient._handle_notification
@@ -893,9 +1130,13 @@ return {
         function ACPClient:_handle_notification(message_id, method, params)
           if type(method) == "string" and method:match("^_x%.ai/") then
             if type(self._debug_log) == "function" then
-              self:_debug_log("ignored proprietary Grok ACP notification: " .. method .. "\n")
+              self:_debug_log("grok _x.ai notification: " .. method .. "\n" .. vim.inspect(params) .. "\n")
             end
-            return
+            local ok_h, err = pcall(handle_xai_notification, method, params)
+            if not ok_h and type(self._debug_log) == "function" then
+              self:_debug_log("grok _x.ai handler error: " .. tostring(err) .. "\n")
+            end
+            return -- never fall through to Unknown notification WARN
           end
           return original(self, message_id, method, params)
         end

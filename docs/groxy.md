@@ -385,7 +385,7 @@ only handles `session/*` and `fs/*` and otherwise warns `Unknown notification me
 |----------------|---------|
 | **Not** | Wrong provider, missing `grok` PATH, failed build, or broken ACP session |
 | **Is** | Client whitelist vs agent protocol extension (noise; session/tools still work) |
-| Mitigations | (1) Ignore `_x.ai/*` in host post-setup (in-tree `avante-grok.lua` does this); (2) wait for upstream; (3) trim MCP servers if unused |
+| Mitigations | (1) **Consume** `_x.ai/*` in host post-setup (in-tree `avante-grok.lua`: progress/status UI + `:GrokMcpStatus`); (2) wait for upstream whitelist; (3) trim MCP servers if unused |
 
 Operator re-check:
 
@@ -487,7 +487,7 @@ There is still **no** link from phone XChat DMs into the Avante buffer unless yo
 | Symptom | Check |
 |---------|--------|
 | Plugin starts Claude/Gemini instead | `provider` / adapter name points at `grok-acp` |
-| `Unknown notification method: _x.ai/mcp/…` WARN spam | Grok proprietary ACP extensions; ignore `_x.ai/*` (host hook) or wait for upstream — **not** a broken install |
+| `Unknown notification method: _x.ai/mcp/…` WARN spam | Grok proprietary ACP extensions; host hook should **consume** `_x.ai/*` (see extras `avante-grok.lua`) — **not** a broken install |
 | `Sending message to fast!, API key is not yet set` | **Not** a missing XAI key for ACP. Stock avante sets `vim.g.avante_login=false` for ACP providers. Host `avante-grok.lua` re-asserts login. Restart nvim; `:AvanteSwitchProvider grok-acp` if needed |
 | Do I need `acp serve` if avante works? | **No** for daily Neovim — avante uses **stdio**. Use serve for remote/long-lived/multi-client only |
 | Leaked serve secret / rotate | Secret is **static** on disk; restart does not rotate. See [ACP secret](#acp-secret-static-on-disk-rotate-on-leak) |

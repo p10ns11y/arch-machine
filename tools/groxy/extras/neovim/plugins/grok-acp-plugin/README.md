@@ -7,7 +7,7 @@ documented in [docs/groxy.md](../../../../../docs/groxy.md).
 |---------|------------------|
 | A **Lazy.nvim / LazyVim plugin spec** (`return { "yetone/avante.nvim", … }`) | A Grok agent slash-plugin under `plugins/arch-machine` |
 | How **avante.nvim** spawns `grok agent … stdio` | `groxy acp serve` (WebSocket / remote multi-client) |
-| Host UI wiring (login fix, `_x.ai/*` ignore, zen, UI harden) | The vault (`tools/keeper`) or control plane (`tools/archy`) |
+| Host UI wiring (login fix, **consume `_x.ai/*` MCP status**, zen, UI harden) | The vault (`tools/keeper`) or control plane (`tools/archy`) |
 
 ```text
   Neovim (avante)
@@ -59,10 +59,34 @@ ln -sfn "$(pwd)/tools/groxy/extras/neovim/plugins/grok-acp-plugin/avante-grok.lu
 | `provider = "grok-acp"` | ACP provider id |
 | `args = { "agent", "stdio", … }` | **stdio** ACP (not WS serve) |
 | ACP login re-assert | Avoid false “API key not set” on ACP |
-| Ignore `_x.ai/*` notifications | Quiet Grok MCP protocol extensions |
+| **Use** `_x.ai/*` notifications | MCP init progress (echo), server status, servers ready, PR/system toasts; `:GrokMcpStatus` |
 | Zen / full view | `:AvanteZen`, `<leader>az` |
 | Pane colors + loop UX harden | Input vs result contrast; safer `nvim_buf_get_name` |
 | File selection | Deselect all (`D`); gitignore filter |
+
+## `_x.ai/*` notifications (used, not ignored)
+
+| Method (examples) | UI |
+|-------------------|-----|
+| `_x.ai/mcp/init_progress` | Throttled echo: `Grok MCP · server: message (pct)` |
+| `_x.ai/mcp/server_status` | INFO/WARN toast on ready/error transitions |
+| `_x.ai/mcp/servers_updated` | INFO toast + marks MCP ready |
+| structured `kind`/`title`/`body` | INFO toast |
+| other `_x.ai/*` | Silent store (no WARN); inspect via command |
+
+State: `vim.g.grok_acp_mcp` (`servers`, `last_progress`, `ready`, `event_count`).
+
+```vim
+:GrokMcpStatus
+```
+
+Statusline snippet (optional):
+
+```lua
+-- example: show MCP ready flag
+local s = vim.g.grok_acp_mcp
+return (s and s.ready) and "MCP✓" or "MCP…"
+```
 
 ## Verify
 
