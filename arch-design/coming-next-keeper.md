@@ -2,7 +2,7 @@
 
 **Audience:** You · implementer · agents  
 **Style:** Short words. Diagrams over prose. Optimism grounded in evidence.  
-**Contract:** [keeper architecture](./keeper.md) · [THREAT-MODEL](../modules/security/keeper/docs/THREAT-MODEL.md)  
+**Contract:** [keeper architecture](./keeper.md) · [THREAT-MODEL](../tools/keeper/docs/THREAT-MODEL.md)  
 **Method:** [stellar-roadmap](../.agents/skills/stellar-roadmap/SKILL.md) · collab-finder blueprint style  
 **Parent backlog:** [coming-next.md](./coming-next.md)
 
@@ -184,14 +184,14 @@ flowchart LR
 
 | File | Work |
 |------|------|
-| `modules/security/keeper/README.md` | already documents path |
+| `tools/keeper/README.md` | already documents path |
 | operator escrow path | store offline share off-laptop |
 
 **Done when:** `status` reports healthy after no-passphrase recover; canary open.
 
 **Verify:**
 ```bash
-cd modules/security/keeper
+cd tools/keeper
 export KEEPER_ROOT=/tmp/keeper-dogfood KEEPER_PASSPHRASE=… KEEPER_KNOWLEDGE=…
 cargo run --quiet -- init --escrow /tmp/keeper-escrow.json
 cargo run --quiet -- put demo --value 'x'
@@ -207,13 +207,13 @@ cargo run --quiet -- status   # healthy
 ```mermaid
 flowchart LR
   pr[PR to sentinel] --> ci[GitHub Actions]
-  ci --> test[cargo test --manifest-path modules/security/keeper/Cargo.toml]
+  ci --> test[cargo test --manifest-path tools/keeper/Cargo.toml]
 ```
 
 | File | Work |
 |------|------|
 | `.github/workflows/ci.yml` | add `keeper` job (stable Rust) |
-| `modules/security/keeper/` | keep tests offline/no network |
+| `tools/keeper/` | keep tests offline/no network |
 
 **Done when:** CI red if `cargo test` fails on keeper.
 
@@ -232,7 +232,7 @@ flowchart LR
 | File | Work |
 |------|------|
 | `modules/security/install.sh` | `--agent-expand` optional install release binary |
-| `modules/security/keeper/README.md` | PATH install section |
+| `tools/keeper/README.md` | PATH install section |
 
 **Done when:** `command -v keeper` after expand/install; `keeper status` works.
 

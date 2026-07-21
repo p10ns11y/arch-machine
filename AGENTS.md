@@ -57,6 +57,7 @@ make lint                    # shellcheck + yamllint + markdownlint
 make validate-profiles       # profile-validation-harness.sh
 cargo test --manifest-path tools/archy/Cargo.toml
 cargo test --manifest-path tools/groxy/Cargo.toml
+cargo test --manifest-path tools/keeper/Cargo.toml
 go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 ./install.sh --thin --validate
 ./maintenance/extract-evidence.sh --dry-run
@@ -85,6 +86,7 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | **Control plane (main)** | `tools/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
 | **Remote surfaces** | `tools/groxy` · `tools/groxy/README.md` · `docs/groxy.md` · `bin/groxy` (`inject` notify · `acp serve` control) |
+| **Threshold vault** | `tools/keeper` · `tools/keeper/README.md` · `arch-design/keeper.md` · install via `modules/security/install.sh --agent-expand` |
 | TUI (Elm/gum legacy) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI shim | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
 | Inventory | `maintenance/inventory.sh` → `tinfoil inventory` / schema v1 + ownership tags |
@@ -99,5 +101,6 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 
 - `expand tui` / `expand archy` — Eagle+Satellites TEA control plane (`tools/archy`, `docs/archy.md`)
 - `expand groxy` / `expand remote` — inject + ACP remote surfaces (`tools/groxy`, `docs/groxy.md`)
+- `expand keeper` / `expand vault` — threshold secrets vault (`tools/keeper`, `arch-design/keeper.md`)
 - `expand profiles` — YAML profile composition
 - `expand evidence` — bundle schema + extraction pipeline

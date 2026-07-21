@@ -581,18 +581,21 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   case "${1:-}" in
     --agent-expand)
       echo "agent-expand: security module at $_mod_dir"
-      if [[ -f "$_mod_dir/keeper/Cargo.toml" ]]; then
+      # Keeper SoT lives under tools/ (first-class product); security expand installs it.
+      _repo_root="$(cd "$_mod_dir/../.." && pwd)"
+      _keeper_dir="${KEEPER_CRATE_DIR:-$_repo_root/tools/keeper}"
+      if [[ -f "$_keeper_dir/Cargo.toml" ]]; then
         if ! command -v cargo >/dev/null 2>&1; then
           echo "cargo required for security --agent-expand (keeper build+install)" >&2
           exit 1
         fi
         # Fail closed: do not stamp success when keeper does not build
-        echo "building keeper (release)…"
-        (cd "$_mod_dir/keeper" && cargo build --release --quiet) || {
+        echo "building keeper (release) at $_keeper_dir …"
+        (cd "$_keeper_dir" && cargo build --release --quiet) || {
           echo "error: cargo build --release failed for keeper — not writing .agent-expanded" >&2
           exit 1
         }
-        _keeper_bin="$_mod_dir/keeper/target/release/keeper"
+        _keeper_bin="$_keeper_dir/target/release/keeper"
         if [[ ! -x "$_keeper_bin" ]]; then
           echo "error: missing $_keeper_bin after release build" >&2
           exit 1
@@ -613,6 +616,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             exit 1
           }
         fi
+      else
+        echo "warning: no keeper crate at $_keeper_dir — skip install" >&2
       fi
       date -Iseconds >"$_mod_dir/.agent-expanded"
       echo "wrote $_mod_dir/.agent-expanded"
@@ -620,7 +625,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       exit 0
       ;;
     -h|--help)
-      echo "Usage: $0 --agent-expand   # consent-gated module prep; builds+installs keeper to ~/.local/bin"
+      echo "Usage: $0 --agent-expand   # consent-gated module prep; builds+installs tools/keeper → ~/.local/bin"
       exit 0
       ;;
     *)

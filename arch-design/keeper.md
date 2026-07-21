@@ -1,7 +1,7 @@
 # Keeper — architecture design (arch-machine)
 
 **Audience:** operators · implementers · agents  
-**Contract:** [THREAT-MODEL](../modules/security/keeper/docs/THREAT-MODEL.md) · [RECOVERY-CEREMONY](../modules/security/keeper/docs/RECOVERY-CEREMONY.md) · [LOCATION](../modules/security/keeper/docs/LOCATION.md)  
+**Contract:** [THREAT-MODEL](../tools/keeper/docs/THREAT-MODEL.md) · [RECOVERY-CEREMONY](../tools/keeper/docs/RECOVERY-CEREMONY.md) · [LOCATION](../tools/keeper/docs/LOCATION.md)  
 **Backlog:** [coming-next-keeper.md](./coming-next-keeper.md) · parent [coming-next.md](./coming-next.md)  
 **Method:** stellar-roadmap · evidence columns · diagrams over prose  
 
@@ -99,7 +99,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  subgraph cli["CLI — modules/security/keeper"]
+  subgraph cli["CLI — tools/keeper"]
     Init[init]
     Put[put]
     Get[get]
@@ -139,7 +139,7 @@ flowchart TB
   Status --> Canary
 ```
 
-**Paths:** crate `modules/security/keeper/` · `keeper loop` interactive UX · agent expand installs PATH binary via `modules/security/install.sh --agent-expand`.
+**Paths:** crate `tools/keeper/` · `keeper loop` interactive UX · agent expand installs PATH binary via `modules/security/install.sh --agent-expand`.
 
 ---
 
@@ -247,7 +247,7 @@ Agent surface prefers **Grok plugin** over `tinfoil tui` for expand. Expand inst
 ## 6. Module layout
 
 ```
-modules/security/keeper/
+tools/keeper/
   Cargo.toml
   README.md
   docs/
@@ -277,8 +277,8 @@ modules/security/keeper/
 
 | Source | Use |
 |--------|-----|
-| `modules/security/keeper/README.md` | Operator quick start |
-| `modules/security/keeper/docs/*` | Threat, ceremony, location ban |
+| `tools/keeper/README.md` | Operator quick start |
+| `tools/keeper/docs/*` | Threat, ceremony, location ban |
 | `arch-design/coming-next-keeper.md` | SN-KEEP-* backlog |
 | `Work/personal/plugins/arch-machine` | Grok agent-as-TUI expand |
 | collab-finder batch-2 blueprints | Card format |

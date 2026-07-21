@@ -23,10 +23,10 @@ else
   echo "ok no secret-shaped payload"
 fi
 for rel in \
-  ../modules/security/keeper/docs/OPERATOR-MODEL.md \
-  ../modules/security/keeper/docs/THREAT-MODEL.md \
-  ../modules/security/keeper/docs/RECOVERY-CEREMONY.md \
-  ../modules/security/keeper/README.md \
+  ../tools/keeper/docs/OPERATOR-MODEL.md \
+  ../tools/keeper/docs/THREAT-MODEL.md \
+  ../tools/keeper/docs/RECOVERY-CEREMONY.md \
+  ../tools/keeper/README.md \
   INDEX.md \
   ../arch-design/keeper.md
 do
