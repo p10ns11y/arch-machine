@@ -1,6 +1,6 @@
 # arch-machine
 
-<img src="tinfoil.jpg" alt="arch-machine" width="140" style="display: block; margin: auto;">
+<img src="archy.jpg" alt="archy — Eagle control plane" width="140" style="display: block; margin: auto;">
 
 Arch Linux workstation toolkit steered by **`archy`**: thin install first, then optional YAML profiles for ML/AI and security. Shell backends do the work; evidence closes the loop. Works well on Omarchy.
 
