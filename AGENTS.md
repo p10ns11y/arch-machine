@@ -18,28 +18,30 @@ Skill: **eagle-satellite-elomaxz** · Doc: `docs/archy.md` · Code: `tools/archy
 | Agent → host | Grok plugin `arch-machine` | `/arch-status`, `/arch-audit`, `/arch-control`, `/arch-init`, `/arch-expand` |
 | Host → agent | archy co-pilot | `p` / `G` / brief Enter → `grok --cwd … "<preload>"` |
 
-Plugin checkout: `~/Work/personal/plugins/arch-machine` ([p10ns11y/plugins](https://github.com/p10ns11y/plugins)) · `docs/CROSS-REF.md`  
+Plugin: [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` · cycle docs in `docs/archy.md`  
 Do not tell users to run `am-*` by hand — slash commands only.
 
-## Active skills (symlinked or in-repo)
+## Active skills
 
-| Skill | Path | Use when |
+| Skill | Kind | Use when |
 |-------|------|----------|
-| **master-planner** | `.agents/skills/master-planner` | Master plan / skill pack pull-tweak / ontology; `/master-planner` |
-| **eagle-satellite-elomaxz** | `.agents/skills/eagle-satellite-elomaxz` (in-repo) | Edit archy / TEA / job routing; Eagle+Satellites+Elomaxz message passing |
-| ai-optimization | `.agents/skills/ai-optimization` | Large bash/Rust/Go scout; token budgets |
-| fusion-sage | `.agents/skills/fusion-sage` | Cross-module synthesis + surplus |
-| higher-order-decision-architect | `.agents/skills/higher-order-decision-architect` | Material architecture/security choices |
-| session-unit-order | `.agents/skills/session-unit-order` (in-repo; also [p10ns11y/skills](https://github.com/p10ns11y/skills)) | User systemd + UWSM/Hyprland; on Omarchy also load **omarchy**; forbid `Wants=graphical-session` on Persistent timers |
-| stellar-roadmap | `.agents/skills/stellar-roadmap` | `arch-design/coming-next.md`, SN-* cards |
-| verification-cockpit | `.agents/skills/verification-cockpit` | Regenerate `.agents/verification/` |
-| agent-orchestrator | `.agents/skills/agent-orchestrator` | Multi-step / multi-agent delivery |
-| looper | `.agents/skills/looper` | Budgeted agent loops + HITL gates |
-| git-worktrees | `.agents/skills/git-worktrees` | Isolated worker worktrees |
+| **master-planner** | in-repo | Master plan / pack install / overlay tweak / ontology |
+| **eagle-satellite-elomaxz** | in-repo | Edit archy / TEA / job routing |
+| **session-unit-order** | in-repo | User systemd + UWSM/Hyprland; Omarchy → also **omarchy** skill |
+| ai-optimization | locked | Large bash/Rust/Go scout; token budgets |
+| fusion-sage | locked | Cross-module synthesis + surplus |
+| higher-order-decision-architect | locked | Material architecture/security choices |
+| stellar-roadmap | locked | `arch-design/coming-next.md`, SN-* cards |
+| verification-cockpit | locked | Regenerate `.agents/verification/` |
+| agent-orchestrator | locked | Multi-step / multi-agent delivery |
+| looper | locked | Budgeted agent loops + HITL gates |
+| git-worktrees | locked | Isolated worker worktrees |
 
-**Overlays:** `.agents/overlays/arch-machine-*.md` (repo-specific; do not edit symlinked skill bodies).  
-**Ontology:** `.agents/ontology/` — load subgraph by intent (`control` · `install` · `evidence` · `remote` · `vault` · `verify`).  
-**Pack:** `arch-guardian` via master-planner (`SKILLS_ROOT` → `~/Work/personal/skills` → clone [p10ns11y/skills](https://github.com/p10ns11y/skills)).
+**Catalog:** [skills.sh/p10ns11y/skills](https://www.skills.sh/p10ns11y/skills) · **Lock:** `skills-lock.json`  
+**Install / restore:** `npx skills experimental_install` (or `.agents/skills/master-planner/scripts/pull-skills.sh .`)  
+**Overlays:** `.agents/overlays/arch-machine-*.md` — project tweaks only; do not edit locked skill bodies.  
+**Ontology:** `.agents/ontology/` — load by intent (`control` · `install` · `evidence` · `remote` · `vault` · `verify`).  
+**Agent links:** `.cursor/skills/*` and `.grok/skills/*` → relative `../../.agents/skills/<name>`.
 
 ## Fused abstraction
 

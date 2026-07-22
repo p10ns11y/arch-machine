@@ -1,1 +1,15 @@
-/home/sustainableabundance/Work/personal/skills/rules/higher-order-decision-architect.mdc
+---
+description: Before material coding decisions, load higher-order-decision-architect + arch-machine overlay.
+alwaysApply: true
+---
+
+# Higher-Order Decision Architect (router)
+
+Before **material coding decisions** (architecture, dependencies, public API, security, data contracts, multi-module refactors, or anything hard to revert):
+
+1. Load [higher-order-decision-architect/SKILL.md](../skills/higher-order-decision-architect/SKILL.md).
+2. Load project hooks [.agents/overlays/arch-machine-decision-hooks.md](../../.agents/overlays/arch-machine-decision-hooks.md).
+3. Run the mental-model sequence **internally** (all 8 steps, including thrive ascent after honest pre-mortem).
+4. For non-trivial choices, surface **Executive Verdict**, **risks**, **thrive ascent**, **confidence**, and **next actions**.
+
+**Thrive counterweight:** pre-mortem is honest; step 8 reframes risk as trajectory guardrails. Never end on defeat without an acceleration alternative.

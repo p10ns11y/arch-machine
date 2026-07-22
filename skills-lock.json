@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-orchestrator": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "agent-orchestrator/SKILL.md",
+      "computedHash": "5140c1567028097d28ea4c9cbc78dc5b1685138fb1a599d30b7f0b1ab81ca5bc"
+    },
+    "ai-optimization": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "ai-optimization/SKILL.md",
+      "computedHash": "b42b5072cf96a638ae3c2398680805d7f6380a74b331dcd18a4e42eda6ebe545"
+    },
+    "fusion-sage": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "fusion-sage/SKILL.md",
+      "computedHash": "4647d31c7538c3db7fc7901202c15b2d51d2f9241ef9201756a46f431f3bd33b"
+    },
+    "git-worktrees": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "git-worktrees/SKILL.md",
+      "computedHash": "3707906de576c7760eee917ae18f701399d39f60e6f6a36dc994561d5629a23b"
+    },
+    "higher-order-decision-architect": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "higher-order-decision-architect/SKILL.md",
+      "computedHash": "607da912136c63bcf86ed9154578ddb88561d487aea790a2cd789e7e915550bc"
+    },
+    "looper": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "looper/SKILL.md",
+      "computedHash": "58937329f21432ac0592b5cd2ae8e70c2fd811d04fd5da2bc811e4726b4612c6"
+    },
+    "stellar-roadmap": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "stellar-roadmap/SKILL.md",
+      "computedHash": "fe29e91514d05d550d21419cd8243151850a7c68c9aeafd4621fee8802b0cd3e"
+    },
+    "verification-cockpit": {
+      "source": "p10ns11y/skills",
+      "sourceType": "github",
+      "skillPath": "verification-cockpit/SKILL.md",
+      "computedHash": "04a1891859528600e6a8ccebdc4cd47227833f53152c7d9d73515dc453f3a626"
+    }
+  }
+}

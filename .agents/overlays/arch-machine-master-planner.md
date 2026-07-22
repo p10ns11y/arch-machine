@@ -4,47 +4,40 @@
 
 **Mission:** Self-remediating Arch guardian — Eagle routes; shells act; evidence closes.
 
-**Pack:** `arch-guardian` · **Ontology:** [../ontology/INDEX.md](../ontology/INDEX.md)
+**Catalog:** [skills.sh/p10ns11y/skills](https://www.skills.sh/p10ns11y/skills) · **Lock:** `skills-lock.json`
 
 ```text
-Library skills ──symlink──► .agents/skills/
+npx skills add p10ns11y/skills -s … --copy
         │
-        ├── eagle-* / session-unit-order  (in-repo)
-        └── overlays + ontology           (project coords)
+.agents/skills/  ← portable (locked) + in-repo (eagle, session, master-planner)
+        │
+.agents/overlays/  ← THIS repo’s tweaks only
+.cursor/skills + .grok/skills  →  ../../.agents/skills/*
 ```
 
 ## Active pack
 
-| Skill | Role |
+| Skill | Kind |
 |-------|------|
-| master-planner | Pull / tweak / ontology |
-| eagle-satellite-elomaxz | TEA control plane |
-| session-unit-order | user-systemd / UWSM |
-| ai-optimization | Token budget |
-| fusion-sage | Fused loop + surplus |
-| higher-order-decision-architect | Material bets |
-| stellar-roadmap | SN-* cards |
-| verification-cockpit | `av` cockpit |
-| agent-orchestrator | Multi-step delivery |
-| looper | Budgeted loops |
-| git-worktrees | Isolated workers |
+| master-planner | in-repo (until published to catalog) |
+| eagle-satellite-elomaxz | in-repo |
+| session-unit-order | in-repo |
+| ai-optimization · fusion-sage · HODA · stellar-roadmap · verification-cockpit · agent-orchestrator · looper · git-worktrees | locked from p10ns11y/skills |
 
-## Friction web (automations)
+## Friction web
 
 | Removes | Wire |
 |---------|------|
 | Rediscovering control flow | ontology `control` + eagle skill |
-| Profile/module mismatch | `make validate-profiles` |
+| Profile/module drift | `make validate-profiles` |
 | Unsafe remediation | policy + dry-run evidence |
 | Agent overwrite collisions | git-worktrees + orchestrator |
 | Token bloat | ai-optimization overlay |
 
-## Verify
+## Restore / verify
 
 ```bash
-# library: local or https://github.com/p10ns11y/skills (--from-remote)
-"$HOME/Work/personal/skills/master-planner/scripts/verify-pack.sh" --project "$(pwd)"
+npx skills experimental_install
+.agents/skills/master-planner/scripts/verify-pack.sh .
 make lint && make validate-profiles
-cargo test --manifest-path tools/archy/Cargo.toml
-./install.sh --thin --validate
 ```
