@@ -1,42 +1,44 @@
-# Overlay — arch-machine (bash + Go sentinel)
+# Overlay — arch-machine token budget
 
-**Pairs with:** [ai-optimization](../skills/ai-optimization/SKILL.md)
+**Pairs with:** [ai-optimization](../skills/ai-optimization/SKILL.md)  
+**Boundary:** `policies/security-remediation.md` · **Ontology:** [../ontology/INDEX.md](../ontology/INDEX.md)
 
-**Repo:** [p10ns11y/arch-machine](https://github.com/p10ns11y/arch-machine) · **Type:** shell-installer · **Boundary:** `policies/security-remediation.md`
+## Stack
 
-## Project snapshot
+Rust archy + bash installer/modules/maintenance + YAML profiles + evidence JSON/TOON. Go `tinfoil` = thin legacy shim.
 
-- **Stack:** Bash installer modules, gum/Bubble Tea TUI shims, Go `tinfoil` CLI, YAML profiles, evidence JSON/TOON
-- **Verify:** `make lint`, `make validate-profiles`, `go build ./bin/tinfoil.go`, `./install.sh --validate`
-- **CI:** `.github/workflows/ci.yml`
+## Relevance
 
-## Relevance scoring
+| Signal | Boost |
+|--------|-------|
+| `tools/archy/**` | +40 |
+| `install.sh`, `lib/installer.sh` | +40 |
+| `modules/*/install.sh` | +30 |
+| `maintenance/`, `policies/` | +30 |
+| `config/profiles/*.yaml` | +25 |
+| `tools/groxy/**`, `tools/keeper/**` | +25 |
+| `docs/archy.md`, `docs/INDEX.md`, `docs/MODULES.md` | +20 |
+| `bin/tinfoil.go`, `lib/tui/**` | +15 (legacy) |
+| `.grok/`, sample logs | −50 unless debugging |
 
-| Signal | Boost | Notes |
-|--------|-------|-------|
-| `install.sh`, `lib/installer.sh` | +40 | Entry + orchestration |
-| `bin/tinfoil.go`, `lib/tui*.sh` | +35 | User-facing sentinel |
-| `modules/*/install.sh` | +30 | Profile composition |
-| `maintenance/`, `policies/` | +30 | Audit, evidence, remediation |
-| `config/profiles/*.yaml` | +25 | Profile edits |
-| `docs/INDEX.md`, `docs/MODULES.md` | +20 | Contracts |
-| `.grok/`, `logs/`, samples | -50 | Unless debugging evidence/logs |
+## Compress
 
-## Bash compression playbook
-
-- **install modules:** `install_<name>()` signature + dry-run/validate flags + one-line side effects
-- **lib/*.sh:** exported functions with signatures; collapse standard `log_*` / `set -euo pipefail` boilerplate
-- **maintenance scripts:** entry args, policy step invoked, output artifact path
-- **YAML profiles:** `description`, `includes[]`, key package lists — not full duplicate of tools.yaml
-- **Go tinfoil:** Cobra subcommands table; Bubble Tea model fields only when editing TUI
+| Kind | Keep |
+|------|------|
+| archy | Msg/Cmd/Eagle signatures; satellite job table |
+| install modules | `install_<name>()` + dry-run/validate flags |
+| lib/*.sh | exported fns; drop `log_*` boilerplate |
+| profiles | `description`, `includes[]`, key pkgs |
+| maintenance | args → policy step → artifact path |
 
 ## Never compress
 
-- `policies/security-remediation.md` and any destructive `maintenance/apply-*.sh` path
-- Full `install_<module>()` when editing that module
-- Profile `includes` when adding/removing modules
-- `lib/tui/update.sh` message dispatch when fixing TUI flows
+- `policies/security-remediation.md`
+- `install_<module>()` under edit
+- Profile `includes[]` on composition change
+- Eagle Msg/Cmd when routing
+- Evidence fields agents parse
 
-## Fusion handoff
+## Handoff
 
-Cross-cutting refactors → load [arch-machine-fusion-sage.md](arch-machine-fusion-sage.md) + [arch-design/coming-next.md](../../arch-design/coming-next.md).
+Cross-cut → [arch-machine-fusion-sage.md](arch-machine-fusion-sage.md) · Ontology subgraph by intent.

@@ -2,34 +2,35 @@
 
 **Pairs with:** [higher-order-decision-architect](../skills/higher-order-decision-architect/SKILL.md)
 
-## Material decision zones
+## Zones
 
-| Zone | Invariants | Pre-mortem trigger |
-|------|------------|-------------------|
-| **Installer / modules** | Idempotent `install_*`; `--dry-run` before mutate | Breaks existing Arch installs; pacman hook conflicts |
-| **TUI destructive flows** | Security Remediation Policy; confirm in gum | Silent `rm -rf` or branch cleanup without audit trail |
-| **Profile YAML** | `includes[]` ↔ `install_<module>` symbol exists | Profile validates in CI but fails on real machine |
-| **tinfoil packaging** | Thin default; `/usr/share/tinfoil` runtime | Heavy deps pulled on `--thin`; PATH shadowing |
-| **Evidence contracts** | Token-efficient bundles; no secrets in logs | Schema drift breaks agent consumers |
+| Zone | Invariant | Pre-mortem |
+|------|-----------|------------|
+| Eagle / satellites | Thin Eagle; satellites own jobs; offline exit | Spaghetti update; Eagle shells out |
+| Installer / modules | Idempotent `install_*`; dry-run first | Breaks live Arch; pacman hook fights |
+| Profiles | `includes[]` ↔ `install_<module>` exists | CI green, machine red |
+| Remediation | Policy + confirm; no silent destroy | `rm -rf` without audit trail |
+| Evidence | No secrets in bundles | Schema drift breaks agents |
+| Thin PATH | archy on thin; tinfoil optional | Heavy deps on `--thin` |
+| Groxy | inject + acp only | Ambient chat as control plane |
 
-## Consequence chain (template)
+## Chain (template)
 
-| Order | Effect | Watch signal |
-|-------|--------|--------------|
-| 1st | New module in `ml-dev` profile | `make validate-profiles` |
-| 2nd | Weekly timer runs heavier maintenance | systemd unit CPU/disk logs |
-| 3rd | Evidence schema change breaks LLM tooling | `tinfoil evidence latest` parse errors |
+| Order | Effect | Watch |
+|-------|--------|-------|
+| 1st | New module in profile | `make validate-profiles` |
+| 2nd | Heavier weekly maintenance | timer CPU/disk |
+| 3rd | Evidence field rename | agent parse fail |
 
-## Antifragility preferences
+## Prefer
 
-- Prefer **dry-run + evidence bundle** before apply-remediation
-- Prefer **thin install path** as default blast-radius bound
-- Prefer **module isolation** over monolithic install scripts
+Dry-run + evidence before apply · thin blast radius · module isolation · Msg/Cmd over ad-hoc scripts
 
-## Refuse vs build
+## Refuse / build
 
-| Refuse | Build toward |
-|--------|--------------|
-| Hand-edit signer/policy JSON (N/A here) | Kit-managed policy patterns for future autonomous hooks |
-| Silent destructive maintenance | gum confirm + policy step logging |
-| Duplicate root-level `*-simple.sh` | Canonical `setups/` + `maintenance/` layout |
+| Refuse | Build |
+|--------|-------|
+| Silent destructive maintenance | Confirm + policy step log |
+| Eagle builds shell strings | Satellite owns command |
+| Duplicate root `*-simple.sh` | Canonical `maintenance/` + setups |
+| Hand am-* to users | Plugin slash / archy only |

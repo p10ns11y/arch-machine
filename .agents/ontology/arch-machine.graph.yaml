@@ -1,0 +1,161 @@
+# arch-machine ontology graph
+meta:
+  version: "1.0"
+  project: arch-machine
+  last_updated: "2026-07-22"
+  mission: >
+    Interconnected friction-removing automations: Eagle routes offline jobs;
+    profiles/modules install; evidence closes the remediation loop.
+
+nodes:
+  - id: am:ControlPlane
+    type: Domain
+    name: Control Plane
+    subgraph: control
+    fused_summary: >
+      archy is the live sentinel. Keys/job lines become Msg; Eagle updates;
+      Cmds hit satellites/shell. Gum TEA and tinfoil are legacy bridges.
+    source_refs:
+      - tools/archy/
+      - docs/archy.md
+      - .agents/skills/eagle-satellite-elomaxz/SKILL.md
+
+  - id: am:EagleTEA
+    type: Concept
+    name: Eagle TEA Message Passing
+    subgraph: control
+    fused_summary: >
+      Model/Msg/Update/Cmd/View. Eagle stays thin; satellites own domain jobs;
+      jobs run offline (start → stream → exit).
+    source_refs:
+      - tools/archy/
+      - .agents/skills/eagle-satellite-elomaxz/references/machine-graph.md
+
+  - id: am:ProfileEngine
+    type: Domain
+    name: Profile Engine
+    subgraph: install
+    fused_summary: >
+      install.sh + lib/installer.sh compose YAML profiles with --thin,
+      --validate, --dry-run before mutate.
+    source_refs:
+      - install.sh
+      - lib/installer.sh
+      - config/profiles/
+
+  - id: am:ModuleBay
+    type: Domain
+    name: Module Bay
+    subgraph: install
+    fused_summary: >
+      modules/*/install.sh expose install_<name>() contracts documented in
+      docs/MODULES.md.
+    source_refs:
+      - modules/
+      - docs/MODULES.md
+
+  - id: am:EvidenceLoop
+    type: Domain
+    name: Evidence Loop
+    subgraph: evidence
+    fused_summary: >
+      maintenance + lib/evidence.sh emit logs/evidence-bundle-*.{json,toon}
+      for agents and remediation.
+    source_refs:
+      - lib/evidence.sh
+      - maintenance/extract-evidence.sh
+      - logs/
+
+  - id: am:RemediationPolicy
+    type: Boundary
+    name: Security Remediation Policy
+    subgraph: evidence
+    fused_summary: >
+      policies/security-remediation.md is never-compress. Dry-run before apply.
+      No silent destructive maintenance.
+    source_refs:
+      - policies/security-remediation.md
+      - maintenance/apply-remediation.sh
+
+  - id: am:Groxy
+    type: Domain
+    name: Groxy Remote Surface
+    subgraph: remote
+    fused_summary: >
+      inject notify + acp serve only. No ambient XChat → open TUI.
+    source_refs:
+      - tools/groxy/
+      - docs/groxy.md
+      - bin/groxy
+
+  - id: am:PluginCycle
+    type: Concept
+    name: Grok Plugin Cycle
+    subgraph: remote
+    fused_summary: >
+      Plugin slash cmds hit host; archy co-pilot launches grok with preload.
+      Slash only — never hand users am-* scripts.
+    source_refs:
+      - docs/archy.md
+      - docs/INDEX.md
+
+  - id: am:Keeper
+    type: Domain
+    name: Keeper Threshold Vault
+    subgraph: vault
+    fused_summary: >
+      tools/keeper installs via security module --agent-expand. Separate SN-KEEP backlog.
+    source_refs:
+      - tools/keeper/
+      - arch-design/keeper.md
+      - arch-design/coming-next-keeper.md
+
+  - id: am:VerifyGate
+    type: Domain
+    name: Verify Gate
+    subgraph: verify
+    fused_summary: >
+      make lint, validate-profiles, cargo tests (archy/groxy/keeper), go vet,
+      install --thin --validate, evidence dry-run.
+    source_refs:
+      - AGENTS.md
+      - .github/workflows/ci.yml
+      - Makefile
+
+edges:
+  - from: am:ControlPlane
+    to: am:EagleTEA
+    rel: implements
+  - from: am:EagleTEA
+    to: am:ModuleBay
+    rel: dispatches_jobs
+  - from: am:EagleTEA
+    to: am:EvidenceLoop
+    rel: dispatches_jobs
+  - from: am:ProfileEngine
+    to: am:ModuleBay
+    rel: composes
+  - from: am:ModuleBay
+    to: am:EvidenceLoop
+    rel: feeds
+  - from: am:EvidenceLoop
+    to: am:RemediationPolicy
+    rel: governed_by
+  - from: am:EagleTEA
+    to: am:Groxy
+    rel: may_launch
+  - from: am:PluginCycle
+    to: am:EagleTEA
+    rel: cycles_with
+  - from: am:Keeper
+    to: am:ProfileEngine
+    rel: expands_via
+  - from: am:VerifyGate
+    to: am:ControlPlane
+    rel: gates
+  - from: am:VerifyGate
+    to: am:ProfileEngine
+    rel: gates
+  - from: am:VerifyGate
+    to: am:EvidenceLoop
+    rel: gates

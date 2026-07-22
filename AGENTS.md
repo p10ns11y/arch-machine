@@ -25,15 +25,21 @@ Do not tell users to run `am-*` by hand — slash commands only.
 
 | Skill | Path | Use when |
 |-------|------|----------|
+| **master-planner** | `.agents/skills/master-planner` | Master plan / skill pack pull-tweak / ontology; `/master-planner` |
 | **eagle-satellite-elomaxz** | `.agents/skills/eagle-satellite-elomaxz` (in-repo) | Edit archy / TEA / job routing; Eagle+Satellites+Elomaxz message passing |
-| ai-optimization | `.agents/skills/ai-optimization` | Large bash/Go scout; token budgets |
+| ai-optimization | `.agents/skills/ai-optimization` | Large bash/Rust/Go scout; token budgets |
 | fusion-sage | `.agents/skills/fusion-sage` | Cross-module synthesis + surplus |
 | higher-order-decision-architect | `.agents/skills/higher-order-decision-architect` | Material architecture/security choices |
-| session-unit-order | `.agents/skills/session-unit-order` (in-repo; `~/skills/session-unit-order` → same; also published to [p10ns11y/skills](https://github.com/p10ns11y/skills)) | User systemd + UWSM/Hyprland; on Omarchy also load **omarchy** skill; forbid `Wants=graphical-session` on Persistent timers |
+| session-unit-order | `.agents/skills/session-unit-order` (in-repo; also [p10ns11y/skills](https://github.com/p10ns11y/skills)) | User systemd + UWSM/Hyprland; on Omarchy also load **omarchy**; forbid `Wants=graphical-session` on Persistent timers |
 | stellar-roadmap | `.agents/skills/stellar-roadmap` | `arch-design/coming-next.md`, SN-* cards |
 | verification-cockpit | `.agents/skills/verification-cockpit` | Regenerate `.agents/verification/` |
+| agent-orchestrator | `.agents/skills/agent-orchestrator` | Multi-step / multi-agent delivery |
+| looper | `.agents/skills/looper` | Budgeted agent loops + HITL gates |
+| git-worktrees | `.agents/skills/git-worktrees` | Isolated worker worktrees |
 
-**Overlays:** `.agents/overlays/arch-machine-*.md` (repo-specific; do not edit symlinked skill bodies).
+**Overlays:** `.agents/overlays/arch-machine-*.md` (repo-specific; do not edit symlinked skill bodies).  
+**Ontology:** `.agents/ontology/` — load subgraph by intent (`control` · `install` · `evidence` · `remote` · `vault` · `verify`).  
+**Pack:** `arch-guardian` via master-planner (`SKILLS_ROOT` → `~/Work/personal/skills` → clone [p10ns11y/skills](https://github.com/p10ns11y/skills)).
 
 ## Fused abstraction
 
@@ -99,8 +105,9 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 
 ## Expand commands
 
-- `expand tui` / `expand archy` — Eagle+Satellites TEA control plane (`tools/archy`, `docs/archy.md`)
-- `expand groxy` / `expand remote` — inject + ACP remote surfaces (`tools/groxy`, `docs/groxy.md`)
-- `expand keeper` / `expand vault` — threshold secrets vault (`tools/keeper`, `arch-design/keeper.md`)
-- `expand profiles` — YAML profile composition
-- `expand evidence` — bundle schema + extraction pipeline
+- `expand tui` / `expand archy` / `expand control` — Eagle+Satellites TEA (`tools/archy`, ontology `control`)
+- `expand groxy` / `expand remote` — inject + ACP (`tools/groxy`, ontology `remote`)
+- `expand keeper` / `expand vault` — threshold vault (`tools/keeper`, ontology `vault`)
+- `expand profiles` / `expand install` — YAML profiles + modules (ontology `install`)
+- `expand evidence` — bundle schema + extraction (ontology `evidence`)
+- `expand master-plan` — pull/tweak skill pack + ontology (skill `master-planner`)

@@ -1,44 +1,39 @@
-# Overlay — arch-machine stellar roadmap scout
+# Overlay — arch-machine stellar roadmap
 
 **Pairs with:** [stellar-roadmap](../skills/stellar-roadmap/SKILL.md)
 
-**Canonical doc:** `arch-design/coming-next.md` · **Boundary:** `policies/security-remediation.md` · **Index:** `docs/INDEX.md`
+**Doc:** `arch-design/coming-next.md` · **Keeper:** `arch-design/coming-next-keeper.md` · **Index:** `docs/INDEX.md`
 
-## Fused abstraction
+## Fused one-liner
 
-**archy** (entry + loop) + shell backends + profile installer + evidence loop → **self-remediating guardian platform** (the repo eats its own policy). Go shim / gum are legacy bridges.
+archy + shell backends + profile installer + evidence → self-remediating guardian (repo eats its policy).
 
-## Scorecard skeleton (refresh on each roadmap pass)
+## Scorecard (refresh each pass)
 
 | Area | Grade | Evidence |
 |------|-------|----------|
-| archy control plane | B+ | `crates/archy`, `make archy` |
-| archy on thin PATH | D | SN-ARCHY-1 open — thin still ships Go shim |
-| Thin-first install | A- | `install.sh --thin`, README |
+| archy control plane | B+ | `tools/archy`, cargo tests |
+| archy on thin PATH | D | SN-ARCHY-1 open |
+| Thin-first install | A- | `install.sh --thin` |
 | Shell backends | A- | `maintenance/*.sh` |
-| Profile validation | B | `scripts/profile-validation-harness.sh`, CI job |
-| Evidence pipeline | A- | `maintenance/extract-evidence.sh`, `logs/` |
+| Profile validation | B | harness + CI |
+| Evidence pipeline | A- | extract-evidence + logs |
 | Remediation policy | A | `policies/security-remediation.md` |
+| groxy / keeper | B | crates + docs |
 | CI gate | B+ | `.github/workflows/ci.yml` |
 
-## SN priority template
+## SN order (template)
 
-1. **SN-ARCHY-1** Thin install ships `/usr/local/bin/archy`
-2. **SN-1** Dogfood gate — `make lint && make validate-profiles && make archy`
-3. **SN-INV-2** Multi-select actuate UX in archy
-4. **SN-GO-THIN** Demote/exit optional Go shim
-5. **SN-2** gum freeze (no new features)
-
-## Key paths
-
-`crates/archy/` · `docs/INDEX.md` · `install.sh` · `modules/` · `maintenance/` · `config/profiles/`
+1. **SN-1** Dogfood — lint + validate-profiles + archy tests  
+2. **SN-ARCHY-1** Thin ships `archy` on PATH  
+3. Inventory/actuate UX in archy  
+4. Demote Go shim  
+5. Freeze gum features  
 
 ## Verify
 
 ```bash
-make lint
-make validate-profiles
-make archy
-./crates/archy/target/debug/archy --print-root
-./install.sh --validate
+make lint && make validate-profiles
+cargo test --manifest-path tools/archy/Cargo.toml
+./install.sh --thin --validate
 ```
