@@ -1,0 +1,43 @@
+# Legacy at runners — prefer cockpit.yaml → cockpits.test
+max_run: 2
+
+tests:
+  - id: make-lint
+    priority: 1
+    command: make lint
+    label: shellcheck + yamllint + markdownlint
+
+  - id: archy-cargo-test
+    priority: 2
+    command: cargo test --manifest-path tools/archy/Cargo.toml
+    label: archy crate tests
+
+  - id: groxy-cargo-test
+    priority: 3
+    command: cargo test --manifest-path tools/groxy/Cargo.toml
+    label: groxy crate tests
+
+  - id: keeper-cargo-test
+    priority: 4
+    command: cargo test --manifest-path tools/keeper/Cargo.toml
+    label: keeper crate tests
+
+  - id: tinfoil-go
+    priority: 5
+    command: go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
+    label: tinfoil build + go vet
+
+  - id: validate-profiles
+    priority: 6
+    command: make validate-profiles
+    label: profile validation harness
+
+  - id: evidence-dry-run
+    priority: 7
+    command: ./maintenance/extract-evidence.sh --dry-run
+    label: evidence extraction dry-run
+
+  - id: install-thin-validate
+    priority: 8
+    command: ./install.sh --thin --validate
+    label: thin install validate (heavier; not in max_run)

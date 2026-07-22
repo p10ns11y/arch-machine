@@ -1,0 +1,95 @@
+# Unified verification cockpit — arch-machine
+# Runtime: av → tmux-layout.sh (keep pane commands in sync); at → cockpits.test
+# ab (build) is host SHELL_AGENT_BUILD_CMD — not configured here.
+
+project: arch-machine
+risk_profile: medium
+
+cockpits:
+  verify:
+    layout: golden-4
+    phi_major: 62
+    phi_minor: 38
+    panes:
+      - id: watch-lint
+        title: WATCH
+        tier: watch
+        priority: 1
+        space_profile: scroll
+        cwd: .
+        command: 'while true; do make lint 2>&1 | tail -40; sleep 30; done'
+        value: shellcheck/yamllint/markdownlint drift
+
+      - id: console
+        title: CMD
+        tier: monitor
+        priority: 2
+        space_profile: interactive
+        value: agent_scan, manual verify
+
+      - id: git
+        title: GIT
+        tier: monitor
+        priority: 3
+        space_profile: tui-side
+        command: lazygit
+        tool: lazygit
+        value: Review agent diffs
+
+      - id: verify-suite
+        title: VERIFY
+        tier: verify
+        priority: 4
+        space_profile: confirm-burst
+        cwd: .
+        command: 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/... && ./maintenance/extract-evidence.sh --dry-run'
+        value: Pre-PR gate from AGENTS.md (omit install.sh --thin --validate — use at listed test)
+
+  # Neovim + avante grok-acp (tools/groxy/extras) — preferred build surface for this repo
+  build:
+    command: nvim .
+    continue_command: nvim .
+
+  test:
+    layout: btop-test
+    max_run: 2
+    tests:
+      - id: make-lint
+        priority: 1
+        command: make lint
+        label: shellcheck + yamllint + markdownlint
+
+      - id: archy-cargo-test
+        priority: 2
+        command: cargo test --manifest-path tools/archy/Cargo.toml
+        label: archy crate tests
+
+      - id: groxy-cargo-test
+        priority: 3
+        command: cargo test --manifest-path tools/groxy/Cargo.toml
+        label: groxy crate tests
+
+      - id: keeper-cargo-test
+        priority: 4
+        command: cargo test --manifest-path tools/keeper/Cargo.toml
+        label: keeper crate tests
+
+      - id: tinfoil-go
+        priority: 5
+        command: go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
+        label: tinfoil build + go vet
+
+      - id: validate-profiles
+        priority: 6
+        command: make validate-profiles
+        label: profile validation harness
+
+      - id: evidence-dry-run
+        priority: 7
+        command: ./maintenance/extract-evidence.sh --dry-run
+        label: evidence extraction dry-run
+
+      - id: install-thin-validate
+        priority: 8
+        command: ./install.sh --thin --validate
+        label: thin install validate (heavier; not in max_run)

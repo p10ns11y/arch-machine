@@ -74,7 +74,7 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 
 **CI mirror:** `.github/workflows/ci.yml` — **hard:** archy/groxy/keeper cargo tests (+ eye-comfort gates). **Advisory today:** shellcheck/yamllint/markdownlint/profile stub/evidence-smoke often `|| true`. Soft-obsolete: `arch-design/soft-obsolete-candidates.md`.
 
-**Cockpit:** `av` delegates here when `.agents/verification/tmux-layout.sh` exists (requires host `~/.config/shell` verify libs). VERIFY pane is a **partial** gate vs the full list above.
+**Cockpit:** `.agents/verification/README.md` — `av` / `at` in tmux (host shellyxz `SHELL_VERIFICATION_LIB`). VERIFY pane matches the list above except `install.sh --thin --validate` (listed under `at`, not auto `max_run`).
 
 ## Never compress (agents)
 
