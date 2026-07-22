@@ -1,6 +1,7 @@
 # Soft-obsolete candidates → hard pass (2026-07)
 
 **Status:** Hard pass executed on `feat/master-planner-arch-guardian` (docs + deletes only; **no application code**).  
+**Narrative log:** [evolutions/2026-07-22.md](evolutions/2026-07-22.md)  
 **Soft commit:** `docs: soft domain evolution pass (1–6) with SO inventory`  
 **This pass:** remove approved artifacts + rewrite docs that taught them.
 
