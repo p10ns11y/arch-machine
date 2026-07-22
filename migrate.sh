@@ -213,6 +213,7 @@ run_migration_validation() {
 
         if sudo systemctl is-active --quiet k3s 2>/dev/null; then
             # validate_kubernetes || log_warn "Kubernetes validation failed"
+            true
         fi
     else
         log_warn "Validator script not found, skipping validation"

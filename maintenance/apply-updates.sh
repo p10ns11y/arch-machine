@@ -152,7 +152,8 @@ verify_updates() {
 
 # Create update report
 create_update_report() {
-    local report_file="$LOGS_DIR/update-report-$(date +%Y%m%d-%H%M%S).txt"
+    local report_file
+    report_file="$LOGS_DIR/update-report-$(date +%Y%m%d-%H%M%S).txt"
 
     {
         echo "=== Update Application Report ==="

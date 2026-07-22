@@ -56,22 +56,22 @@ flowchart LR
 | Area | Grade | One line | Evidence |
 |------|-------|----------|----------|
 | **archy control plane** | **B+** | Entry + loop MVP; menus steer shell backends | `tools/archy`, `make archy` |
-| **archy on thin PATH** | **D** | MVP builds in-repo; thin install still ships Go shim only | `install.sh` → `/usr/local/bin/tinfoil`; no `archy` install yet |
-| Thin install | A- | Default `--thin` ships sentinel runtime tree | `install.sh`, README |
+| **archy on thin PATH** | **D** | MVP builds in-repo; thin install still ships Go shim only | `install.sh` → `/usr/local/bin/tinfoil`; no `archy` install yet — **SN-ARCHY-1** |
+| Thin install | A- | Default `--thin` ships sentinel runtime tree | `install.sh`, README; day-1 docs interim in `docs/INSTALLATION.md` |
 | Shell backends | A- | Inventory/catalog/actuate/audit/evidence | `maintenance/*.sh` |
 | Inventory backend | **B+** | Schema v1 + ownership tags | `maintenance/inventory.sh`, `config/baselines/omarchy.yaml` |
 | Catalog search | **B** | Shell backend + archy menu | `maintenance/catalog.sh`, SN-CAT-1 |
 | Select update/remove | **C** | Dry-run actuate + refuse-list; multi-select UX in archy next | `maintenance/package-actuate.sh`, SN-INV-2 |
 | Grok agent TUI | **B+** | Slash status/init/audit/expand; fail closed | `plugins/arch-machine`, BOUNDARY.md |
-| **groxy remote surfaces** | **B+** | inject (host→XChat) + `acp serve`; poll removed; multi-session docs | `tools/groxy`, `tools/groxy/README.md`, `docs/groxy.md`, SN-GROXY-1 |
-| Gum TUI (legacy) | C+ | Works; freeze feature growth | `lib/tui/*.sh`, Issue #7 |
-| Go shim (optional) | C+ | Dispatcher only; not the control plane | `bin/tinfoil.go` |
+| **Grok agent transports** | **A-** | inject + acp serve + nvim stdio docs; SN-GROXY-3 parked | `tools/groxy`, `docs/groxy.md`, ontology `agent_transport` |
+| Gum TUI (legacy) | C+ | Works; freeze feature growth | `lib/tui/*.sh`, Issue #7 · soft SO-1 |
+| Go shim (optional) | C+ | Dispatcher only; still default thin PATH face | `bin/tinfoil.go` · SN-GO-THIN after SN-ARCHY-1 |
 | Keeper (MFA vault) | **A** | k=2 n=3 + PQ seal + drill + rebind + loop + PATH | `tools/keeper` |
-| Profiles | B+ | YAML compose; harness asserts module.category | `config/profiles/*.yaml`, SN-3 harness |
-| Evidence | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
-| Remediation policy | A | Repo applies own 6-step policy | `policies/security-remediation.md` |
-| CI | B+ | shellcheck, go, yaml, evidence smoke; **groxy + archy + keeper cargo test** | `.github/workflows/ci.yml`; SN-GROXY-2 |
-| Agent skills | B+ | Symlinked skills + overlays | `AGENTS.md`, `.agents/` |
+| Profiles | B+ | YAML compose; **local** harness asserts module.category | `config/profiles/*.yaml`, `make validate-profiles`; CI job still stub |
+| Evidence (extract) | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
+| Remediation (apply) | **C** | Policy doc strong; Phase-5 applicator stub **removed** (SO-11) | `policies/security-remediation.md` |
+| CI | B | Cargo hard-fail (archy/groxy/keeper); shell/profile/evidence often soft | `.github/workflows/ci.yml` |
+| Agent skills / ontology | **A-** | skills-lock + overlays + rules under `.agents`; soft-obsolete list | `AGENTS.md`, `.agents/`, `arch-design/soft-obsolete-candidates.md` |
 
 ## §2 System map today
 

@@ -1,0 +1,16 @@
+# at test cockpit — priority-ordered runners (agents: edit for your project).
+max_run: 2
+
+tests:
+  - id: npm-test
+    priority: 1
+    command: pnpm test
+    watch_command: pnpm test --watch
+    label: package.json test script
+
+  - id: verify-main
+    priority: 2
+    command: pnpm test
+    label: full-suite confirm — replace with build/test/lint
+
+# Auto-discovery when absent: package.json, Cargo.toml, pytest, bin/test/*.test.sh, shellcheck

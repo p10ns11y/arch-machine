@@ -507,7 +507,8 @@ scan_config_lynis() {
         emit skip config "lynis: needs passwordless sudo"
         return
     fi
-    local lrep="$REPORTS_DIR/lynis-report-$(date +%Y%m%d).txt"
+    local lrep
+    lrep="$REPORTS_DIR/lynis-report-$(date +%Y%m%d).txt"
     mkdir -p "$REPORTS_DIR"
     timeout 120 sudo lynis audit system --quiet --report-file "$lrep" >/dev/null 2>&1 || true
     report "lynis report: $lrep"

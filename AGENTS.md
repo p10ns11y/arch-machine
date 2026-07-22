@@ -18,37 +18,46 @@ Skill: **eagle-satellite-elomaxz** · Doc: `docs/archy.md` · Code: `tools/archy
 | Agent → host | Grok plugin `arch-machine` | `/arch-status`, `/arch-audit`, `/arch-control`, `/arch-init`, `/arch-expand` |
 | Host → agent | archy co-pilot | `p` / `G` / brief Enter → `grok --cwd … "<preload>"` |
 
-Plugin checkout: `~/Work/personal/plugins/arch-machine` ([p10ns11y/plugins](https://github.com/p10ns11y/plugins)) · `docs/CROSS-REF.md`  
+Plugin: [p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/` · cycle docs in `docs/archy.md`  
 Do not tell users to run `am-*` by hand — slash commands only.
 
-## Active skills (symlinked or in-repo)
+## Active skills
 
-| Skill | Path | Use when |
+| Skill | Kind | Use when |
 |-------|------|----------|
-| **eagle-satellite-elomaxz** | `.agents/skills/eagle-satellite-elomaxz` (in-repo) | Edit archy / TEA / job routing; Eagle+Satellites+Elomaxz message passing |
-| ai-optimization | `.agents/skills/ai-optimization` | Large bash/Go scout; token budgets |
-| fusion-sage | `.agents/skills/fusion-sage` | Cross-module synthesis + surplus |
-| higher-order-decision-architect | `.agents/skills/higher-order-decision-architect` | Material architecture/security choices |
-| session-unit-order | `.agents/skills/session-unit-order` (in-repo; `~/skills/session-unit-order` → same; also published to [p10ns11y/skills](https://github.com/p10ns11y/skills)) | User systemd + UWSM/Hyprland; on Omarchy also load **omarchy** skill; forbid `Wants=graphical-session` on Persistent timers |
-| stellar-roadmap | `.agents/skills/stellar-roadmap` | `arch-design/coming-next.md`, SN-* cards |
-| verification-cockpit | `.agents/skills/verification-cockpit` | Regenerate `.agents/verification/` |
+| **master-planner** | in-repo | Master plan / pack install / overlay tweak / ontology |
+| **eagle-satellite-elomaxz** | in-repo | Edit archy / TEA / job routing |
+| **session-unit-order** | in-repo | User systemd + UWSM/Hyprland; Omarchy → also **omarchy** skill |
+| ai-optimization | locked | Large bash/Rust/Go scout; token budgets |
+| fusion-sage | locked | Cross-module synthesis + surplus |
+| higher-order-decision-architect | locked | Material architecture/security choices |
+| stellar-roadmap | locked | `arch-design/coming-next.md`, SN-* cards |
+| verification-cockpit | locked | Regenerate `.agents/verification/` |
+| agent-orchestrator | locked | Multi-step / multi-agent delivery |
+| looper | locked | Budgeted agent loops + HITL gates |
+| git-worktrees | locked | Isolated worker worktrees |
 
-**Overlays:** `.agents/overlays/arch-machine-*.md` (repo-specific; do not edit symlinked skill bodies).
+**Catalog:** [skills.sh/p10ns11y/skills](https://www.skills.sh/p10ns11y/skills) · **Lock:** `skills-lock.json`  
+**Install / restore:** `npx skills experimental_install` (or `.agents/skills/master-planner/scripts/pull-skills.sh .`)  
+**Overlays:** `.agents/overlays/arch-machine-*.md` — project tweaks only; do not edit locked skill bodies.  
+**Rules (canonical):** `.agents/rules/*.mdc` — `.cursor/rules` and `.grok/rules` are relative symlinks.  
+**Ontology:** `.agents/ontology/` — load by intent (`control` · `install` · `evidence` · `agent_transport` · `vault` · `verify`).  
+**Agent links:** `.cursor/{skills,rules}/*` and `.grok/{skills,rules}/*` → relative `../../.agents/...`.
 
 ## Fused abstraction
 
 ```text
-archy (Eagle + satellites)  →  maintenance/*.sh / install.sh  →  evidence bundles
-        ↑ TEA Msg/Cmd                    iron peak                    logs/
-tinfoil.go / gum TUI          (optional shim / legacy)
+archy Eagle → maintenance/*.sh / install.sh → evidence
+     ↕ G/p · plugin /arch-*   (local Grok Build cycle — not groxy)
 
-groxy:  inject → host job → XChat notify
-        acp serve → grok agent serve (client picks cwd)
-        (no ambient XChat → open TUI)
+Grok agent transports (docs/groxy.md):
+  acp serve  →  grok agent serve   (remote / long-lived)
+  nvim       →  grok agent stdio   (local IDE; no serve)
+  inject     →  XChat notify only
 ```
 
-**Sentinel surface** (`tools/archy`, optional `bin/tinfoil.go`, `lib/tui.sh`) → **profile installer** (`install.sh`, `lib/installer.sh`, `modules/*/`) → **maintenance heart** (`maintenance/*`, `policies/security-remediation.md`) → **evidence loop** (`lib/evidence.sh`, `logs/evidence-bundle-*.{json,toon}`).  
-**Remote:** `tools/groxy` / `bin/groxy` — inject + ACP only (see `docs/groxy.md`).
+**Sentinel:** `tools/archy` → **installer** (`install.sh`, modules) → **maintenance** + **evidence**.  
+**Transports:** `tools/groxy` / Neovim extras — see `docs/groxy.md`. Do not conflate with archy↔Grok Build.
 
 ## Verify before done
 
@@ -63,9 +72,9 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 ./maintenance/extract-evidence.sh --dry-run
 ```
 
-**CI mirror:** `.github/workflows/ci.yml` (shellcheck, yamllint, go build/vet, profile validation stub, evidence smoke).
+**CI mirror:** `.github/workflows/ci.yml` — **hard:** archy/groxy/keeper cargo tests (+ eye-comfort gates). **Advisory today:** shellcheck/yamllint/markdownlint/profile stub/evidence-smoke often `|| true`. Soft-obsolete: `arch-design/soft-obsolete-candidates.md`.
 
-**Cockpit:** `av` delegates here when `.agents/verification/tmux-layout.sh` exists (requires host `~/.config/shell` verify libs).
+**Cockpit:** `av` delegates here when `.agents/verification/tmux-layout.sh` exists (requires host `~/.config/shell` verify libs). VERIFY pane is a **partial** gate vs the full list above.
 
 ## Never compress (agents)
 
@@ -85,7 +94,7 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | **Control plane (main)** | `tools/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
-| **Remote surfaces** | `tools/groxy` · `tools/groxy/README.md` · `docs/groxy.md` · `bin/groxy` (`inject` notify · `acp serve` control) |
+| **Remote / agent transports** | `tools/groxy` · `docs/groxy.md` · Neovim extras (`grok agent stdio`) · `bin/groxy` (`inject` · `acp serve`) |
 | **Threshold vault** | `tools/keeper` · `tools/keeper/README.md` · `arch-design/keeper.md` · install via `modules/security/install.sh --agent-expand` |
 | TUI (Elm/gum legacy) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI shim | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
@@ -99,8 +108,9 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 
 ## Expand commands
 
-- `expand tui` / `expand archy` — Eagle+Satellites TEA control plane (`tools/archy`, `docs/archy.md`)
-- `expand groxy` / `expand remote` — inject + ACP remote surfaces (`tools/groxy`, `docs/groxy.md`)
-- `expand keeper` / `expand vault` — threshold secrets vault (`tools/keeper`, `arch-design/keeper.md`)
-- `expand profiles` — YAML profile composition
-- `expand evidence` — bundle schema + extraction pipeline
+- `expand tui` / `expand archy` / `expand control` — local Eagle TUI + Grok Build cycle (`docs/archy.md`, ontology `control`)
+- `expand groxy` / `expand remote` / `expand transport` — serve · stdio · inject (`docs/groxy.md`, ontology `agent_transport`)
+- `expand keeper` / `expand vault` — threshold vault (`tools/keeper`, ontology `vault`)
+- `expand profiles` / `expand install` — YAML profiles + modules (ontology `install`)
+- `expand evidence` — bundle schema + extraction (ontology `evidence`)
+- `expand master-plan` — pull/tweak skill pack + ontology (skill `master-planner`)

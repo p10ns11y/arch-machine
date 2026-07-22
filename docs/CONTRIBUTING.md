@@ -4,27 +4,26 @@ The Vigilant Guardian welcomes contributions that strengthen the evidence self-l
 
 ## Before You Open a PR
 
-1. Run the project's own tools:
-   - `./install.sh --thin`
-   - `tinfoil` (or `tinfoil tui`)
-   - `maintenance/security-audit.sh`
-   - `maintenance/extract-evidence.sh`
+1. Prefer the live control plane from a checkout:
+   ```bash
+   make archy
+   TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
+   ```
+   Or call backends: `./maintenance/security-audit.sh`, `./maintenance/extract-evidence.sh`.
+2. `make lint` and `make validate-profiles`.
+3. Cargo where you touched Rust:
+   ```bash
+   cargo test --manifest-path tools/archy/Cargo.toml
+   cargo test --manifest-path tools/groxy/Cargo.toml
+   cargo test --manifest-path tools/keeper/Cargo.toml
+   ```
+4. Produce an evidence bundle (or `--dry-run`) and reference it in your PR when relevant.
 
-2. `make lint` (or the individual linters) and `make validate-profiles`.
+Full gate list: root [AGENTS.md](../AGENTS.md). Cockpit VERIFY is a subset — see `.agents/verification/`.
 
-3. Produce an evidence bundle and reference it in your PR.
+## CI
 
-## CI Requirements (Phase 4+)
-
-All PRs to `sentinel` must pass the CI workflow (see `.github/workflows/ci.yml`):
-- shellcheck
-- yamllint
-- Go build/vet
-- Profile validation harness
-- Evidence smoke test
-- Markdown lint
-
-See the PR template for the full checklist.
+See `.github/workflows/ci.yml`. Today **hard**: archy/groxy/keeper cargo (+ eye-comfort gates). Shell/profile/evidence jobs may still be advisory (`|| true`). Do not assume every AGENTS.md check is CI-blocking yet.
 
 ## Adding a Module
 
@@ -32,6 +31,6 @@ See [docs/MODULES.md](MODULES.md).
 
 ## Documentation
 
-Update `docs/INDEX.md` and relevant guides when changing behavior or adding features.
+Update `docs/INDEX.md` and relevant guides when changing behavior. Evolution inventory: [arch-design/soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md).
 
 Thank you for helping the Sentinel watch itself.

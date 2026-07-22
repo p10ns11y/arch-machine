@@ -78,7 +78,7 @@ Full table: [omarchy-commands.md](./omarchy-commands.md).
 
 ## archy control plane
 
-`archy` (or `tinfoil tui`) menu includes **Omarchy status** → runs `maintenance/omarchy-status.sh` and streams stdio.
+`archy` menu includes **Omarchy status** → runs `maintenance/omarchy-status.sh` and streams stdio.
 
 Mutating Omarchy package/theme flows stay in Omarchy’s own TUI/`omarchy menu` until multi-select actuate lands.
 

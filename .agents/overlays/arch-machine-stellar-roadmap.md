@@ -1,44 +1,42 @@
-# Overlay — arch-machine stellar roadmap scout
+# Overlay — arch-machine stellar roadmap
 
 **Pairs with:** [stellar-roadmap](../skills/stellar-roadmap/SKILL.md)
 
-**Canonical doc:** `arch-design/coming-next.md` · **Boundary:** `policies/security-remediation.md` · **Index:** `docs/INDEX.md`
+**Doc:** `arch-design/coming-next.md` · **Keeper:** `arch-design/coming-next-keeper.md` · **Index:** `docs/INDEX.md`  
+**Soft-obsolete / hard pass:** `arch-design/soft-obsolete-candidates.md`
 
-## Fused abstraction
+## Fused one-liner
 
-**archy** (entry + loop) + shell backends + profile installer + evidence loop → **self-remediating guardian platform** (the repo eats its own policy). Go shim / gum are legacy bridges.
+archy + shell backends + profile installer + evidence → self-remediating guardian. Grok transports (serve/stdio/inject) are sibling surfaces.
 
-## Scorecard skeleton (refresh on each roadmap pass)
+## Scorecard skeleton (2026-07 soft pass)
 
 | Area | Grade | Evidence |
 |------|-------|----------|
-| archy control plane | B+ | `crates/archy`, `make archy` |
-| archy on thin PATH | D | SN-ARCHY-1 open — thin still ships Go shim |
-| Thin-first install | A- | `install.sh --thin`, README |
+| archy control plane | B+ | `tools/archy`, cargo tests |
+| archy on thin PATH | D | SN-ARCHY-1 open |
+| Grok agent transports | A- | `docs/groxy.md`, ontology |
+| Thin-first install | A- | `install.sh --thin` |
 | Shell backends | A- | `maintenance/*.sh` |
-| Profile validation | B | `scripts/profile-validation-harness.sh`, CI job |
-| Evidence pipeline | A- | `maintenance/extract-evidence.sh`, `logs/` |
-| Remediation policy | A | `policies/security-remediation.md` |
-| CI gate | B+ | `.github/workflows/ci.yml` |
+| Profile validation | B | local harness; CI stub |
+| Evidence extract | A- | extract-evidence + logs |
+| Remediation apply | C | policy strong; applicator stub removed (SO-11) |
+| Keeper | A | `tools/keeper` |
+| CI | B | cargo hard; shell soft |
+| Agent skills | A- | skills-lock + `.agents/` |
 
 ## SN priority template
 
-1. **SN-ARCHY-1** Thin install ships `/usr/local/bin/archy`
-2. **SN-1** Dogfood gate — `make lint && make validate-profiles && make archy`
-3. **SN-INV-2** Multi-select actuate UX in archy
-4. **SN-GO-THIN** Demote/exit optional Go shim
-5. **SN-2** gum freeze (no new features)
-
-## Key paths
-
-`crates/archy/` · `docs/INDEX.md` · `install.sh` · `modules/` · `maintenance/` · `config/profiles/`
+1. **SN-1** Dogfood — lint + validate-profiles + cargo tests  
+2. **SN-ARCHY-1** Thin ships `archy` on PATH  
+3. Wire CI `make validate-profiles` (finish SN-3)  
+4. Inventory/actuate UX in archy  
+5. SN-GO-THIN demote Go shim  
 
 ## Verify
 
 ```bash
-make lint
-make validate-profiles
-make archy
-./crates/archy/target/debug/archy --print-root
-./install.sh --validate
+make lint && make validate-profiles
+cargo test --manifest-path tools/archy/Cargo.toml
+./install.sh --thin --validate
 ```

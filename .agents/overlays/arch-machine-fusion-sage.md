@@ -1,35 +1,40 @@
-# Overlay — arch-machine fusion playbook
+# Overlay — arch-machine fusion
 
-**Pairs with:** [fusion-sage](../skills/fusion-sage/SKILL.md)
+**Pairs with:** [fusion-sage](../skills/fusion-sage/SKILL.md) · **Ontology:** [../ontology/INDEX.md](../ontology/INDEX.md)
 
-## Fused abstraction: Vigilant Guardian Loop
+## Fused loop
 
+```text
+archy Eagle → maintenance/*.sh / install.sh → evidence
+     ↕ G/p preload (local Grok Build cycle — not groxy)
+groxy transports: acp serve | nvim stdio | inject→XChat
+keeper: security --agent-expand → ~/.local/bin/keeper
 ```
-tinfoil (CLI/TUI) ──► install.sh + profiles ──► modules/install_* ──► maintenance orchestration
-        ▲                                                      │
-        └──────── evidence bundles (JSON/TOON) ◄────────────────┘
-```
 
-**Binding energy:** High — appears in `docs/INDEX.md`, `install.sh`, `maintenance/weekly-check.sh`, `lib/evidence.sh`, `bin/tinfoil.go`.
+**Iron peak:** Eagle thin + offline jobs + evidence schema — compounds a decade.
 
-## Domain aggregates
+## Aggregates
 
 | Aggregate | Sources | Stable API |
 |-----------|---------|------------|
-| **SentinelSurface** | `bin/tinfoil.go`, `lib/tui.sh`, `lib/tui/*` | `tinfoil`, `tinfoil tui`, audit/cleanup/evidence subcmds |
-| **ProfileEngine** | `install.sh`, `lib/installer.sh`, `config/profiles/` | `--profile`, `--thin`, `--validate`, `--dry-run` |
-| **ModuleBay** | `modules/*/install.sh` | `install_<name>()` per `docs/MODULES.md` |
-| **EvidenceReactor** | `lib/evidence.sh`, `maintenance/extract-evidence.sh` | `logs/evidence-bundle-*.{json,toon}` |
-| **RemediationPolicy** | `policies/security-remediation.md`, `maintenance/apply-remediation.sh` | 6-step audit→fix→kill meta-rule |
+| **ControlPlane** | `tools/archy/`, eagle skill | Msg → Eagle → Cmd → satellite |
+| **GrokBuildCycle** | `docs/archy.md`, `grok_launch.rs` | `G`/`p` ↔ plugin `/arch-*` |
+| **ProfileEngine** | `install.sh`, `lib/installer.sh`, profiles | `--profile --thin --validate --dry-run` |
+| **ModuleBay** | `modules/*/install.sh` | `install_<name>()` · `docs/MODULES.md` |
+| **EvidenceLoop** | `lib/evidence.sh`, extract-evidence | `logs/evidence-bundle-*.{json,toon}` |
+| **RemediationPolicy** | `policies/security-remediation.md` | audit→fix dry-run first |
+| **GrokAgentTransports** | `docs/groxy.md`, `tools/groxy/` | parent of serve / stdio / inject |
+| **GroxyAcpServe** | `bin/groxy acp serve` | WS remote `grok agent serve` |
+| **NvimGrokStdio** | groxy extras neovim plugin | `grok agent stdio` (no serve) |
+| **GroxyInject** | `bin/groxy inject` | host → XChat notify only |
+| **Keeper** | `tools/keeper/`, `modules/security/install.sh` | `--agent-expand` → `~/.local/bin/keeper` |
 
-## Surplus targets (Q > 1)
+## Surplus (Q>1)
 
-1. **Single `ModuleRegistry` manifest** — derive profile validation + docs tables from `config/tools.yaml` (+47 tokens saved per profile task)
-2. **TUI Message enum doc** — generate from `lib/tui/messages.sh` for agent-safe TUI edits
-3. **Evidence schema pin** — `fusion-state.json` node for bundle fields agents may rely on
+1. Derive profile docs from one registry (cut duplicate tables)
+2. Pin evidence schema node agents may trust
+3. Ontology drift check before merge on control/install edges
 
 ## Expand
 
-- `expand SentinelSurface` → full Cobra + gum TUI graph
-- `expand ProfileEngine` → harness + YAML includes graph
-- `expand EvidenceReactor` → JSON/TOON field reference
+`expand control` · `expand install` · `expand evidence` · `expand remote` · `expand vault`

@@ -140,4 +140,4 @@ Rotate: stop serve → delete file → start again. Details in [docs/groxy.md](.
 | Full operator guide + Neovim | [docs/groxy.md](../../docs/groxy.md) |
 | Local control plane | [tools/archy/README.md](../archy/README.md) · [docs/archy.md](../../docs/archy.md) |
 | Roadmap cards SN-GROXY-* | [arch-design/coming-next.md](../../arch-design/coming-next.md) |
-| Old path name | [docs/xchat-remote.md](../../docs/xchat-remote.md) → this package |
+| Old path name `xchat-remote` | Use this package + [docs/groxy.md](../../docs/groxy.md) (stub doc removed) |

@@ -182,9 +182,9 @@ No live phase hot-reload. See `?` help.
 
 **Iron peak:** logic lives under `maintenance/`. This crate only steers.
 
-## Wire as default `tinfoil tui`
+## PATH note (SN-ARCHY-1)
 
-When `archy` is on `PATH`, the Go dispatcher can start it first (`bin/tinfoil.go`). Gum stays fallback. (PATH install: SN-ARCHY-1.)
+Thin install still ships the Go `tinfoil` shim. When `archy` is on `PATH`, that shim can prefer it. Gum `lib/tui/` is a frozen fallback only — not the product.
 
 ## Tests
 

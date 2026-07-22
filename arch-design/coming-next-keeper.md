@@ -189,14 +189,14 @@ flowchart LR
 
 **Done when:** `status` reports healthy after no-passphrase recover; canary open.
 
-**Verify:**
+**Verify:** (default **k=2 n=3** — passphrase + escrow share; no `KEEPER_KNOWLEDGE` required)
 ```bash
 cd tools/keeper
-export KEEPER_ROOT=/tmp/keeper-dogfood KEEPER_PASSPHRASE=… KEEPER_KNOWLEDGE=…
+export KEEPER_ROOT=/tmp/keeper-dogfood KEEPER_PASSPHRASE='dogfood-pass'
 cargo run --quiet -- init --escrow /tmp/keeper-escrow.json
 cargo run --quiet -- put demo --value 'x'
-# unset passphrase
-cargo run --quiet -- recover --escrow /tmp/keeper-escrow.json
+unset KEEPER_PASSPHRASE
+cargo run --quiet -- recover --escrow /tmp/keeper-escrow.json   # prompts / uses escrow share
 cargo run --quiet -- status   # healthy
 ```
 

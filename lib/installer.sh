@@ -143,7 +143,8 @@ add_user_to_group() {
 run_installer_script() {
     local url="$1"
     local description="$2"
-    local temp_file="/tmp/installer-$(basename "$url")"
+    local temp_file
+    temp_file="/tmp/installer-$(basename "$url")"
 
     log_subsection "Installing $description from $url"
 
@@ -196,9 +197,9 @@ version_compare() {
     fi
 
     # Simple version comparison (doesn't handle all cases)
-    local IFS=.
-    local v1_parts=($version1)
-    local v2_parts=($version2)
+    local -a v1_parts v2_parts
+    IFS=. read -ra v1_parts <<< "$version1"
+    IFS=. read -ra v2_parts <<< "$version2"
 
     for i in {0..2}; do
         local v1_part="${v1_parts[$i]:-0}"

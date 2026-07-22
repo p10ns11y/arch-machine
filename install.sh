@@ -463,6 +463,7 @@ install_module() {
     log_section "Installing $module module ($category)"
 
     # Source the module script
+    # shellcheck source=/dev/null
     source "$module_script"
 
     # Call the install function with category parameter

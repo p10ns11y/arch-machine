@@ -28,7 +28,7 @@ tui_init_screen() {
 
 tui_clear_screen() {
   if [[ -e /dev/tty ]]; then
-    printf '\033[H\033[2J' </dev/tty 2>/dev/null || clear
+    printf '\033[H\033[2J' >/dev/tty 2>/dev/null || clear
   else
     clear 2>/dev/null || true
   fi

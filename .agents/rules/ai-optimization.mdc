@@ -1,0 +1,21 @@
+---
+description: Context Sage fission — arch-machine bash/Go sentinel; load overlay for compression rules.
+alwaysApply: false
+globs:
+  - "**/*.sh"
+  - "**/*.go"
+  - "config/**"
+  - "modules/**"
+  - "maintenance/**"
+---
+
+Load [ai-optimization/SKILL.md](../skills/ai-optimization/SKILL.md) and project overlay [.agents/overlays/arch-machine-ai-optimization.md](../overlays/arch-machine-ai-optimization.md).
+
+## arch-machine defaults
+
+- **Hierarchy first:** `docs/INDEX.md` → touched subsystem → file bodies
+- **Verify:** `make lint`, `make validate-profiles`, `cargo test --manifest-path tools/archy/Cargo.toml`
+- **Never compress:** `policies/security-remediation.md`, destructive maintenance, files being edited
+- **Expand:** user says `expand <concept>` or edits summarized TUI/installer code
+
+Pair with [fusion-sage.mdc](fusion-sage.mdc) for cross-module synthesis.

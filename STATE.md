@@ -1,4 +1,8 @@
 # STATE.md — Live Mission State (ARCH-MACHINE-2026-05-28)
+
+> **Archive.** Historical gum-era mission log. Not current truth.  
+> Live control: [docs/archy.md](docs/archy.md) · Roadmap: [arch-design/coming-next.md](arch-design/coming-next.md) · Evolution: [arch-design/soft-obsolete-candidates.md](arch-design/soft-obsolete-candidates.md).
+
 **Mission Started**: 2026-05-28T23:27:43+05:30
 **Current Phase**: 4 - Final Integration, Self-Audit & Closeout
 **Last Re-Read**: 2026-05-28T23:30:00+05:30 (before Phase 1 actions)

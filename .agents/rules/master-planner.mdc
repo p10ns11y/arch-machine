@@ -1,0 +1,14 @@
+---
+description: Load master-planner when pulling/tweaking skill packs or authoring master plans as friction-removing automation webs.
+alwaysApply: false
+---
+
+# Master Planner (router)
+
+When the user asks for a **master plan**, **skill pack**, **pull/tweak skills**, or **project ontology**:
+
+1. Load [master-planner/SKILL.md](../skills/master-planner/SKILL.md).
+2. Load [.agents/overlays/arch-machine-master-planner.md](../overlays/arch-machine-master-planner.md).
+3. Core thesis (verbatim): *A true master plan, to me, is only one thing: an interconnected, inter-related web of friction-removing automations aimed at impossible missions that great vision makes real.*
+4. Portable skills via `npx skills` + `skills-lock.json`; project tweaks only in `.agents/overlays/`.
+5. Surface: pack · friction removed · verify · next automation.

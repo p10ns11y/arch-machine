@@ -4,6 +4,24 @@
 
 This file embodies the "self-application of policy" principle at the heart of the Vigilant Guardian platform. The Sentinel purges its own waste.
 
+## Evolution pass — hard removals (2026-07)
+
+Inventory: **[soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md)** (outcomes table).
+
+**Removed this pass (docs/artifacts only):**
+
+- Gum-era plan + overnight `cli-policy-remediation-tui/` handoff
+- `docs/xchat-remote.md` (use [groxy.md](groxy.md))
+- Root `EVIDENCE-EXTRACTION.md` (use [MAINTENANCE.md](MAINTENANCE.md) § Evidence)
+- `maintenance/apply-remediation.sh` Phase-5 stub (policy remains [security-remediation.md](../policies/security-remediation.md))
+- Weak Apr `logs/*-sample*` fixtures
+
+**Still on disk (code deferred):** gum `lib/tui/`, Go shim PATH face, groxy leftover poll APIs, CI profile stub.
+
+**Last evolution note**: 2026-07-22 hard pass on `feat/master-planner-arch-guardian`.
+
+---
+
 ## 2026-05-29 Phase 1: systemd/ Exact Duplication Tree (High-Severity Vulnerability)
 
 **What was killed**:

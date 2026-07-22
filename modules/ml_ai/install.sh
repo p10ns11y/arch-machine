@@ -31,7 +31,8 @@ install_conda() {
 
 
     log_subsection "Downloading $installer_name"
-    local installer_file="/tmp/$installer_name-$(date +%s).sh"
+    local installer_file
+    installer_file="/tmp/$installer_name-$(date +%s).sh"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would download $source_url"
@@ -120,7 +121,8 @@ setup_ai_environment() {
     else
         rocm_full=$(hipconfig --version 2>/dev/null || echo "7.2")
     fi
-    local rocm_ver=$(echo "$rocm_full" | cut -d. -f1,2)
+    local rocm_ver
+    rocm_ver=$(echo "$rocm_full" | cut -d. -f1,2)
     local pip_index="https://download.pytorch.org/whl/rocm${rocm_ver}"
 
     # Check if environment already exists
@@ -189,7 +191,8 @@ setup_xai_environment() {
     else
         rocm_full=$(hipconfig --version 2>/dev/null || echo "7.2")
     fi
-    local rocm_ver=$(echo "$rocm_full" | cut -d. -f1,2)
+    local rocm_ver
+    rocm_ver=$(echo "$rocm_full" | cut -d. -f1,2)
     local pip_index="https://download.pytorch.org/whl/rocm${rocm_ver}"
 
     # Check if environment already exists
@@ -289,7 +292,7 @@ install_ml_ai() {
     local environments
     mapfile -t environments < <(yaml_get "$PROFILE_CONFIG/$PROFILE.yaml" "customizations.ml_ai.conda.environments[]")
 
-    if [[ "$environments" == "null" ]] || [[ ${#environments} -eq 0 ]]; then
+    if [[ ${#environments[@]} -eq 0 ]] || [[ "${environments[0]:-}" == "null" ]]; then
         log_subsection "default envs"
         # Default environments
         setup_ai_environment
