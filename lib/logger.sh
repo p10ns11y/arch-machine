@@ -64,7 +64,8 @@ get_timestamp() {
 format_log() {
     local level="$1"
     local message="$2"
-    local timestamp=$(get_timestamp)
+    local timestamp
+    timestamp=$(get_timestamp)
     echo "[$timestamp] [$level] $message"
 }
 

@@ -64,10 +64,11 @@ tinfoil_cmd_path() {
 
 install_profiles_list() {
   local profiles=()
-  local p
-  while IFS= read -r p; do
-    profiles+=("$p")
-  done < <(ls "$ROOT/config/profiles/"*.yaml 2>/dev/null | xargs -I{} basename {} .yaml)
+  local f
+  for f in "$ROOT/config/profiles/"*.yaml; do
+    [[ -e "$f" ]] || continue
+    profiles+=("$(basename "$f" .yaml)")
+  done
   if [ ${#profiles[@]} -eq 0 ]; then
     echo "ml-dev"
   else
