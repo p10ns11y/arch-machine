@@ -40,7 +40,7 @@ TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
 ./maintenance/security-audit.sh
 ./maintenance/inventory.sh --json
 
-# STEP 2 (when ready): Full profile install via the same installer or from TUI
+# STEP 2 (when ready): Full profile install (same installer; prefer archy menus later)
 ./install.sh --profile ml-dev     # recommended full ML/AI + ROCm workstation
 # or
 ./install.sh --profile security-dev
@@ -128,60 +128,31 @@ customizations:
 
 Modify `config/tools.yaml` to change tool versions or add new tools.
 
-## Legacy Scripts
+## Legacy one-shots (removed from day-1)
 
-The original standalone scripts are still available for backward compatibility:
+Do **not** start from old root one-shots (`basic_setup.sh`, fortress scripts, etc.). They were killed or superseded; history only in [LEGACY.md](LEGACY.md). Use **profiles** + `./install.sh --profile …`.
 
-- **`basic_setup.sh`**: Comprehensive ML/AI development setup
-- **`secure-fortress-phase0-simple.sh`**: Security hardening setup
+## Day-1 controller: archy
 
-These provide one-shot installation but lack the profile-based approach of the new system.
+**Product surface:** [archy.md](archy.md) (`tools/archy`). Interactive menus → NEXT → maintenance backends.
 
-## The tinfoil CLI (optional shim — interim)
-
-> **Product surface:** **`archy`** (`tools/archy`) is the main interactive control plane.  
-> Until **SN-ARCHY-1** ships `archy` on PATH from thin install, day-1 from a checkout is:
->
-> ```bash
-> make archy
-> TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
-> ```
->
-> `tinfoil` remains the **thin Go dispatcher** installed by default `./install.sh` / `--thin` today.  
-> `tinfoil tui` / `./install.sh --tui` fall through to **gum** (`lib/tui/`) — legacy bridge (SN-2 freeze), not the product.
-
-`tinfoil` is the lightweight sentinel/guardian **CLI shim**. By default `./install.sh` (or `--thin`) still installs this binary first.
-
-### Installation details (current thin path)
-- Binary: `/usr/local/bin/tinfoil`
-- Supporting runtime: `/usr/share/tinfoil/`  
-  (contains `bin/tinfoil.go`, `lib/`, `config/profiles/`, `maintenance/`, `modules/`, `install.sh`, etc.)
-
-### Basic usage after thin install (shim)
-
-```bash
-tinfoil                  # Full system audit (global investigator mode)
-tinfoil tui              # Legacy: prefers archy if on PATH, else gum TUI
-tinfoil .                # Audit current directory
-tinfoil /some/path       # Audit any folder
-```
-
-Prefer running **archy** from the checkout (or future PATH install) for the real menu → NEXT loop. See [archy.md](archy.md).
-
-For development (before any install):
+Until **SN-ARCHY-1** installs `archy` on PATH from thin install:
 
 ```bash
 make archy
 TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
-# legacy gum:
-# ./install.sh --tui
-# go run bin/tinfoil.go tui
 ```
 
-After the thin CLI is installed you can still do full workstation bootstrap with:
+Gum `lib/tui/` remains on disk as a frozen bridge (bugfixes only). Do not document it as the product. Code cleanup of gum / Go PATH face is deferred (no app changes in this docs pass).
+
+## Thin shim note (`tinfoil`)
+
+Today `./install.sh` / `--thin` still installs the Go **`tinfoil`** dispatcher to `/usr/local/bin/tinfoil` and runtime under `/usr/share/tinfoil/`. Use it for shim subcommands (audit, inventory, …) if needed. Prefer **archy** for the menu loop.
 
 ```bash
+tinfoil                  # audit via shim (if installed)
+tinfoil .                # audit current directory
 ./install.sh --profile ml-dev
 ```
 
-Name humor: [tinfoil-name-explained.md](../tinfoil-name-explained.md) (legacy entry doc — points here + archy). Architecture: [INDEX.md](INDEX.md).
+Name humor (optional): [tinfoil-name-explained.md](../tinfoil-name-explained.md). Architecture: [INDEX.md](INDEX.md).

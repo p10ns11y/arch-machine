@@ -50,7 +50,7 @@ else
     verify_launch_pane 'verify.2' watch 'WATCH' "$ROOT" 'while true; do make lint 2>&1 | tail -40; sleep 30; done'
 
     if [ "$CONFIRM_SPLIT" = "1" ]; then
-        verify_launch_pane 'verify.1' verify 'VERIFY' "$ROOT" 'make lint && make validate-profiles && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...'
+        verify_launch_pane 'verify.1' verify 'VERIFY' "$ROOT" 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/... && ./maintenance/extract-evidence.sh --dry-run'
     fi
 
     verify_launch_pane 'verify.3' monitor 'CMD' "$ROOT" ''

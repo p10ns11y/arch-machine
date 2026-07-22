@@ -69,7 +69,7 @@ flowchart LR
 | Keeper (MFA vault) | **A** | k=2 n=3 + PQ seal + drill + rebind + loop + PATH | `tools/keeper` |
 | Profiles | B+ | YAML compose; **local** harness asserts module.category | `config/profiles/*.yaml`, `make validate-profiles`; CI job still stub |
 | Evidence (extract) | A- | JSON + TOON bundles | `maintenance/extract-evidence.sh`, `logs/` |
-| Remediation (apply) | **C** | Policy doc strong; `apply-remediation.sh` is Phase-5 stub | `policies/security-remediation.md` vs SO-11 |
+| Remediation (apply) | **C** | Policy doc strong; Phase-5 applicator stub **removed** (SO-11) | `policies/security-remediation.md` |
 | CI | B | Cargo hard-fail (archy/groxy/keeper); shell/profile/evidence often soft | `.github/workflows/ci.yml` |
 | Agent skills / ontology | **A-** | skills-lock + overlays + rules under `.agents`; soft-obsolete list | `AGENTS.md`, `.agents/`, `arch-design/soft-obsolete-candidates.md` |
 

@@ -3,7 +3,7 @@
 **Pairs with:** [stellar-roadmap](../skills/stellar-roadmap/SKILL.md)
 
 **Doc:** `arch-design/coming-next.md` · **Keeper:** `arch-design/coming-next-keeper.md` · **Index:** `docs/INDEX.md`  
-**Soft-obsolete:** `arch-design/soft-obsolete-candidates.md`
+**Soft-obsolete / hard pass:** `arch-design/soft-obsolete-candidates.md`
 
 ## Fused one-liner
 
@@ -20,7 +20,7 @@ archy + shell backends + profile installer + evidence → self-remediating guard
 | Shell backends | A- | `maintenance/*.sh` |
 | Profile validation | B | local harness; CI stub |
 | Evidence extract | A- | extract-evidence + logs |
-| Remediation apply | C | policy A-; applicator stub |
+| Remediation apply | C | policy strong; applicator stub removed (SO-11) |
 | Keeper | A | `tools/keeper` |
 | CI | B | cargo hard; shell soft |
 | Agent skills | A- | skills-lock + `.agents/` |

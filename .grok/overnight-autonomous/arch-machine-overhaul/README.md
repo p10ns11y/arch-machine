@@ -23,9 +23,8 @@ This folder is the **living, executable, sentinel-grade control plane** for the 
 7. The handoff folder itself is a first-class, evidence-producing citizen of the platform.
 
 ## Relationship to Prior Work
-- Evolves and supersedes the narrower `cli-policy-remediation-tui/` handoff (TUI + policy remediation mission from 2026-05-28).
-- Incorporates all prior autonomous session lessons (self-referential loops, branch policy, tone shift to "vigilant guardian", thin tinfoil-first installer already partially implemented in this session).
-- The old TUI-SPEC.md (in the prior folder) remains relevant for the parallel Bubble Tea TUI work (now on the same hotfix lineage).
+- Superseded the narrower `cli-policy-remediation-tui/` handoff (TUI + policy remediation, 2026-05-28). That folder was **deleted** in the 2026-07 hard pass (SO-6); this overhaul folder remains the historical archive.
+- Gum-as-primary decision is obsolete — live control plane is `tools/archy` (see `docs/archy.md`).
 
 ## Success
 When the 6 phases are complete, the repo will be a model citizen of its own principles: clean, duplication-free, professionally surfaced, with the evidence self-loop amplified and the platform's own security-remediation policy applied to its own technical debt.

@@ -99,9 +99,12 @@ nodes:
     subgraph: evidence
     fused_summary: >
       policies/security-remediation.md is never-compress. Dry-run before apply.
+      Phase-5 apply-remediation.sh stub removed (2026-07); no replacement
+      applicator in-tree yet.
     source_refs:
       - policies/security-remediation.md
-      - maintenance/apply-remediation.sh
+      - docs/LEGACY.md
+      - docs/MAINTENANCE.md
 
   - id: am:GrokAgentTransports
     type: Domain

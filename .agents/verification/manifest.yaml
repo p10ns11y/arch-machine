@@ -37,5 +37,5 @@ panes:
     priority: 4
     space_profile: confirm-burst
     cwd: .
-    command: 'make lint && make validate-profiles && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...'
-    value: Pre-PR gate from AGENTS.md
+    command: 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/... && ./maintenance/extract-evidence.sh --dry-run'
+    value: Pre-PR gate closer to AGENTS.md (still omit full install validate unless needed)

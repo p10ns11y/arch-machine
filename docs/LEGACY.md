@@ -4,18 +4,21 @@
 
 This file embodies the "self-application of policy" principle at the heart of the Vigilant Guardian platform. The Sentinel purges its own waste.
 
-## Soft-obsolete candidates (2026-07 — do not delete yet)
+## Evolution pass — hard removals (2026-07)
 
-Operator-approved inventory for the evolution pass: **[soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md)**.
+Inventory: **[soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md)** (outcomes table).
 
-Highlights:
+**Removed this pass (docs/artifacts only):**
 
-- **Gum TUI** (`lib/tui/`) and **Go shim as day-1 face** — superseded by `tools/archy`; freeze features; PATH install of `archy` is SN-ARCHY-1.
-- **`tinfoil-name-explained.md`** — humor retained; product entry is archy (interim: build from checkout).
-- **`apply-remediation.sh`** — historical Phase-5 demo; not the live dep-audit kill-chain in `policies/security-remediation.md`.
-- **groxy poll leftovers** — CLI poll removed (SN-GROXY-1); do not revive inbound without SN-GROXY-3 prerequisites.
+- Gum-era plan + overnight `cli-policy-remediation-tui/` handoff
+- `docs/xchat-remote.md` (use [groxy.md](groxy.md))
+- Root `EVIDENCE-EXTRACTION.md` (use [MAINTENANCE.md](MAINTENANCE.md) § Evidence)
+- `maintenance/apply-remediation.sh` Phase-5 stub (policy remains [security-remediation.md](../policies/security-remediation.md))
+- Weak Apr `logs/*-sample*` fixtures
 
-**Last evolution note**: 2026-07-22 (domains 1–6 soft pass on `feat/master-planner-arch-guardian`).
+**Still on disk (code deferred):** gum `lib/tui/`, Go shim PATH face, groxy leftover poll APIs, CI profile stub.
+
+**Last evolution note**: 2026-07-22 hard pass on `feat/master-planner-arch-guardian`.
 
 ---
 

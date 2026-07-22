@@ -51,21 +51,23 @@ maintenance/systemd-setup.sh setup
 
 ## Evidence Extraction
 
-Maintenance scripts automatically generate AI-optimized evidence bundles:
+Maintenance scripts generate AI-optimized evidence bundles for agents:
 
-- **Format**: JSON bundles with TOON compression
-- **Content**: Errors, warnings, blockers, metrics
-- **Size**: ~97% reduction vs raw logs
-- **Location**: `logs/evidence-bundle-*.json`
+- **Format**: JSON + optional TOON compression (~27% smaller than JSON)
+- **Content**: Security audit status/metrics/blockers, install errors, system health
+- **Size**: ~97% reduction vs raw installer logs (when extract runs on real logs)
+- **Location**: `logs/evidence-bundle-YYYYMMDD-HHMMSS.{json,toon}`
+
+Auto-generated after security audits and weekly maintenance when those paths call extract. Prefer fresh bundles over archived samples (Apr sample fixtures were removed in the 2026-07 hard pass).
 
 ### Manual Extraction
 ```bash
-# Extract evidence from latest logs
 ./maintenance/extract-evidence.sh
-
-# Extract to custom location
+./maintenance/extract-evidence.sh --dry-run
 ./maintenance/extract-evidence.sh -o /path/to/output
 ```
+
+Canonical guide lives here (root `EVIDENCE-EXTRACTION.md` deleted). Remediation **policy**: [policies/security-remediation.md](../policies/security-remediation.md) — there is no live `apply-remediation.sh` stub anymore.
 
 ## Maintenance Reports
 
