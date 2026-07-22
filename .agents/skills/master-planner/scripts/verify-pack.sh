@@ -50,6 +50,38 @@ for agent in .cursor .grok; do
   done < <(find "$agent/skills" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
 done
 
+echo "== rules (canonical .agents/rules) =="
+if [[ -d .agents/rules ]]; then
+  for f in .agents/rules/*.mdc; do
+    [[ -f "$f" ]] || continue
+    name="$(basename "$f")"
+    echo "OK   .agents/rules/$name"
+    for agent in .cursor .grok; do
+      link="$agent/rules/$name"
+      if [[ -L "$link" ]]; then
+        target="$(readlink "$link")"
+        case "$target" in
+          ../../.agents/rules/*) echo "OK   $link → $target" ;;
+          /*)
+            echo "FAIL absolute rule symlink $link → $target"
+            fail=$((fail + 1))
+            ;;
+          *)
+            echo "FAIL unexpected rule link $link → $target"
+            fail=$((fail + 1))
+            ;;
+        esac
+      else
+        echo "FAIL missing relative symlink $link"
+        fail=$((fail + 1))
+      fi
+    done
+  done
+else
+  echo "FAIL missing .agents/rules"
+  fail=$((fail + 1))
+fi
+
 echo "== overlays =="
 if [[ -d .agents/overlays ]]; then
   for f in .agents/overlays/*.md; do

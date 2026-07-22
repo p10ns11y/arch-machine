@@ -40,8 +40,9 @@ Do not tell users to run `am-*` by hand — slash commands only.
 **Catalog:** [skills.sh/p10ns11y/skills](https://www.skills.sh/p10ns11y/skills) · **Lock:** `skills-lock.json`  
 **Install / restore:** `npx skills experimental_install` (or `.agents/skills/master-planner/scripts/pull-skills.sh .`)  
 **Overlays:** `.agents/overlays/arch-machine-*.md` — project tweaks only; do not edit locked skill bodies.  
+**Rules (canonical):** `.agents/rules/*.mdc` — `.cursor/rules` and `.grok/rules` are relative symlinks.  
 **Ontology:** `.agents/ontology/` — load by intent (`control` · `install` · `evidence` · `remote` · `vault` · `verify`).  
-**Agent links:** `.cursor/skills/*` and `.grok/skills/*` → relative `../../.agents/skills/<name>`.
+**Agent links:** `.cursor/{skills,rules}/*` and `.grok/{skills,rules}/*` → relative `../../.agents/...`.
 
 ## Fused abstraction
 

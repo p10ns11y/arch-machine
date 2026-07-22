@@ -9,7 +9,7 @@ globs:
   - "maintenance/**"
 ---
 
-Load [ai-optimization/SKILL.md](../skills/ai-optimization/SKILL.md) and project overlay [.agents/overlays/arch-machine-ai-optimization.md](../../.agents/overlays/arch-machine-ai-optimization.md).
+Load [ai-optimization/SKILL.md](../skills/ai-optimization/SKILL.md) and project overlay [.agents/overlays/arch-machine-ai-optimization.md](../overlays/arch-machine-ai-optimization.md).
 
 ## arch-machine defaults
 

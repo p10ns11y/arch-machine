@@ -13,6 +13,7 @@ npx skills add p10ns11y/skills -s … --copy
         │
 .agents/overlays/  ← THIS repo’s tweaks only
 .cursor/skills + .grok/skills  →  ../../.agents/skills/*
+.cursor/rules  + .grok/rules   →  ../../.agents/rules/*
 ```
 
 ## Active pack

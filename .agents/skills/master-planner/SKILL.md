@@ -138,4 +138,4 @@ When agents re-derive architecture every turn: `.agents/ontology/INDEX.md` + `*.
 - [references/orwell-tweak.md](references/orwell-tweak.md)
 - [references/ontology-template.md](references/ontology-template.md)
 - [examples/arch-machine-pack.md](examples/arch-machine-pack.md)
-- Router: `.cursor/rules/master-planner.mdc`
+- Router: `.agents/rules/master-planner.mdc` (symlinked into `.cursor/rules` + `.grok/rules`)
