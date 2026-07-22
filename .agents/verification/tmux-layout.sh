@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # arch-machine verification cockpit — golden-ratio layout.
 # Usage: tmux-layout.sh [directory]
-# Prerequisite: ~/.config/shell/bin/lib/verify-{launch,layout}.sh (host av workflow)
+# Prerequisite: host shellyxz plugins/verification (SHELL_VERIFICATION_LIB)
 set -euo pipefail
 
 DIR="${1:-.}"
@@ -19,10 +19,11 @@ if [ -z "${TMUX:-}" ]; then
     exit 1
 fi
 
+# SN-4a: plugin lib (never ~/.config/shell/bin/lib — that path is obsolete).
 # shellcheck source=/dev/null
-source "$HOME/.config/shell/bin/lib/verify-launch.sh"
+source "${SHELL_VERIFICATION_LIB:-${HOME}/.config/shell/plugins/verification/lib}/verify-launch.sh"
 # shellcheck source=/dev/null
-source "$HOME/.config/shell/bin/lib/verify-layout.sh"
+source "${SHELL_VERIFICATION_LIB:-${HOME}/.config/shell/plugins/verification/lib}/verify-layout.sh"
 
 SESSION="$(tmux display-message -p '#{session_name}')"
 ROOT="$(verify_workflow_root "$ROOT")"
@@ -36,6 +37,10 @@ verify_apply_theme "$SESSION" "$PROJECT_NAME" "$RISK_PROFILE" "$VERIFY_DIR/tmux-
 
 CONFIRM_SPLIT=1
 
+# Keep in sync with cockpit.yaml → cockpits.verify
+VERIFY_CMD='make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./bin/tinfoil.go && ./maintenance/extract-evidence.sh --dry-run'
+WATCH_CMD='while true; do make lint 2>&1 | tail -40; sleep 30; done'
+
 if verify_layout_ok "$SESSION"; then
     tmux select-window -t 'verify'
 else
@@ -47,10 +52,10 @@ else
         verify_launch_pane 'verify.0' monitor 'GIT' "$ROOT" "echo 'optional: install lazygit'"
     fi
 
-    verify_launch_pane 'verify.2' watch 'WATCH' "$ROOT" 'while true; do make lint 2>&1 | tail -40; sleep 30; done'
+    verify_launch_pane 'verify.2' watch 'WATCH' "$ROOT" "$WATCH_CMD"
 
     if [ "$CONFIRM_SPLIT" = "1" ]; then
-        verify_launch_pane 'verify.1' verify 'VERIFY' "$ROOT" 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/... && ./maintenance/extract-evidence.sh --dry-run'
+        verify_launch_pane 'verify.1' verify 'VERIFY' "$ROOT" "$VERIFY_CMD"
     fi
 
     verify_launch_pane 'verify.3' monitor 'CMD' "$ROOT" ''

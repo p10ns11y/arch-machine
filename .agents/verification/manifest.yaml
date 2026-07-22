@@ -1,4 +1,5 @@
 # Generated for arch-machine — edit when verify commands change.
+# Prefer cockpit.yaml; keep this aligned with tmux-layout.sh for agents that read legacy manifests.
 project: arch-machine
 risk_profile: medium
 layout: golden-4
@@ -29,7 +30,7 @@ panes:
     space_profile: tui-side
     command: lazygit
     tool: lazygit
-    value: Review agent diffs on sentinel branch
+    value: Review agent diffs
 
   - id: verify-suite
     title: VERIFY
@@ -37,5 +38,5 @@ panes:
     priority: 4
     space_profile: confirm-burst
     cwd: .
-    command: 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/... && ./maintenance/extract-evidence.sh --dry-run'
-    value: Pre-PR gate closer to AGENTS.md (still omit full install validate unless needed)
+    command: 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./bin/tinfoil.go && ./maintenance/extract-evidence.sh --dry-run'
+    value: Pre-PR gate from AGENTS.md (omit install.sh --thin --validate — use at listed test)
