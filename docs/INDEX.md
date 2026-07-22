@@ -103,7 +103,8 @@ flowchart LR
 | Legacy / killed paths | [LEGACY.md](LEGACY.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) · [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Roadmap | [arch-design/coming-next.md](../arch-design/coming-next.md) |
-| Soft-obsolete (review before delete) | [arch-design/soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md) |
+| Evolutions | [arch-design/evolutions/](../arch-design/evolutions/) (e.g. [2026-07-22](../arch-design/evolutions/2026-07-22.md)) |
+| Soft-obsolete / hard-pass outcomes | [arch-design/soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md) |
 
 ---
 
