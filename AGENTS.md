@@ -41,23 +41,23 @@ Do not tell users to run `am-*` by hand — slash commands only.
 **Install / restore:** `npx skills experimental_install` (or `.agents/skills/master-planner/scripts/pull-skills.sh .`)  
 **Overlays:** `.agents/overlays/arch-machine-*.md` — project tweaks only; do not edit locked skill bodies.  
 **Rules (canonical):** `.agents/rules/*.mdc` — `.cursor/rules` and `.grok/rules` are relative symlinks.  
-**Ontology:** `.agents/ontology/` — load by intent (`control` · `install` · `evidence` · `remote` · `vault` · `verify`).  
+**Ontology:** `.agents/ontology/` — load by intent (`control` · `install` · `evidence` · `agent_transport` · `vault` · `verify`).  
 **Agent links:** `.cursor/{skills,rules}/*` and `.grok/{skills,rules}/*` → relative `../../.agents/...`.
 
 ## Fused abstraction
 
 ```text
-archy (Eagle + satellites)  →  maintenance/*.sh / install.sh  →  evidence bundles
-        ↑ TEA Msg/Cmd                    iron peak                    logs/
-tinfoil.go / gum TUI          (optional shim / legacy)
+archy Eagle → maintenance/*.sh / install.sh → evidence
+     ↕ G/p · plugin /arch-*   (local Grok Build cycle — not groxy)
 
-groxy:  inject → host job → XChat notify
-        acp serve → grok agent serve (client picks cwd)
-        (no ambient XChat → open TUI)
+Grok agent transports (docs/groxy.md):
+  acp serve  →  grok agent serve   (remote / long-lived)
+  nvim       →  grok agent stdio   (local IDE; no serve)
+  inject     →  XChat notify only
 ```
 
-**Sentinel surface** (`tools/archy`, optional `bin/tinfoil.go`, `lib/tui.sh`) → **profile installer** (`install.sh`, `lib/installer.sh`, `modules/*/`) → **maintenance heart** (`maintenance/*`, `policies/security-remediation.md`) → **evidence loop** (`lib/evidence.sh`, `logs/evidence-bundle-*.{json,toon}`).  
-**Remote:** `tools/groxy` / `bin/groxy` — inject + ACP only (see `docs/groxy.md`).
+**Sentinel:** `tools/archy` → **installer** (`install.sh`, modules) → **maintenance** + **evidence**.  
+**Transports:** `tools/groxy` / Neovim extras — see `docs/groxy.md`. Do not conflate with archy↔Grok Build.
 
 ## Verify before done
 
@@ -94,7 +94,7 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 | Profiles | `config/profiles/` |
 | Modules | `modules/{system,development,ml_ai,security,productivity}/` |
 | **Control plane (main)** | `tools/archy` · `docs/archy.md` · skill `eagle-satellite-elomaxz` |
-| **Remote surfaces** | `tools/groxy` · `tools/groxy/README.md` · `docs/groxy.md` · `bin/groxy` (`inject` notify · `acp serve` control) |
+| **Remote / agent transports** | `tools/groxy` · `docs/groxy.md` · Neovim extras (`grok agent stdio`) · `bin/groxy` (`inject` · `acp serve`) |
 | **Threshold vault** | `tools/keeper` · `tools/keeper/README.md` · `arch-design/keeper.md` · install via `modules/security/install.sh --agent-expand` |
 | TUI (Elm/gum legacy) | `lib/tui/{model,view,update,messages}.sh` |
 | CLI shim | `bin/tinfoil.go` (thin dispatcher; prefer shell backends) |
@@ -108,8 +108,8 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 
 ## Expand commands
 
-- `expand tui` / `expand archy` / `expand control` — Eagle+Satellites TEA (`tools/archy`, ontology `control`)
-- `expand groxy` / `expand remote` — inject + ACP (`tools/groxy`, ontology `remote`)
+- `expand tui` / `expand archy` / `expand control` — local Eagle TUI + Grok Build cycle (`docs/archy.md`, ontology `control`)
+- `expand groxy` / `expand remote` / `expand transport` — serve · stdio · inject (`docs/groxy.md`, ontology `agent_transport`)
 - `expand keeper` / `expand vault` — threshold vault (`tools/keeper`, ontology `vault`)
 - `expand profiles` / `expand install` — YAML profiles + modules (ontology `install`)
 - `expand evidence` — bundle schema + extraction (ontology `evidence`)

@@ -1,45 +1,71 @@
 # arch-machine — ontology viz
 
-Evidence-checked against `tools/archy` jobs + `modules/security/install.sh --agent-expand` (2026-07-22).
+Evidence: [docs/archy.md](../../docs/archy.md) · [docs/groxy.md](../../docs/groxy.md) · `tools/archy` jobs · `modules/security/install.sh` (2026-07-22).
 
 ```mermaid
 flowchart TB
-  subgraph control["control"]
+  subgraph control["control — local archy Eagle"]
     CP[am:ControlPlane]
     Eagle[am:EagleTEA]
+    GB[am:GrokBuildCycle]
   end
+
   subgraph install["install"]
     PE[am:ProfileEngine]
     MB[am:ModuleBay]
   end
+
   subgraph evidence["evidence"]
     EL[am:EvidenceLoop]
     RP[am:RemediationPolicy]
   end
-  subgraph remote["remote"]
-    GX[am:Groxy]
-    PL[am:PluginCycle]
+
+  subgraph transport["agent_transport — Grok agent transports"]
+    GAT[am:GrokAgentTransports]
+    Serve[am:GroxyAcpServe]
+    Stdio[am:NvimGrokStdio]
+    Inj[am:GroxyInject]
   end
+
   subgraph vault["vault"]
     KP[am:Keeper]
   end
+
   VG[am:VerifyGate]
 
   CP -->|implements| Eagle
-  Eagle -->|Cmd FireSatellite| EL
-  Eagle -->|InstallDry install.sh| PE
-  Eagle -->|LaunchGrok| GX
-  PL <-->|slash / co-pilot| Eagle
-  PE -->|composes profiles| MB
-  MB -->|install_security profile path| KP
+  Eagle -->|FireSatellite| EL
+  Eagle -->|InstallDry| PE
+  Eagle <-->|G/p preload · exit resumes| GB
+  GB -->|plugin /arch-*| Eagle
+
+  PE -->|composes| MB
   MB -.->|security --agent-expand| KP
+  MB -->|install_security profile| KP
   EL -->|governed_by| RP
+
+  GAT --- Serve
+  GAT --- Stdio
+  GAT --- Inj
+  Serve -->|WS wraps| AgentWS[grok agent serve]
+  Stdio -->|IDE child| AgentIO[grok agent stdio]
+  Inj -->|host→XChat| XChat[XChat DM]
+
   VG -.->|gates| CP
   VG -.->|gates| PE
   VG -.->|gates| EL
   VG -.->|gates| KP
+  VG -.->|gates| GAT
 ```
 
-**Not an edge:** Keeper → ProfileEngine. `--agent-expand` is the **security module** standalone entry; it builds/installs `tools/keeper`. It does **not** call ProfileEngine.
+## Do not confuse
 
-Intent → start: see [INDEX.md](INDEX.md).
+| Surface | Is | Is not |
+|---------|----|--------|
+| **archy** (local Eagle TUI) | Menu → satellites → NEXT; `G`/`p` opens **Grok Build** with preload; exit returns to archy | Remote phone/laptop control |
+| **GrokBuildCycle** | Plugin `/arch-*` ↔ archy handoff | groxy |
+| **groxy acp serve** | Long-lived WS remote control of a cwd | archy co-pilot; Neovim daily path |
+| **Neovim stdio** | avante spawns `grok agent stdio` | Needs `acp serve` |
+| **groxy inject** | Host → XChat **notify** only | Inbound DM control |
+
+Intent → start: [INDEX.md](INDEX.md).

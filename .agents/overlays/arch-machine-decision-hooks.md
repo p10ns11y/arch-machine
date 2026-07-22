@@ -12,7 +12,8 @@
 | Remediation | Policy + confirm; no silent destroy | `rm -rf` without audit trail |
 | Evidence | No secrets in bundles | Schema drift breaks agents |
 | Thin PATH | archy on thin; tinfoil optional | Heavy deps on `--thin` |
-| Groxy | inject + acp only | Ambient chat as control plane |
+| Groxy | inject + acp only | Ambient chat as control plane; conflate with archy↔Grok cycle |
+| Neovim stdio | `grok agent stdio` via avante | Require `groxy acp serve` for daily edit |
 
 ## Chain (template)
 

@@ -1,12 +1,14 @@
 # arch-machine ontology graph
-# Verified 2026-07-22 against tools/archy jobs + modules/security/install.sh
+# Verified 2026-07-22 against docs/archy.md + docs/groxy.md + tools/archy jobs
 meta:
-  version: "1.1"
+  version: "1.2"
   project: arch-machine
   last_updated: "2026-07-22"
   mission: >
-    Interconnected friction-removing automations: Eagle routes offline jobs;
-    profiles/modules install; evidence closes the remediation loop.
+    Interconnected friction-removing automations: local archy Eagle routes
+    offline jobs; profiles/modules install; evidence closes remediation;
+    Grok agent transports (serve / stdio / inject) are separate from the
+    archy ↔ Grok Build co-pilot cycle.
 
 nodes:
   - id: am:ControlPlane
@@ -14,8 +16,8 @@ nodes:
     name: Control Plane
     subgraph: control
     fused_summary: >
-      archy is the live sentinel. Keys/job lines become Msg; Eagle updates;
-      Cmds hit satellites/shell. Gum TEA and tinfoil are legacy bridges.
+      archy is the live local sentinel TUI (Ratatui). Keys/job lines become
+      Msg; Eagle updates; Cmds hit satellites/shell. Gum/tinfoil are legacy.
     source_refs:
       - tools/archy/
       - docs/archy.md
@@ -26,13 +28,28 @@ nodes:
     name: Eagle TEA Message Passing
     subgraph: control
     fused_summary: >
-      Model/Msg/Update/Cmd/View. Eagle stays thin; satellites own domain jobs;
-      jobs run offline (start → stream → exit).
+      Thin Eagle: Model/Msg/Update/Cmd/View. Satellites own domain jobs;
+      jobs run offline (start → stream → exit). Does not speak ACP remote.
     source_refs:
       - tools/archy/src/eagle.rs
       - tools/archy/src/jobs.rs
       - tools/archy/src/satellites/mod.rs
+      - docs/archy.md
       - .agents/skills/eagle-satellite-elomaxz/references/machine-graph.md
+
+  - id: am:GrokBuildCycle
+    type: Concept
+    name: archy ↔ Grok Build Cycle
+    subgraph: control
+    fused_summary: >
+      Local cyclic handoff only. From archy: G/p/Enter brief suspends TUI and
+      launches interactive grok --cwd with preload; exit resumes archy.
+      From Grok Build: arch-machine plugin /arch-* hits host scripts/archy.
+      Not groxy. Not ACP serve. Not Neovim stdio.
+    source_refs:
+      - docs/archy.md
+      - docs/INDEX.md
+      - tools/archy/src/grok_launch.rs
 
   - id: am:ProfileEngine
     type: Domain
@@ -40,7 +57,7 @@ nodes:
     subgraph: install
     fused_summary: >
       install.sh + lib/installer.sh compose YAML profiles with --thin,
-      --validate, --dry-run before mutate. archy InstallDry invokes this.
+      --validate, --dry-run. archy InstallDry invokes this.
     source_refs:
       - install.sh
       - lib/installer.sh
@@ -53,7 +70,7 @@ nodes:
     subgraph: install
     fused_summary: >
       modules/*/install.sh expose install_<name>() for profile composition.
-      Security module also has a standalone --agent-expand that installs keeper.
+      Security module standalone --agent-expand installs keeper.
     source_refs:
       - modules/
       - docs/MODULES.md
@@ -80,42 +97,67 @@ nodes:
     subgraph: evidence
     fused_summary: >
       policies/security-remediation.md is never-compress. Dry-run before apply.
-      No silent destructive maintenance.
     source_refs:
       - policies/security-remediation.md
       - maintenance/apply-remediation.sh
 
-  - id: am:Groxy
+  - id: am:GrokAgentTransports
     type: Domain
-    name: Groxy Remote Surface
-    subgraph: remote
+    name: Grok Agent Transports
+    subgraph: agent_transport
     fused_summary: >
-      inject notify + acp serve only. No ambient XChat → open TUI.
+      Parent for ways to drive or notify around Grok agents outside the
+      local archy ↔ Grok Build cycle. Children: WebSocket serve, Neovim
+      stdio, inject notify. See docs/groxy.md.
     source_refs:
-      - tools/groxy/
       - docs/groxy.md
+      - docs/INDEX.md
+      - tools/groxy/
+
+  - id: am:GroxyAcpServe
+    type: Concept
+    name: groxy ACP Serve
+    subgraph: agent_transport
+    fused_summary: >
+      groxy acp serve wraps grok agent serve over WebSocket. Remote /
+      long-lived / multi-client control of a chosen cwd (SSH/Tailscale).
+      Not the archy co-pilot. Not daily Neovim.
+    source_refs:
+      - docs/groxy.md
+      - tools/groxy/
       - bin/groxy
 
-  - id: am:PluginCycle
+  - id: am:NvimGrokStdio
     type: Concept
-    name: Grok Plugin Cycle
-    subgraph: remote
+    name: Neovim Grok ACP stdio
+    subgraph: agent_transport
     fused_summary: >
-      Plugin slash cmds hit host; archy co-pilot LaunchGrok with preload.
-      Slash only — never hand users am-* scripts.
+      Local IDE path: avante/CodeCompanion spawns grok agent stdio as a
+      child process. Does not require groxy acp serve. SoT example under
+      tools/groxy/extras/neovim/plugins/grok-acp-plugin/.
     source_refs:
-      - docs/archy.md
-      - docs/INDEX.md
-      - tools/archy/src/grok_launch.rs
+      - docs/groxy.md
+      - tools/groxy/extras/neovim/plugins/grok-acp-plugin/
+      - tools/groxy/extras/neovim/plugins/grok-acp-plugin/README.md
+
+  - id: am:GroxyInject
+    type: Concept
+    name: groxy Inject Notify
+    subgraph: agent_transport
+    fused_summary: >
+      Host → XChat outbound notify only (optional session label). Not
+      inbound DM control. Not a TUI listener.
+    source_refs:
+      - docs/groxy.md
+      - bin/groxy
 
   - id: am:Keeper
     type: Domain
     name: Keeper Threshold Vault
     subgraph: vault
     fused_summary: >
-      First-class product at tools/keeper. Installed by security module
-      --agent-expand (build release → ~/.local/bin/keeper), or via profile
-      path install_security when security.full is composed. Not ProfileEngine.
+      tools/keeper. Installed by security module --agent-expand
+      (~/.local/bin/keeper) or profile install_security. Not ProfileEngine.
     source_refs:
       - tools/keeper/
       - tools/keeper/README.md
@@ -143,39 +185,49 @@ edges:
     to: am:EvidenceLoop
     rel: dispatches_jobs
     note: >
-      FireSatellite → maintenance/*.sh (inventory, catalog, audit, actuate,
-      omarchy-status, extract-evidence). See tools/archy/src/jobs.rs.
+      FireSatellite → maintenance/*.sh. See tools/archy/src/jobs.rs.
   - from: am:EagleTEA
     to: am:ProfileEngine
     rel: install_dry
-    note: >
-      SatelliteId::InstallDry → bash install.sh --profile … --dry-run.
+    note: SatelliteId::InstallDry → install.sh --dry-run.
   - from: am:EagleTEA
-    to: am:Groxy
-    rel: may_launch
-    note: Cmd::LaunchGrok / co-pilot path.
-  - from: am:PluginCycle
+    to: am:GrokBuildCycle
+    rel: launches_grok_build
+    note: >
+      Cmd::LaunchGrok — interactive grok --cwd with preload; exit resumes
+      archy. docs/archy.md. NOT groxy.
+  - from: am:GrokBuildCycle
     to: am:EagleTEA
-    rel: cycles_with
+    rel: plugin_returns
+    note: >
+      Grok Build + arch-machine plugin /arch-* → host scripts / archy.
   - from: am:ProfileEngine
     to: am:ModuleBay
     rel: composes
-    note: Profile includes[] → install_<module>() sourced by installer.
   - from: am:ModuleBay
     to: am:Keeper
     rel: agent_expand_installs
-    note: >
-      modules/security/install.sh --agent-expand builds tools/keeper and
-      installs ~/.local/bin/keeper. Standalone; NOT via ProfileEngine.
+    note: modules/security/install.sh --agent-expand → ~/.local/bin/keeper.
   - from: am:ModuleBay
     to: am:Keeper
     rel: profile_may_install
-    note: >
-      install_security() when profile category=full and security enabled
-      (e.g. security-dev). Separate from --agent-expand entry.
+    note: install_security() when profile enables security.full.
   - from: am:EvidenceLoop
     to: am:RemediationPolicy
     rel: governed_by
+  - from: am:GrokAgentTransports
+    to: am:GroxyAcpServe
+    rel: includes
+  - from: am:GrokAgentTransports
+    to: am:NvimGrokStdio
+    rel: includes
+  - from: am:GrokAgentTransports
+    to: am:GroxyInject
+    rel: includes
+  - from: am:GroxyAcpServe
+    to: am:GrokAgentTransports
+    rel: child_of
+    note: Symmetric nav; parent is GrokAgentTransports.
   - from: am:VerifyGate
     to: am:ControlPlane
     rel: gates
@@ -188,4 +240,7 @@ edges:
   - from: am:VerifyGate
     to: am:Keeper
     rel: gates
-    note: cargo test --manifest-path tools/keeper/Cargo.toml
+  - from: am:VerifyGate
+    to: am:GrokAgentTransports
+    rel: gates
+    note: cargo test tools/groxy; nvim avante verify script optional.
