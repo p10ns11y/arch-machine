@@ -1,10 +1,12 @@
 # arch-machine — ontology viz
 
+Evidence-checked against `tools/archy` jobs + `modules/security/install.sh --agent-expand` (2026-07-22).
+
 ```mermaid
 flowchart TB
   subgraph control["control"]
-    Eagle[am:EagleTEA]
     CP[am:ControlPlane]
+    Eagle[am:EagleTEA]
   end
   subgraph install["install"]
     PE[am:ProfileEngine]
@@ -23,18 +25,21 @@ flowchart TB
   end
   VG[am:VerifyGate]
 
-  CP --> Eagle
-  Eagle -->|Cmd jobs| MB
-  Eagle -->|Cmd jobs| EL
-  PE --> MB
-  MB --> EL
-  EL --> RP
-  Eagle --> GX
-  PL <--> Eagle
-  KP -.->|agent-expand| PE
+  CP -->|implements| Eagle
+  Eagle -->|Cmd FireSatellite| EL
+  Eagle -->|InstallDry install.sh| PE
+  Eagle -->|LaunchGrok| GX
+  PL <-->|slash / co-pilot| Eagle
+  PE -->|composes profiles| MB
+  MB -->|install_security profile path| KP
+  MB -.->|security --agent-expand| KP
+  EL -->|governed_by| RP
   VG -.->|gates| CP
   VG -.->|gates| PE
   VG -.->|gates| EL
+  VG -.->|gates| KP
 ```
+
+**Not an edge:** Keeper → ProfileEngine. `--agent-expand` is the **security module** standalone entry; it builds/installs `tools/keeper`. It does **not** call ProfileEngine.
 
 Intent → start: see [INDEX.md](INDEX.md).

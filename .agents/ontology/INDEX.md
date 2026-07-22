@@ -27,9 +27,9 @@ Load **one subgraph** per task. Do not dump the full graph.
 | Evidence | `lib/evidence.sh`, `maintenance/extract-evidence.sh`, `logs/` |
 | Remediation | `policies/security-remediation.md` |
 | Groxy | `tools/groxy/`, `docs/groxy.md`, `bin/groxy` |
-| Keeper | `tools/keeper/`, `arch-design/keeper.md` |
+| Keeper | `tools/keeper/`, `modules/security/install.sh --agent-expand`, `arch-design/keeper.md` |
 | Session order | skill `session-unit-order` · Omarchy + UWSM |
-| Plugin ↔ archy | `docs/archy.md` · plugin `~/Work/personal/plugins/arch-machine/docs/CROSS-REF.md` |
+| Plugin ↔ archy | `docs/archy.md` · plugin repo `docs/CROSS-REF.md` ([p10ns11y/plugins](https://github.com/p10ns11y/plugins) `arch-machine/`) |
 
 ## Never compress
 

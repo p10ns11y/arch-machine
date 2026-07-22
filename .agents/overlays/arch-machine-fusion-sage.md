@@ -23,7 +23,7 @@ groxy: inject|acp · keeper: threshold vault · plugin↔archy cycle
 | **EvidenceLoop** | `lib/evidence.sh`, extract-evidence | `logs/evidence-bundle-*.{json,toon}` |
 | **RemediationPolicy** | `policies/security-remediation.md` | audit→fix dry-run first |
 | **Groxy** | `tools/groxy/`, `bin/groxy` | inject notify · acp serve |
-| **Keeper** | `tools/keeper/` | `--agent-expand` install |
+| **Keeper** | `tools/keeper/`, `modules/security/install.sh` | `--agent-expand` → `~/.local/bin/keeper` (not via profiles) |
 
 ## Surplus (Q>1)
 
