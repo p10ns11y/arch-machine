@@ -65,7 +65,7 @@ flowchart LR
 
 Eagle receives **messages** (keys, job lines, job done). Satellites own each domain job. Jobs are **offline**: start → stream → exit — no busy heartbeats.
 
-### groxy paths (notify vs control)
+### groxy / Grok agent transports
 
 ```mermaid
 flowchart LR
@@ -73,11 +73,17 @@ flowchart LR
     Job[host job] --> Inj[inject]
     Inj --> DM[XChat]
   end
-  subgraph control [Control]
+  subgraph remoteCtl [Remote control]
     Client[ACP client] --> Serve[acp serve]
-    Serve --> Agent[grok agent]
+    Serve --> Agent[grok agent serve]
+  end
+  subgraph localIde [Local IDE]
+    Nvim[Neovim avante] --> Stdio[grok agent stdio]
   end
 ```
+
+**Not groxy:** archy `G`/`p` and plugin `/arch-*` are the **local Grok Build cycle** ([archy.md](archy.md)).  
+**stdio** does not need `acp serve`. Soft-obsolete inventory: [soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md).
 
 ---
 
@@ -97,6 +103,7 @@ flowchart LR
 | Legacy / killed paths | [LEGACY.md](LEGACY.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) · [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Roadmap | [arch-design/coming-next.md](../arch-design/coming-next.md) |
+| Soft-obsolete (review before delete) | [arch-design/soft-obsolete-candidates.md](../arch-design/soft-obsolete-candidates.md) |
 
 ---
 

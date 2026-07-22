@@ -137,32 +137,45 @@ The original standalone scripts are still available for backward compatibility:
 
 These provide one-shot installation but lack the profile-based approach of the new system.
 
-## The tinfoil CLI (The Good Sentinel)
+## The tinfoil CLI (optional shim — interim)
 
-`tinfoil` is the lightweight sentinel/guardian CLI. By default `./install.sh` (or `./install.sh --thin`) installs **only** this — the recommended first step.
+> **Product surface:** **`archy`** (`tools/archy`) is the main interactive control plane.  
+> Until **SN-ARCHY-1** ships `archy` on PATH from thin install, day-1 from a checkout is:
+>
+> ```bash
+> make archy
+> TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
+> ```
+>
+> `tinfoil` remains the **thin Go dispatcher** installed by default `./install.sh` / `--thin` today.  
+> `tinfoil tui` / `./install.sh --tui` fall through to **gum** (`lib/tui/`) — legacy bridge (SN-2 freeze), not the product.
 
-### Installation details
+`tinfoil` is the lightweight sentinel/guardian **CLI shim**. By default `./install.sh` (or `--thin`) still installs this binary first.
+
+### Installation details (current thin path)
 - Binary: `/usr/local/bin/tinfoil`
-- Supporting runtime (for tui, audits, and launching profiles): `/usr/share/tinfoil/`
-  (contains `bin/tinfoil.go`, `lib/`, `config/profiles/`, `maintenance/`, `modules/`, `install.sh` etc.)
+- Supporting runtime: `/usr/share/tinfoil/`  
+  (contains `bin/tinfoil.go`, `lib/`, `config/profiles/`, `maintenance/`, `modules/`, `install.sh`, etc.)
 
-### Basic usage after thin install
+### Basic usage after thin install (shim)
 
 ```bash
 tinfoil                  # Full system audit (global investigator mode)
-tinfoil tui              # Beautiful interactive TUI (audit, remediation, profile installer, evidence)
+tinfoil tui              # Legacy: prefers archy if on PATH, else gum TUI
 tinfoil .                # Audit current directory
 tinfoil /some/path       # Audit any folder
 ```
 
-From inside the TUI you can launch profile installs (it uses the self-contained tree under /usr/share/tinfoil).
+Prefer running **archy** from the checkout (or future PATH install) for the real menu → NEXT loop. See [archy.md](archy.md).
 
 For development (before any install):
 
 ```bash
-go run bin/tinfoil.go tui
-# or
-./install.sh --tui
+make archy
+TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
+# legacy gum:
+# ./install.sh --tui
+# go run bin/tinfoil.go tui
 ```
 
 After the thin CLI is installed you can still do full workstation bootstrap with:
@@ -171,4 +184,4 @@ After the thin CLI is installed you can still do full workstation bootstrap with
 ./install.sh --profile ml-dev
 ```
 
-See `tinfoil-name-explained.md`, the main README, and docs/INDEX.md for philosophy + architecture.
+Name humor: [tinfoil-name-explained.md](../tinfoil-name-explained.md) (legacy entry doc — points here + archy). Architecture: [INDEX.md](INDEX.md).

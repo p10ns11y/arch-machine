@@ -72,9 +72,9 @@ go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
 ./maintenance/extract-evidence.sh --dry-run
 ```
 
-**CI mirror:** `.github/workflows/ci.yml` (shellcheck, yamllint, go build/vet, profile validation stub, evidence smoke).
+**CI mirror:** `.github/workflows/ci.yml` — **hard:** archy/groxy/keeper cargo tests (+ eye-comfort gates). **Advisory today:** shellcheck/yamllint/markdownlint/profile stub/evidence-smoke often `|| true`. Soft-obsolete: `arch-design/soft-obsolete-candidates.md`.
 
-**Cockpit:** `av` delegates here when `.agents/verification/tmux-layout.sh` exists (requires host `~/.config/shell` verify libs).
+**Cockpit:** `av` delegates here when `.agents/verification/tmux-layout.sh` exists (requires host `~/.config/shell` verify libs). VERIFY pane is a **partial** gate vs the full list above.
 
 ## Never compress (agents)
 

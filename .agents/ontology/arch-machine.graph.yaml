@@ -17,7 +17,9 @@ nodes:
     subgraph: control
     fused_summary: >
       archy is the live local sentinel TUI (Ratatui). Keys/job lines become
-      Msg; Eagle updates; Cmds hit satellites/shell. Gum/tinfoil are legacy.
+      Msg; Eagle updates; Cmds hit satellites/shell. Gum lib/tui is a frozen
+      legacy bridge. Go tinfoil is still the default thin PATH binary until
+      SN-ARCHY-1 ships archy; then demote (SN-GO-THIN).
     source_refs:
       - tools/archy/
       - docs/archy.md

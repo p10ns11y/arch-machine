@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# apply-remediation.sh — Real self-application of policies/security-remediation.md
-# Phase 5 deliverable.
+# apply-remediation.sh — Phase-5 historical demo of policies/security-remediation.md
+# SOFT-OBSOLETE (SO-11): not the live dep-audit kill-chain. Prefer
+# policies/security-remediation.md + extract-evidence.sh. See
+# arch-design/soft-obsolete-candidates.md before rewriting or deleting.
 # Usage: ./maintenance/apply-remediation.sh [--dry-run] [target]
 # Targets (MVP): legacy-dup, root-pollution, etc.
-# Always produces evidence before/after.
 
 set -euo pipefail
 

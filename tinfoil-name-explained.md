@@ -1,30 +1,31 @@
 # tinfoil — The CLI Name & Quick Start Guide
 
-**tinfoil** is the main security auditor CLI that ships with arch-machine.
+> **Legacy entry doc (soft).** The **main interactive control plane is `archy`** — see [docs/archy.md](docs/archy.md).  
+> Thin install still ships the Go **`tinfoil` shim** until SN-ARCHY-1. Gum `tinfoil tui` is frozen (SN-2).  
+> Soft-obsolete inventory: [arch-design/soft-obsolete-candidates.md](arch-design/soft-obsolete-candidates.md) (SO-4).
+
+**tinfoil** is the humorous name for the optional sentinel/guardian **CLI shim** that ships with arch-machine.
 
 ## Quick Installation & Usage
 
-tinfoil is installed automatically when you run the main installer:
+```bash
+# Preferred interactive UI (from checkout until PATH ships):
+make archy
+TINFOIL_ROOT="$PWD" ./tools/archy/target/debug/archy
+
+# Thin install still installs the shim:
+./install.sh --thin
+tinfoil                  # audit via shim
+tinfoil tui              # legacy: archy if on PATH, else gum
+```
+
+Full profiles:
 
 ```bash
 ./install.sh --profile ml-dev     # (or security-dev / minimal)
 ```
 
-Then use it:
-
-```bash
-tinfoil                  # full system audit
-tinfoil tui              # interactive TUI
-tinfoil .                # current folder
-```
-
-For development:
-
-```bash
-go run bin/tinfoil.go tui
-```
-
-See the tinfoil section in README.md and docs/INSTALLATION.md.
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) and [docs/INDEX.md](docs/INDEX.md).
 
 ---
 

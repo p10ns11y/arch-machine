@@ -1,5 +1,8 @@
 # AI Evidence Extraction System
 
+> **Soft redirect.** Prefer [docs/MAINTENANCE.md](docs/MAINTENANCE.md) (Evidence Extraction) + ontology `evidence`.  
+> Soft-obsolete: [arch-design/soft-obsolete-candidates.md](arch-design/soft-obsolete-candidates.md) (SO-12).
+
 This system extracts high-signal evidence from maintenance logs for AI agent consumption, providing token-efficient insights instead of verbose raw logs.
 
 ## Overview
@@ -90,11 +93,8 @@ Evidence bundles provide:
 - **Change tracking**: Compare bundles over time
 
 Use the evidence bundles instead of raw logs to minimize token consumption while maintaining full situational awareness.
-## TUI Integration (2026-05-29, autonomous mission)
-The gum TUI (lib/tui.sh) now provides interactive access to evidence flows:
-- "Extract Evidence Bundle" menu directly calls maintenance/extract-evidence.sh
-- Logs browser uses fzf + gum pager on logs/evidence-*.*
-- All TUI runs can be logged via tee for full audit trail
-- Recommended: run `tinfoil tui` then choose evidence for human+AI consumption
+## Surface Integration
 
-This improves the "evidence for the AI overlords" experience with beautiful vigilant UX.
+Prefer **archy** evidence menu / `./maintenance/extract-evidence.sh` (see `docs/MAINTENANCE.md`).
+
+Gum `lib/tui/` still has an extract/browse path (frozen, SO-1). Do not treat `tinfoil tui` as day-1.
