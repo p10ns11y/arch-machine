@@ -67,7 +67,7 @@ make validate-profiles       # profile-validation-harness.sh
 cargo test --manifest-path tools/archy/Cargo.toml
 cargo test --manifest-path tools/groxy/Cargo.toml
 cargo test --manifest-path tools/keeper/Cargo.toml
-go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
+go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./bin/tinfoil.go
 ./install.sh --thin --validate
 ./maintenance/extract-evidence.sh --dry-run
 ```

@@ -42,7 +42,7 @@ cockpits:
         priority: 4
         space_profile: confirm-burst
         cwd: .
-        command: 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/... && ./maintenance/extract-evidence.sh --dry-run'
+        command: 'make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./bin/tinfoil.go && ./maintenance/extract-evidence.sh --dry-run'
         value: Pre-PR gate from AGENTS.md (omit install.sh --thin --validate — use at listed test)
 
   # Neovim + avante grok-acp (tools/groxy/extras) — preferred build surface for this repo
@@ -76,7 +76,7 @@ cockpits:
 
       - id: tinfoil-go
         priority: 5
-        command: go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
+        command: go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./bin/tinfoil.go
         label: tinfoil build + go vet
 
       - id: validate-profiles

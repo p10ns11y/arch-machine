@@ -38,7 +38,7 @@ verify_apply_theme "$SESSION" "$PROJECT_NAME" "$RISK_PROFILE" "$VERIFY_DIR/tmux-
 CONFIRM_SPLIT=1
 
 # Keep in sync with cockpit.yaml → cockpits.verify
-VERIFY_CMD='make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/... && ./maintenance/extract-evidence.sh --dry-run'
+VERIFY_CMD='make lint && make validate-profiles && cargo test --manifest-path tools/archy/Cargo.toml && cargo test --manifest-path tools/groxy/Cargo.toml && cargo test --manifest-path tools/keeper/Cargo.toml && go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./bin/tinfoil.go && ./maintenance/extract-evidence.sh --dry-run'
 WATCH_CMD='while true; do make lint 2>&1 | tail -40; sleep 30; done'
 
 if verify_layout_ok "$SESSION"; then

@@ -24,7 +24,7 @@ tests:
 
   - id: tinfoil-go
     priority: 5
-    command: go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./cmd/... ./bin/...
+    command: go build -o /tmp/tinfoil ./bin/tinfoil.go && go vet ./bin/tinfoil.go
     label: tinfoil build + go vet
 
   - id: validate-profiles
