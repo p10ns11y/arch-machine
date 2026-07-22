@@ -1,13 +1,40 @@
-# arch-machine 🛡️🤖
+# arch-machine 🛡️🦅
 
 **The only Arch Linux setup that audits itself harder than your ex audits your text messages.**
 
-Meet **arch-machine** — your AI-forged, profile-based Arch Linux fortress that turns a fresh install into a vigilant, self-healing, ML/AI-ready workstation faster than you can say “pacman -Syu… oh god why is it still compiling”.
+Meet **arch-machine** — thin-first fortress, optional ML/security bloat, and a control plane that steers shell scripts instead of reimplementing `pacman` in three languages for sport.
 
-### Branch Philosophy – No Boring Feature Branches Allowed
+For the boring (useful) docs: [README.md](README.md) · [docs/archy.md](docs/archy.md) · [docs/groxy.md](docs/groxy.md) · [tools/keeper/README.md](tools/keeper/README.md).
 
-We don’t do lame `feature/xyz` branches.  
-Instead, every branch is a **virtuous compound-word sentinel**. Each one has a distinct purpose and vibe, like elite AI security operatives standing guard over different aspects of the project.
+---
+
+### The cast (current timeline)
+
+| Character | Job | Personality |
+|-----------|-----|-------------|
+| **archy** | Main control plane (Ratatui Eagle loop) | Shows a menu, runs a script, points at **NEXT**. Does not invent package logic. |
+| **Shell backends** | Iron peak (`maintenance/*.sh`, `install.sh`) | Do the real work. Evidence closes the loop. |
+| **groxy** | Remote surfaces (`inject` + `acp serve`) | Host → XChat **notify**, or ACP **control**. Phone DMs do **not** magically pick which of your three Grok windows is “it.” |
+| **keeper** | Threshold vault (`tools/keeper`) | Any **2 of 3** (passphrase · offline escrow · device). `healthy` means you drilled once — not “vault is open, party.” |
+| **Grok plugin** | Complex orchestration (`/arch-*`) | Agent-side slash commands. archy can also launch Grok with a preload. |
+| **gum / tinfoil Go** | Legacy / thin shim | Still in the basement. Do not cast them as the hero in trailers. |
+| **eye-comfort** | Circadian themes (Omarchy) | Soft cream days, warm umber nights. Your retinas file a thank-you note. |
+
+```text
+  keys → Msg → Eagle update → Cmd → shell satellite
+                 (archy)
+
+  ACP client ──► grok agent serve     ✅ control
+  inject ──────► XChat notify         ✅ outbound only
+  ambient DM ──► “which Grok?”        ❌ not productized
+```
+
+---
+
+### Branch Philosophy – No Boring Feature Branches Allowed (mostly)
+
+We don’t *aspire* to lame `feature/xyz` branches.  
+Instead, every **named** branch is a **virtuous compound-word sentinel**. Each one has a distinct purpose and vibe, like elite AI security operatives standing guard over different aspects of the project.
 
 ![sentinels](/sentinels-ultimate-masters.jpg)
 
@@ -19,39 +46,39 @@ Instead, every branch is a **virtuous compound-word sentinel**. Each one has a d
 | **Guardwell** | guard + well (good/well)           | Simple, reassuring                      |
 | **Trusinel**  | true + sentinel                    | Emphasizes reliability                  |
 
-### Branch Philosophy – No Boring Feature Branches Allowed
-
-We don’t do lame `feature/xyz` branches.  
-Instead, every branch is a **virtuous compound-word sentinel**… except for the one true guardian that rules them all.
-
 | Branch       | Concrete Situation                                                                 | What It Solves                                      |
 |--------------|------------------------------------------------------------------------------------|-----------------------------------------------------|
-| **Sentinel** | The one true default/protected branch (was `main`/`master` in the beginning)     | **The core fortress**. All stable, production-ready, and merged code lives here. This is the branch you clone and trust. |
-| **Virtinel** | Daily driver dev machine, normal work, merging stable improvements                | The “default trustworthy guardian” — balanced, reliable, production-ready security auditing + monitoring stack for everyday use |
-| **Eusinel**  | Experimenting with new AI-powered monitoring dashboards, futuristic Vector configs, or next-gen ML security features | Elegant, positive, slightly futuristic enhancements without breaking the core system |
-| **Safinel**  | Deploying on a production server, high-security environment, or machine with sensitive data | Maximum hardening mode — ultra-secure configs when you need the strongest possible guardian |
-| **Guardwell**| Onboarding a new team member, writing documentation, or creating a minimal/clean setup for someone less steeped in security | Simple and reassuring experience — makes the whole security fortress feel approachable and beginner-friendly |
-| **Trusinel** | Long-term stable release for critical systems, CI/CD pipelines, or machines that must stay rock-solid for months | Emphasizes reliability — bug-free, battle-tested version for environments where uptime and trust matter most |
+| **Sentinel** | The one true default/protected branch (was `main`/`master` in the beginning)     | **The core fortress**. Stable, production-ready merges live here. Clone this and sleep. |
+| **Virtinel** | Daily driver dev machine, normal work, merging stable improvements                | Balanced guardian — everyday security + monitoring stack |
+| **Eusinel**  | Experimenting with AI dashboards, eye-comfort phases, or next-gen ML security     | Elegant, slightly futuristic without torching the core |
+| **Safinel**  | High-security host, sensitive data, maximum hardening cosplay                    | Strongest guardian mode |
+| **Guardwell**| Onboarding, docs, minimal/clean setup for humans who don’t dream in YAML         | Approachable fortress tour |
+| **Trusinel** | Long-term stable / “please don’t break CI for six months”                        | Reliability cosplay for uptime cultists |
 
-**Rule:** These six branches are the **only** ones that exist.  
-`Sentinel` is the protected main branch. The others are the elite specialist sentinels.  
-(They’re basically the Justice League of Arch Linux security.)
+**Rule (aspirational):** These six are the Justice League. **`Sentinel`** is home base.  
+**Reality check (2026):** Agents sometimes open `feat/…` and `fix/…` branches anyway — then we merge the good bits back to **Sentinel** and pretend the temporary names never happened. Classic `main`/`master` remain **genesis fossils**.
 
-**Classic `main` and `master` branches** still exist as **genesis branches** (historical artifacts from the very beginning of the project).
+---
 
-### What the machine actually does (in dramatic terms):
-- **Bootstraps** your Arch machine with surgical precision using cute little `install.sh` and `security-audit.sh` scripts.
-- **Hardens** it like it owes the NSA money (Lynis, rkhunter, unhide, ClamAV, Grype, OSV-Scanner… the whole security zoo shows up and starts flexing).
-- **Monitors** everything like a jealous helicopter parent (Vector + systemd timers = “yes sweetie, I saw that suspicious port at 3:17 a.m.”).
-- **Generates** SBOMs so detailed they could testify in court.
-- Comes with **security-dev** and **ml-dev** profiles because your LLM deserves to train without getting cryptojacked by some script-kiddie in a basement.
+### What the machine actually does (in dramatic terms)
 
-### Tagline options (pick your poison):
-- “Arch Linux, but it has trust issues and a security clearance.”
-- “We turned ‘rolling release’ into ‘rolling security audit’.”
-- “Sentinels don’t sleep. Neither does this machine.”
+- **Bootstraps thin** — `./install.sh` (default `--thin`) drops runtime under `/usr/share/tinfoil/` without inviting the entire AUR to brunch.
+- **Steers with archy** — menu → shell job → stdio drama → **NEXT** bar. Inventory, catalog, Omarchy status, audit, evidence: all scripts, one Eagle.
+- **Hardens** like it owes the NSA money (Lynis, rkhunter, ClamAV, Grype… when you expand security — not on day-1 thin).
+- **Profiles** — `minimal` / `ml-dev` / `security-dev` because your LLM deserves ROCm *and* your secrets deserve a drill-proven vault.
+- **Evidence** — JSON/TOON bundles so “we fixed it” can testify in court (or at least in the next archy session).
+- **Remote, honestly** — **groxy inject** texts you status; **ACP** controls an agent; **no** ambient “phone DM → focused Grok window” magic.
+- **Keeper** — one passphrase, one offline escrow file, this device free. Lose two of three and the universe is silent. That is intentional.
 
-**Warning:** May cause sudden feelings of superiority over Ubuntu users. Side effects include obsessive `security-audit.sh` runs at 2 a.m. and naming your cat “Virtinel”.
+### Tagline options (pick your poison)
 
-Star it. Fork it. Let it watch over your precious AI experiments.  
-(Just don’t ask it for emotional support — it’s too busy checking your rootkits.)
+- “Arch Linux, but it has trust issues and a Ratatui clearance.”
+- “We turned ‘rolling release’ into ‘rolling evidence bundle’.”
+- “Sentinels don’t sleep. Neither does the weekly timer.”
+- “archy steers. Shell works. groxy notifies. keeper forgets nothing you can still prove.”
+- “Omarchy-friendly. Multi-distro fantasies sold separately.”
+
+**Warning:** May cause sudden feelings of superiority over Ubuntu users. Side effects include obsessive `security-audit.sh` runs at 2 a.m., naming your cat “Virtinel”, and arguing with agents about whether gum is “legacy” or “heritage.”
+
+Star it. Fork it. Let **archy** watch the iron peak.  
+(Just don’t ask **groxy** to mind-read your XChat into three open TUIs — it will refuse, correctly.)
