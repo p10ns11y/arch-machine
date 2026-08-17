@@ -1,7 +1,9 @@
 /* Eye-comfort TN Waybar chip + tooltip breathing room.
- * Install copies this next to tn-status.sh. Host apply: either
- *   @import url("file:///home/USER/.local/lib/eye-comfort/waybar/eye-comfort.css");
- * into ~/.config/waybar/style.css, or paste the rules below.
+ * Install copies this next to tn-status.sh.
+ * Host: copy this file to ~/.config/waybar/eye-comfort/eye-comfort.css
+ * and include it from style.css with a relative path
+ * (eye-comfort/eye-comfort.css). Waybar does not load file:// CSS.
+ * Do not put stylesheet include directives in this comment — GTK parses them.
  * Never edit ~/.local/share/omarchy/.
  *
  * Crisp type (HiDPI scale 2): use real font weights only.

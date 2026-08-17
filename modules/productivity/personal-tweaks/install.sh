@@ -75,7 +75,9 @@ run cp "$HERE/units/mission-map-graph.service" "$SYS_USER/"
 run cp "$HERE/units/mission-map-graph.timer" "$SYS_USER/"
 run cp "$HERE/desktop/kanithanj.ai.desktop" "$APPS/"
 run install -m 755 "$LIB/apply-waybar.sh" "$HOME/.local/lib/personal-tweaks/apply-waybar.sh"
+run install -m 755 "$LIB/backup-waybar.sh" "$HOME/.local/lib/personal-tweaks/backup-waybar.sh"
 run install -m 644 "$LIB/patch_waybar.py" "$HOME/.local/lib/personal-tweaks/patch_waybar.py"
+run install -m 644 "$HERE/waybar/mission-map.css" "$HOME/.local/lib/personal-tweaks/mission-map.css"
 run install -m 755 "$HERE/hooks/92-heading-chip.sh" "$HOOKS_THEME/92-heading-chip.sh"
 run install -m 755 "$HERE/hooks/92-heading-chip.sh" "$HOOKS_UPDATE/92-heading-chip.sh"
 
@@ -98,5 +100,7 @@ fi
 
 echo "personal-tweaks ok"
 echo "theme-set + post-update hooks re-apply the chip after Omarchy wipes waybar"
+echo "waybar backups: ~/.local/share/personal-tweaks/waybar-backups/ (last-good + stamps)"
+echo "restore: ~/.local/lib/personal-tweaks/backup-waybar.sh --restore last-good"
 echo "live map JSON stays in ~/.grok/mission-maps/ (not this repo)"
 echo "then: omarchy restart waybar"
