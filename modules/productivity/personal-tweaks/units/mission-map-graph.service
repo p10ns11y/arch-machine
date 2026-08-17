@@ -1,0 +1,8 @@
+[Unit]
+Description=Rewrite life-os UI/Mission.md from mission-map heading
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStartPre=-/bin/sh -c 'systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE DISPLAY DBUS_SESSION_BUS_ADDRESS 2>/dev/null || true'
+ExecStart=%h/.local/bin/mm-lifeos-graph

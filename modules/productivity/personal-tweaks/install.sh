@@ -69,8 +69,8 @@ if [[ ! -x "$LOCAL_BIN/kanithanj.ai" ]]; then
   fi
 fi
 
-run cp "$HERE/systemd/mission-map-graph.service" "$SYS_USER/"
-run cp "$HERE/systemd/mission-map-graph.timer" "$SYS_USER/"
+run cp "$HERE/units/mission-map-graph.service" "$SYS_USER/"
+run cp "$HERE/units/mission-map-graph.timer" "$SYS_USER/"
 run cp "$HERE/desktop/kanithanj.ai.desktop" "$APPS/"
 
 ICON_SRC="$HOME/Work/personal/collab-finder/src-tauri/icons/128x128.png"

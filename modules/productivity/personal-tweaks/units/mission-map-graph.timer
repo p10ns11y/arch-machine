@@ -1,0 +1,11 @@
+[Unit]
+Description=Mission-map heading refresh at 20:00 (life-os graph + heading)
+
+[Timer]
+OnCalendar=*-*-* 20:00:00
+AccuracySec=1min
+Persistent=true
+Unit=mission-map-graph.service
+
+[Install]
+WantedBy=timers.target
