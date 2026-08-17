@@ -1,0 +1,15 @@
+// Paste into ~/.config/waybar/config.jsonc (user config — never ~/.local/share/omarchy).
+// 1) Add "custom/mission-map" to modules-center, right after "custom/focus-now".
+// 2) Merge this block.
+// 3) Import waybar/mission-map.css into ~/.config/waybar/style.css
+// Click: open kanithanj.ai Heading. Right-click: notify.
+
+"custom/mission-map": {
+  "exec": "$HOME/.local/bin/mm-waybar",
+  "return-type": "json",
+  "interval": 120,
+  "signal": 12,
+  "tooltip": true,
+  "on-click": "$HOME/.local/bin/mm-waybar open",
+  "on-click-right": "$HOME/.local/bin/mm-waybar notify"
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=kanithanj.ai
+Comment=Career heading cockpit (cluster satellite)
+Exec=kanithanj.ai
+Icon=kanithanj.ai
+Terminal=false
+Categories=Utility;Office;
+StartupWMClass=collab-finder
+Keywords=heading;career;apply;

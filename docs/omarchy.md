@@ -91,3 +91,4 @@ Mutating Omarchy package/theme flows stay in Omarchy’s own TUI/`omarchy menu` 
 | CLI binaries | `$OMARCHY_PATH/bin/omarchy-*` |
 | arch-machine baseline snapshot | `config/baselines/omarchy.yaml` |
 | Full command reference | `docs/omarchy-commands.md` |
+| Personal heading / kanithanj.ai / 20:00 timer | `modules/productivity/personal-tweaks/` (`install.sh --yes`) |
