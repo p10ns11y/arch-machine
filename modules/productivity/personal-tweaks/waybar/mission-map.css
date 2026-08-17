@@ -1,0 +1,17 @@
+#custom-mission-map {
+  margin-left: 4px;
+  margin-right: 8px;
+  min-width: 48px;
+}
+
+#custom-mission-map.do {
+  color: #95d5b2;
+}
+
+#custom-mission-map.wait {
+  color: #a8dadc;
+}
+
+#custom-mission-map.empty {
+  color: #9a8c98;
+}
