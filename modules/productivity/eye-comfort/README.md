@@ -60,9 +60,10 @@ Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your*
 
 1. Add `"custom/eye-comfort"` to `modules-center` (or `modules-right`).
 2. Paste the module block from [`waybar/module.jsonc`](waybar/module.jsonc).
-3. Import CSS — add to `~/.config/waybar/style.css`:
-   `@import url("file://$HOME/.local/lib/eye-comfort/waybar/eye-comfort.css");`
-   (expands `$HOME`; or paste rules from [`waybar/eye-comfort.css`](waybar/eye-comfort.css)).
+3. Copy [`waybar/eye-comfort.css`](waybar/eye-comfort.css) to
+   `~/.config/waybar/eye-comfort/eye-comfort.css` and add to `~/.config/waybar/style.css`:
+   `@import "eye-comfort/eye-comfort.css";`
+   (Waybar does not resolve `file://` URLs; or paste the rules).
    This adds chip margin (stops clock `…2026` glued to `marutham`) and tooltip padding.
 4. Restart Waybar (`omarchy restart waybar` / the eye-comfort wrapper).
 

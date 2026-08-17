@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
-"""Idempotent waybar heading-chip insert. Stock Omarchy has no focus-now."""
+"""Idempotent waybar heading-chip insert. Stock Omarchy has no focus-now.
+
+Backs up ~/.config/waybar/{config.jsonc,style.css} under
+~/.local/share/personal-tweaks/waybar-backups/ before every write.
+"""
 
 from __future__ import annotations
 
+import json
+import os
 import re
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 MODULE_NAME = "custom/mission-map"
@@ -18,6 +26,72 @@ MODULE_BLOCK = """
     "on-click-right": "$HOME/.local/bin/mm-waybar notify"
   },
 """
+
+RELATIVE_EYE_IMPORT = '@import "eye-comfort/eye-comfort.css";'
+FILE_EYE_IMPORT = re.compile(
+    r'@import\s+url\("file://[^"]*eye-comfort\.css"\);\n?',
+    re.I,
+)
+KEEP_BACKUPS = 20
+
+
+def default_backup_root() -> Path:
+    override = os.environ.get("PERSONAL_TWEAKS_BACKUP")
+    if override:
+        return Path(override)
+    data = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))
+    return Path(data) / "personal-tweaks" / "waybar-backups"
+
+
+def loads_jsonc(text: str) -> object:
+    t = re.sub(r"//.*?$", "", text, flags=re.M)
+    t = re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+    t = re.sub(r",\s*([}\]])", r"\1", t)
+    return json.loads(t)
+
+
+def is_valid_jsonc(text: str) -> bool:
+    try:
+        loads_jsonc(text)
+        return True
+    except (json.JSONDecodeError, ValueError):
+        return False
+
+
+def backup_files(paths: list[Path], dest: Path) -> Path:
+    dest.mkdir(parents=True, exist_ok=True)
+    for p in paths:
+        if p.is_file():
+            shutil.copy2(p, dest / p.name)
+    return dest
+
+
+def prune_backups(root: Path, keep: int = KEEP_BACKUPS) -> None:
+    if not root.is_dir():
+        return
+    dirs = sorted(
+        p for p in root.iterdir() if p.is_dir() and p.name != "last-good"
+    )
+    for old in dirs[:-keep]:
+        shutil.rmtree(old, ignore_errors=True)
+
+
+def snapshot_waybar(paths: list[Path], backup_root: Path | None = None) -> Path:
+    root = backup_root or default_backup_root()
+    stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    dest = root / stamp
+    n = 1
+    while dest.exists():
+        n += 1
+        dest = root / f"{stamp}-{n}"
+    backup_files(paths, dest)
+    prune_backups(root)
+    return dest
+
+
+def mark_last_good(paths: list[Path], backup_root: Path | None = None) -> Path:
+    root = backup_root or default_backup_root()
+    return backup_files(paths, root / "last-good")
 
 
 def ensure_center(text: str) -> str:
@@ -56,7 +130,16 @@ def _insert_after_object(text: str, key: str, extra: str) -> str | None:
         elif ch == "}":
             depth -= 1
             if depth == 0:
-                return text[: j + 1] + "," + extra + text[j + 1 :]
+                k = j + 1
+                while k < len(text) and text[k] in " \t":
+                    k += 1
+                had_comma = k < len(text) and text[k] == ","
+                if had_comma:
+                    k += 1
+                block = extra.strip().rstrip(",").rstrip()
+                if had_comma:
+                    return text[:k] + "\n  " + block + "," + text[k:]
+                return text[: j + 1] + ",\n  " + block + text[j + 1 :]
     return None
 
 
@@ -79,24 +162,79 @@ def ensure_css(css: str, extra: str) -> str:
     return css.rstrip() + "\n\n" + extra.rstrip() + "\n"
 
 
-def apply(cfg_path: Path, css_path: Path, css_src: Path) -> list[str]:
+def ensure_eye_comfort_import(css: str) -> str:
+    """Waybar does not resolve file:// includes; use a path next to style.css."""
+    out = FILE_EYE_IMPORT.sub("", css)
+    if RELATIVE_EYE_IMPORT in out:
+        return out
+    m = re.search(r"@import[^\n]+\n", out)
+    if m:
+        return out[: m.end()] + RELATIVE_EYE_IMPORT + "\n" + out[m.end() :]
+    return RELATIVE_EYE_IMPORT + "\n" + out
+
+
+def stage_eye_comfort_css(style_path: Path) -> Path | None:
+    dest_dir = style_path.parent / "eye-comfort"
+    dest = dest_dir / "eye-comfort.css"
+    if dest.is_file():
+        return dest
+    candidates = [
+        Path.home() / ".local/lib/eye-comfort/waybar/eye-comfort.css",
+        Path.home() / "arch-machine/modules/productivity/eye-comfort/waybar/eye-comfort.css",
+    ]
+    for src in candidates:
+        if src.is_file():
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dest)
+            return dest
+    return None
+
+
+def apply(
+    cfg_path: Path,
+    css_path: Path,
+    css_src: Path,
+    backup_root: Path | None = None,
+) -> list[str]:
     notes: list[str] = []
+    root = backup_root or default_backup_root()
+    snap = snapshot_waybar([cfg_path, css_path], root)
+    notes.append(f"backup {snap}")
+
     if cfg_path.is_file():
         before = cfg_path.read_text(encoding="utf-8")
         after = ensure_object(ensure_center(before))
         if after != before:
-            cfg_path.write_text(after, encoding="utf-8")
-            notes.append(f"patched {cfg_path}")
+            if not is_valid_jsonc(after):
+                notes.append(f"refused invalid jsonc {cfg_path} (left untouched)")
+            else:
+                cfg_path.write_text(after, encoding="utf-8")
+                notes.append(f"patched {cfg_path}")
         else:
-            notes.append(f"ok {cfg_path}")
+            if not is_valid_jsonc(before):
+                notes.append(f"invalid existing jsonc {cfg_path}")
+            else:
+                notes.append(f"ok {cfg_path}")
     else:
         notes.append(f"missing {cfg_path}")
-    if css_path.is_file() and css_src.is_file():
+
+    if css_path.is_file():
         before = css_path.read_text(encoding="utf-8")
-        after = ensure_css(before, css_src.read_text(encoding="utf-8"))
+        after = before
+        if css_src.is_file():
+            after = ensure_css(after, css_src.read_text(encoding="utf-8"))
+        after = ensure_eye_comfort_import(after)
+        staged = stage_eye_comfort_css(css_path)
+        if staged:
+            notes.append(f"css-local {staged}")
         if after != before:
             css_path.write_text(after, encoding="utf-8")
             notes.append(f"patched {css_path}")
         else:
             notes.append(f"ok {css_path}")
+
+    live = [p for p in (cfg_path, css_path) if p.is_file()]
+    if cfg_path.is_file() and is_valid_jsonc(cfg_path.read_text(encoding="utf-8")):
+        mark_last_good(live, root)
+        notes.append(f"last-good {root / 'last-good'}")
     return notes
