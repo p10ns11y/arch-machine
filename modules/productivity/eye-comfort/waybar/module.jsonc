@@ -1,7 +1,8 @@
 // Paste into ~/.config/waybar/config.jsonc (Omarchy user config — not ~/.local/share/omarchy).
 // 1) Add "custom/eye-comfort" to modules-center (or modules-right), ideally after "clock".
 // 2) Merge the block below.
-// 3) Import waybar/eye-comfort.css into ~/.config/waybar/style.css (chip gap + tooltip padding).
+// 3) Copy eye-comfort.css to ~/.config/waybar/eye-comfort/ and include it from style.css
+//    with a relative path (Waybar does not load file:// CSS).
 // Bar: tinai · siru · nN   Tooltip: date + scene + fields (Pango)   Click: notify
 
 "custom/eye-comfort": {
