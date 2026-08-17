@@ -43,15 +43,17 @@ run() {
   fi
 }
 
-WB_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config.jsonc"
-WB_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
 SYS_USER="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 LOCAL_BIN="$HOME/.local/bin"
 APPS="$HOME/.local/share/applications"
 ICONS="$HOME/.local/share/icons/hicolor/128x128/apps"
 MM_SCRIPTS="$PLUGINS_ROOT/mission-map/scripts"
+LIB="$HERE/lib"
+HOOKS_THEME="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
+HOOKS_UPDATE="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/post-update.d"
 
-run mkdir -p "$LOCAL_BIN" "$SYS_USER" "$APPS" "$ICONS"
+run mkdir -p "$LOCAL_BIN" "$SYS_USER" "$APPS" "$ICONS" \
+  "$HOME/.local/lib/personal-tweaks" "$HOOKS_THEME" "$HOOKS_UPDATE"
 
 if [[ -x "$MM_SCRIPTS/mm-lifeos-graph" ]]; then
   run ln -sfn "$MM_SCRIPTS/mm-lifeos-graph" "$LOCAL_BIN/mm-lifeos-graph"
@@ -72,71 +74,20 @@ fi
 run cp "$HERE/units/mission-map-graph.service" "$SYS_USER/"
 run cp "$HERE/units/mission-map-graph.timer" "$SYS_USER/"
 run cp "$HERE/desktop/kanithanj.ai.desktop" "$APPS/"
+run install -m 755 "$LIB/apply-waybar.sh" "$HOME/.local/lib/personal-tweaks/apply-waybar.sh"
+run install -m 644 "$LIB/patch_waybar.py" "$HOME/.local/lib/personal-tweaks/patch_waybar.py"
+run install -m 755 "$HERE/hooks/92-heading-chip.sh" "$HOOKS_THEME/92-heading-chip.sh"
+run install -m 755 "$HERE/hooks/92-heading-chip.sh" "$HOOKS_UPDATE/92-heading-chip.sh"
 
 ICON_SRC="$HOME/Work/personal/collab-finder/src-tauri/icons/128x128.png"
 if [[ -f "$ICON_SRC" ]]; then
   run cp "$ICON_SRC" "$ICONS/kanithanj.ai.png"
 fi
 
-patch_waybar() {
-  python3 - "$WB_CFG" "$WB_CSS" "$HERE/waybar/mission-map.css" <<'PY'
-import pathlib, sys
-
-cfg_p, css_p, css_src = map(pathlib.Path, sys.argv[1:4])
-block = """
-  "custom/mission-map": {
-    "exec": "$HOME/.local/bin/mm-waybar",
-    "return-type": "json",
-    "interval": 120,
-    "signal": 12,
-    "tooltip": true,
-    "on-click": "$HOME/.local/bin/mm-waybar open",
-    "on-click-right": "$HOME/.local/bin/mm-waybar notify"
-  },
-"""
-
-def insert_after_object(text: str, key: str, extra: str) -> str:
-    needle = f'"{key}":'
-    i = text.find(needle)
-    if i < 0:
-        return text
-    brace = text.find("{", i)
-    if brace < 0:
-        return text
-    depth = 0
-    for j, ch in enumerate(text[brace:], brace):
-        if ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                return text[: j + 1] + "," + extra + text[j + 1 :]
-    return text
-
-if cfg_p.is_file():
-    t = cfg_p.read_text(encoding="utf-8")
-    if "custom/mission-map" not in t:
-        t = t.replace('"custom/focus-now"', '"custom/focus-now", "custom/mission-map"', 1)
-        t = insert_after_object(t, "custom/focus-now", block)
-        cfg_p.write_text(t, encoding="utf-8")
-        print("patched", cfg_p)
-    else:
-        print("waybar config already has custom/mission-map")
-if css_p.is_file():
-    css = css_p.read_text(encoding="utf-8")
-    extra = css_src.read_text(encoding="utf-8")
-    if "#custom-mission-map" not in css:
-        css_p.write_text(css.rstrip() + "\n\n" + extra, encoding="utf-8")
-        print("patched", css_p)
-    else:
-        print("waybar css already has #custom-mission-map")
-PY
-}
-
 if (( DRY )); then
-  echo "DRY: patch waybar $WB_CFG $WB_CSS"
+  echo "DRY: apply-waybar.sh"
 else
-  patch_waybar
+  PYTHONPATH="$LIB${PYTHONPATH:+:$PYTHONPATH}" "$LIB/apply-waybar.sh"
 fi
 
 if (( !DRY )); then
@@ -146,4 +97,6 @@ if (( !DRY )); then
 fi
 
 echo "personal-tweaks ok"
+echo "theme-set + post-update hooks re-apply the chip after Omarchy wipes waybar"
+echo "live map JSON stays in ~/.grok/mission-maps/ (not this repo)"
 echo "then: omarchy restart waybar"

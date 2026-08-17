@@ -12,6 +12,10 @@ What this module writes. **Never** edit `~/.local/share/omarchy/`.
 | `~/.config/waybar/style.css` | append CSS if absent | Chip colors |
 | `~/.local/share/applications/kanithanj.ai.desktop` | copy | Walker |
 
-**Not written:** `~/.grok/mission-maps/` (live JSON, contacts, `_private.Mission`). Sync those separately; they are local SoT and may contain process detail.
+| `~/.local/lib/personal-tweaks/patch_waybar.py` | copy | Idempotent insert (stock bar has no focus-now) |
+| `~/.config/omarchy/hooks/theme-set.d/92-heading-chip.sh` | copy | Re-apply chip after theme-set |
+| `~/.config/omarchy/hooks/post-update.d/92-heading-chip.sh` | copy | Re-apply after `omarchy update` |
 
-`omarchy refresh waybar` wipes user Waybar — re-run this install after a refresh.
+**Not written:** `~/.grok/mission-maps/` (live JSON, contacts, `_private.Mission`). That is local SoT and may contain process detail — rsync it yourself if you want a new box to inherit the heading.
+
+`omarchy refresh waybar` still copies stock config. The hooks + `~/.local/lib/personal-tweaks/apply-waybar.sh` put the chip back without a full `--yes` reinstall.

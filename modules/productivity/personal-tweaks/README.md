@@ -10,4 +10,12 @@ omarchy restart waybar
 
 Needs: `~/Work/personal/plugins` (or `PLUGINS_ROOT`) with `mission-map`, network for the v2 binary if `kanithanj.ai` is not on PATH yet.
 
+After `omarchy refresh waybar`, the theme-set / post-update hooks call `apply-waybar.sh`. You can also run that script alone.
+
+Live mission JSON is **not** in this module (correct).
+
+```bash
+cd lib && python3 -m pytest test_patch_waybar.py -q
+```
+
 See [HOST-EDITS.md](HOST-EDITS.md).
