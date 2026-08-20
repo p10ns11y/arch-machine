@@ -5,64 +5,53 @@ on:
     branches: [ sentinel, 'hotfix/**', 'feature/**' ]
   pull_request:
     branches: [ sentinel ]
+  workflow_dispatch:
+
+concurrency:
+  group: vigilant-guardian-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  shellcheck:
+  # One checkout for soft-fail linters — avoids 429 bursts when many jobs
+  # download actions/checkout in parallel (2026-08-17 infra flake).
+  guardian-soft:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
-      - name: Run shellcheck (excluding legacy)
-        run: |
-          find . -name '*.sh' -not -path './.grok/*' -not -path './logs/*' -not -path './systemd/*' | xargs shellcheck --severity=warning || true
 
-  yamllint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - name: shellcheck (excluding legacy)
+        run: |
+          find . -name '*.sh' -not -path './.grok/*' -not -path './logs/*' -not -path './systemd/*' \
+            | xargs shellcheck --severity=warning || true
+
       - name: yamllint (config + profiles)
         run: |
           pip install yamllint -q
           yamllint -c .yamllint.yml config/ || true
 
-  go:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
-        with:
-          go-version: '1.22'
-      - name: Go build + vet (tinfoil + TUI)
+      - name: markdownlint (relaxed for humor/docs)
         run: |
-          go build -o /tmp/tinfoil ./bin/tinfoil.go || true
-          go vet ./cmd/... ./bin/... 2>/dev/null || true
+          npm install -g markdownlint-cli 2>/dev/null || true
+          markdownlint '**/*.md' --ignore 'FUNREADME.md' --ignore 'node_modules' || true
 
-  profile-validation:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
       - name: Profile validation harness (stub — exercises yaml + module symbols)
         run: |
           echo "Phase 4 harness: would validate every profile includes[] has matching install_<module> and module dir"
-          # Real implementation in Phase 4 follow-up
           ./install.sh --profile minimal --dry-run --validate 2>/dev/null || echo "Validation stub (full harness in next iteration)"
 
-  evidence-smoke:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
       - name: Evidence bundle smoke test
         run: |
           ./maintenance/extract-evidence.sh --dry-run 2>/dev/null || echo "Evidence smoke (uses sample logs/)"
           ls -l logs/evidence-bundle-*.json 2>/dev/null | tail -1 || echo "No bundle in this run (expected in real env)"
 
-  markdownlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
-      - name: markdownlint (relaxed for humor/docs)
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '1.22'
+
+      - name: Go build + vet (tinfoil + TUI)
         run: |
-          npm install -g markdownlint-cli 2>/dev/null || true
-          markdownlint '**/*.md' --ignore 'FUNREADME.md' --ignore 'node_modules' || true
+          go build -o /tmp/tinfoil ./bin/tinfoil.go || true
+          go vet ./cmd/... ./bin/... 2>/dev/null || true
 
   # SN-EC-2 + Fusion Surplus: eye-comfort schedule tests + SoT drift check
   eye-comfort:
