@@ -23,6 +23,38 @@ The hybrid is already the human condition. Digital and virtual time, and the foo
 
 ---
 
+## Plain names (first principles)
+
+Work has to happen: food, light, software, secrets, decisions. Either a person does it, a machine does it, or a pipe from someone else’s machine does it. The novels only give nicknames.
+
+| Word | In the books / this repo | Plain |
+|------|--------------------------|-------|
+| Feed | Central nanotech pipe; cheap calories | You take the thing from someone else’s pipe. App stores, `npx`, a chatbot you never check. |
+| Seed / compiler | Local compile; matter printers | You make the thing here. `./install.sh --thin` on your disk. Use the compiler: do the work with the tool in your hands. |
+| Thete | Poor client of the Feed | Someone who only eats from the pipe. Not evil. Numb. Life gets cheaper. They do not get taller. |
+| Primer | Nell’s adaptive book | A teacher that watches what just happened, turns it into a story you can stand, lets you fail cheap, then sends you back to the real thing. It will not pretend you passed. |
+| archy | This repo’s TUI | That teacher-loop on this computer: job runs, screen names it, dry-run is practice, script is the street, logs notice. |
+| Nell | The child who opens the Primer | Stance: open the teacher every day and practice in the alley. |
+| Miranda | Actress voicing the Primer | A human who comes back. Warmth is why the student returns. A cold checklist will not. |
+| Mind | AI that *is* the ship | A machine so capable it is the house. Not a chat box. Do not wait for one to raise you. Use today’s model as a lever the same day, then do the physical version. |
+| Parent | Mind as raiser | The thing you hand your future to. Models are leverage, not this. |
+| The Culture | Banks’s later chapter | If machines take almost all the work: no money needed, work optional, AIs run the plumbing. |
+| Special Circumstances | Culture spies | Plenty at home, dirty jobs abroad. Vault password in the environment is that with none of the care. |
+| Diamond Age | Stephenson, 1995 | Same future, earlier: cheap goods *and* slums, elites, tools that leak. The building site, not the opposite of the Culture. |
+| Horza | *Consider Phlebas* | Warrior who decided machines-as-parent = suicide, then could not tell friend from enemy, and died seconds from help. |
+| Nell in armor | This note | Keep Horza’s nerve. Drop his frozen map. Hard to hurt, easy to teach. |
+| Arch / arch-machine | Distro + this tree | Arch Linux: the principal OS. This repo: that OS as a workstation. |
+| Hull | Ship body | Install, vault, evidence. Other projects hang on it. They do not get welded into the installer. |
+| Eagle / satellite / NEXT | archy internals | Thin brain; jobs that actually run; the bar that says what to do after. |
+| Keeper, 2 of 3, drill | Threshold vault | Secrets need any two of: passphrase, USB file, this machine. Healthy means you practiced opening it once. Not “leave it open.” |
+| Evidence | Bundles under `logs/` | Logs that can be checked. The book noticing. Not vibes. |
+| Compose | Map → this hull | Put a tool on PATH or in a plugin. Do not copy the other git repo into this one. |
+| argv / env | Process arguments | The command line and environment. Secrets do not belong there. |
+
+One line: goods will get cheaper; you will not get simpler; run the teacher-loop on a machine you actually own; do not become a spectator or a hostage.
+
+---
+
 ## Two chapters, not rival prophets
 
 Niall Ferguson says forget easy AI abundance, read Stephenson, the future will be messy. See [Elon’s Favorite Sci-Fi Prophet Was Wrong](https://niallferguson.substack.com/p/elons-favorite-sci-fi-prophet-was). Banks already said the road is ugly. He did not stop at the mess.
