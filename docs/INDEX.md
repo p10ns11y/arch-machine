@@ -92,6 +92,7 @@ flowchart LR
 | Topic | Doc |
 |-------|-----|
 | Control plane | [archy.md](archy.md) · [tools/archy/README.md](../tools/archy/README.md) |
+| Storyline (two chapters, Primer loop) | [storyline.md](storyline.md) |
 | Remote surfaces (inject + ACP; **Neovim ACP setup**) | [groxy.md](groxy.md) · [tools/groxy/README.md](../tools/groxy/README.md) |
 | Threshold vault | [tools/keeper/README.md](../tools/keeper/README.md) · [arch-design/keeper.md](../arch-design/keeper.md) |
 | Install | [INSTALLATION.md](INSTALLATION.md) |
