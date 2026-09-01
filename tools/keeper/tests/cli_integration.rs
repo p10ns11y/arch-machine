@@ -368,3 +368,106 @@ fn cli_rebind_rewrites_device_binding() {
         .unwrap();
     assert_eq!(st.status.code(), Some(2));
 }
+
+#[test]
+fn cli_put_escrow_no_passphrase() {
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("vault-put-escrow");
+    let escrow = dir.path().join("escrow-put.json");
+    let pass = "cli-put-escrow-pass-xx";
+
+    let init = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "init",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        init.status.success(),
+        "{}",
+        String::from_utf8_lossy(&init.stderr)
+    );
+
+    let secret_file = dir.path().join("secret.txt");
+    std::fs::write(&secret_file, "escrow-put-payload").unwrap();
+    let put = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .args([
+            "put-escrow",
+            "demo",
+            "--file",
+            secret_file.to_str().unwrap(),
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        put.status.success(),
+        "put-escrow: {}",
+        String::from_utf8_lossy(&put.stderr)
+    );
+
+    let put_flag_rejected = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .args([
+            "put",
+            "demo",
+            "--file",
+            secret_file.to_str().unwrap(),
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !put_flag_rejected.status.success(),
+        "put --escrow must not be a flag on daily put"
+    );
+
+    let get_esc = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .args([
+            "get",
+            "demo",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        get_esc.status.success(),
+        "get --escrow: {}",
+        String::from_utf8_lossy(&get_esc.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&get_esc.stdout).trim(),
+        "escrow-put-payload"
+    );
+
+    let get = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args(["get", "demo", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        get.status.success(),
+        "{}",
+        String::from_utf8_lossy(&get.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&get.stdout).trim(),
+        "escrow-put-payload"
+    );
+}
