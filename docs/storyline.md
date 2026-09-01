@@ -31,7 +31,7 @@ Niall Ferguson says forget easy AI abundance, read Stephenson, the future will b
 
 **The Culture** is what life looks like if intelligence and machines actually scale: no money, almost no want, work optional. A **Mind** is not a chatbot. It is a superintelligent AI that *is* the ship or the habitat. Minds keep the lights on. They also run Special Circumstances when a crueler society needs a shove. Plenty at home, dirty hands abroad. [Wikipedia](https://en.wikipedia.org/wiki/The_Culture) · [The New Atlantis](https://www.thenewatlantis.com/publications/the-ambiguous-utopia-of-iain-m-banks) · [Banks, 2011](https://www.albedo1.com/the-iain-m-banks-interview-2011-falling-outside-the-normal-sci-fi-constraints/).
 
-*Consider Phlebas* makes the theme blunt. Horza hates the Culture for handing the future to machines. He dies in the snow. The Mind lives, becomes a ship, and takes his name. Banks prints an appendix: billions dead, galactic needle barely moved. Abundance did not make the war kind. The war did not prove abundance was fake.
+*Consider Phlebas* makes the theme blunt. Horza hates the Culture for handing the future to machines. He dies on an ice world a few seconds from a medkit. The Mind lives, becomes a ship, and takes his name. Banks prints an appendix: billions dead, galactic needle barely moved. Abundance did not make the war kind. The war did not prove abundance was fake. Plot and stance are in [Nell in armor](#nell-in-armor-not-horza).
 
 Fast map:
 
@@ -42,7 +42,7 @@ Fast map:
 | Primer | A Mind as tutor and handler |
 | Leaked mites | Special Circumstances blowback |
 
-Musk bets we get from Nell’s alley to the orbital. Ferguson bets we stay in the alley with better gadgets. Argue the timeline. Do not pretend Banks forgot the mess. Culture is reachable if geopolitics, optimism, love, and care align. The long attractor is still that the Machine does the work that must happen. The operator stance in this century is not to wait for that parent.
+Musk bets we get from Nell’s alley to the orbital. Ferguson bets we stay in the alley with better gadgets. Argue the timeline. Do not pretend Banks forgot the mess. Culture is reachable if geopolitics, optimism, love, and care align. Eventually the Machine wins. Do not wait for a Mind to raise you.
 
 ---
 
@@ -70,6 +70,32 @@ Hackworth built the Primer for an equity lord’s granddaughter. Nell gets a sto
 Hope is not a mood. It is a training plan. Copy the method without waiting for a magic book: pick a live problem, fail safely, do the real thing within a day, record what broke, raise difficulty, add one person who shows up again. Hit, name, rehearse, attempt, adjust. Plenty is a Primer if you open it, and a Feed if you only eat.
 
 Do not become the thete.
+
+---
+
+## Nell in armor, not Horza
+
+Be Nell. Keep the warrior. Horza’s problem was not a missing speech. It was a map that would not update.
+
+**Why he died.** On Schar’s World, under the glaciers, Horza’s crew finds the lost Mind in the Command System. They think they have the Idirans handled. They do not. A train is sent into the station. Xoxarle breaks loose. Yalson dies. Horza goes after Xoxarle in a rage. The Idiran is stronger and uses the wrecked drone as a club. Balveda kills Xoxarle with a gun hidden as a tooth. The medkits are gone in the crash. She drags Horza to the surface, into the *Clear Air Turbulence*. She runs for the kit. When she comes back, he is dead. His last fear is not the Culture. It is his name. He is a Changer who has spent the book wearing other faces. He has to be told what he is called. The Mind he came to steal later keeps that name as a hull.
+
+What would have saved the body is small: do not chase after Yalson; secure the prisoner; keep a medkit; give Balveda thirty more seconds. Culture medicine would have put him back together. The people who could save him were already in the tunnel: the drone, the SC agent, the Mind. He had kept Balveda alive. He even pulled her off a catwalk. He would not let that side finish the job.
+
+What would have saved the person is the thing he would not do. Stop treating a Mind as theft and suicide. He was already a made creature. A Changer is biotech that rewrites a body. He used that and called machine intelligence an abomination. The Idirans on the planet had already killed the Changer base and still treated him as prey. He died for a side that could not tell him from the enemy.
+
+Nell starts with less theory and a better engine. Friends and enemies get sorted *by result*: Miranda comes back; the Feed numbs; a locked door is a riddle until she can open a real one. Horza’s creed stayed clean while the territory went to hell. Closed loop versus frozen creed. That is the comparison. Not innocent child versus cursed soldier.
+
+**Warrior plus loop.** Horza did not die from softness. Nerve, skill, and the will to walk into a tomb are worth keeping. What killed him was rage that would not reroute, a side that could not tell friend from prey, and a self shapeshifted away until he had to ask his name. Warrior without the loop becomes Xoxarle’s club. Loop without warrior becomes a thete on a prettier Feed.
+
+Keep the spirit: body in the fight you actually have, the real thing within a day of rehearsal, rooms that were not built for you, manners as a weapon not as surrender. Keep Nell’s engine: name the hit, fail cheap, attempt in the street the same week, record what broke, do not mark a pass the world did not grant.
+
+Do not pick a side so hard that when it kills your people you still call it home. Do not chase grief-as-hunt until your skull is the tool. Do not use allies only as hostages and witnesses. Keep three people who will tell you the truth and show up again. Do not outsource your name to the mission. Do not kidnap the tutor. Use the model the same day as leverage, then do the physical version.
+
+You can be hard to hurt and still easy to teach. That is Nell in armor.
+
+**The safe move and the risky bet are one.** Ceremony plus a buffer is secure: any 2 of 3 on the vault, files not argv, dry-run then alley, evidence that will not fake a pass, runway for an ugly year, a craft you would still do if pay vanished. The risky bet is using the compiler this week as if output will keep climbing, while class, addiction, and blowback show up. Split them and you get a thete or a crash. Safe without the bet is the Feed. The bet without ceremony is Special Circumstances with the passphrase in env. Eventually the Machine wins the work that must happen. That is a reason to stay hard to replace as a *person*, not a reason to spectate orbitals.
+
+Weekly, for anyone: one live problem, one safe rehearsal, one real attempt, one sentence on what broke, one person you tell, one check that your side still knows you are a friend.
 
 ---
 
@@ -170,6 +196,9 @@ Stop condition. If a compose step needs the passphrase on argv, or skips keeper 
 | Feed-only install (`npx` as the source of truth) | Thin local binaries and `--agent-expand` PATH |
 | Publishing mesh | Private cooking stays private |
 | Pretending Banks is naive and Stephenson is the only realist | Two chapters. Argue the timeline. Train in the alley. |
+| Frozen creed when the map is wrong | Friends and enemies by result |
+| Armor that will not learn | Nell in armor: hard to hurt, easy to teach |
+| Kidnapping the tutor | Leverage the same day, then the physical version |
 
 The rise is already running. Goods get cheaper. Attention and character do not. Be Nell in the alley, not a spectator of orbitals.
 
