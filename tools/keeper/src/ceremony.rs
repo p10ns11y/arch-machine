@@ -489,13 +489,17 @@ fn open_named(root: &Path, r: &[u8], name: &str) -> Result<String, CeremonyError
     Ok(String::from_utf8(plain).map_err(|e| CeremonyError::Msg(e.to_string()))?)
 }
 
-pub fn put_secret(root: &Path, passphrase: &str, name: &str, value: &str) -> Result<(), CeremonyError> {
-    let r = unlock_daily(root, passphrase)?;
-    let _seed = pq_seed_from_root(root, &r)?;
+fn seal_named(root: &Path, r: &[u8], name: &str, value: &str) -> Result<(), CeremonyError> {
+    let _seed = pq_seed_from_root(root, r)?;
     let ek = ek_bytes(root)?;
     let sealed = seal_hybrid(&ek, value.as_bytes())?;
     write_secret(root, name, &sealed)?;
     Ok(())
+}
+
+pub fn put_secret(root: &Path, passphrase: &str, name: &str, value: &str) -> Result<(), CeremonyError> {
+    let r = unlock_daily(root, passphrase)?;
+    seal_named(root, &r, name, value)
 }
 
 /// Get via daily path (passphrase + device).
@@ -616,6 +620,17 @@ pub fn get_secret_with_escrow(
 ) -> Result<String, CeremonyError> {
     let r = unlock_with_escrow(root, escrow_path)?;
     open_named(root, &r, name)
+}
+
+/// Put without passphrase: offline escrow + device (same as recover path).
+pub fn put_secret_with_escrow(
+    root: &Path,
+    escrow_path: &Path,
+    name: &str,
+    value: &str,
+) -> Result<(), CeremonyError> {
+    let r = unlock_with_escrow(root, escrow_path)?;
+    seal_named(root, &r, name, value)
 }
 
 /// Get via strong path: YubiKey + device.
@@ -1078,6 +1093,35 @@ mod tests {
             "still-here"
         );
         assert!(!status(&root).unwrap().healthy); // drill cleared
+    }
+
+    #[test]
+    fn put_secret_with_escrow_roundtrip() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("off.json");
+        let wrong = dir.path().join("wrong.json");
+        let pass = "escrow-put-pass-xx";
+        init_vault(&root, pass, &escrow).unwrap();
+
+        put_secret_with_escrow(&root, &escrow, "demo", "via-escrow").unwrap();
+        assert_eq!(get_secret(&root, pass, "demo").unwrap(), "via-escrow");
+        assert_eq!(
+            get_secret_with_escrow(&root, &escrow, "demo").unwrap(),
+            "via-escrow"
+        );
+        assert!(put_secret_with_escrow(&root, &wrong, "demo", "nope").is_err());
+
+        put_secret_with_escrow(&root, &escrow, "demo", "first").unwrap();
+        put_secret_with_escrow(&root, &escrow, "demo", "second").unwrap();
+        assert_eq!(get_secret(&root, pass, "demo").unwrap(), "second");
+
+        put_secret(&root, pass, "daily", "after-escrow-put").unwrap();
+        assert_eq!(
+            get_secret(&root, pass, "daily").unwrap(),
+            "after-escrow-put"
+        );
+        assert_eq!(get_secret(&root, pass, "demo").unwrap(), "second");
     }
 
     #[test]

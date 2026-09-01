@@ -30,7 +30,7 @@ Deeper: [docs/OPERATOR-MODEL.md](docs/OPERATOR-MODEL.md) · [docs/SECRETS-EVERYD
 
 ```text
                     ┌─ passphrase + device ──────── get / put (daily)
-  root reconstruct ─┼─ offline escrow + device ──── get-escrow / recover
+  root reconstruct ─┼─ offline escrow + device ──── get-escrow / put-escrow / recover
                     └─ passphrase + escrow ──────── new machine (then rebind)
 ```
 
@@ -110,6 +110,7 @@ keeper> quit
 | Read **without** passphrase | `get-escrow NAME` |
 | Read with passphrase | `get NAME` |
 | Store another secret | `put NAME` |
+| Store **without** passphrase | `put-escrow NAME` |
 | Change passphrase (know old) | `passwd` |
 | Forgot passphrase | `passwd-reset` then `recover` |
 | Health | `status` |
@@ -120,6 +121,7 @@ keeper> quit
 | Typed | Problem | Use instead |
 |-------|---------|-------------|
 | `get --escrow` | not a loop command | `get-escrow NAME` |
+| `put --escrow` | not a loop command | `put-escrow NAME` |
 | `get NAME` with wrong passphrase | wrap fails | retype carefully, or `get-escrow NAME`, or `passwd-reset` |
 | Expecting `healthy` to skip passphrase | design | healthy ≠ open session |
 
@@ -139,6 +141,7 @@ keeper put demo --file "$HOME/tmp/keeper-practice-secret.txt"
 keeper get demo                                    # passphrase path
 unset KEEPER_PASSPHRASE
 keeper get demo --escrow "$ESCROW"                 # no passphrase
+keeper put-escrow demo --file "$HOME/tmp/keeper-practice-secret.txt" --escrow "$ESCROW"  # no passphrase
 keeper recover --escrow "$ESCROW"
 keeper status                                      # healthy + drillProven
 
@@ -242,6 +245,7 @@ Until recover works **without** the passphrase, treat the vault as unproven.
 |-----------|-------------|
 | Daily unlock | `keeper get NAME` or loop `get NAME` |
 | Forgot passphrase, same PC, USB present | `keeper get NAME --escrow USB` or loop `get-escrow NAME` |
+| Store without passphrase, same PC, USB present | `keeper put-escrow NAME --escrow USB --file PATH` or loop `put-escrow NAME` |
 | Change passphrase (you know the old one) | `keeper passwd` or loop `passwd` — **secrets kept, escrow unchanged** |
 | Forgot passphrase, same PC, USB present | `keeper passwd-reset --escrow USB` or loop `passwd-reset` — **secrets kept, escrow rewritten** |
 | New machine / reimage | restore vault files → `rebind --escrow` → copy new escrow → `recover` → `get` |
@@ -291,6 +295,7 @@ keeper yubi-probe   # must reject solo Yubi
 | `get [name]` | Passphrase + device |
 | `get-escrow [name]` | Offline + device — **no passphrase** |
 | `put [name]` | Store (prompts passphrase + value) |
+| `put-escrow [name]` | Store via escrow — **no passphrase** |
 | `status` | Health (healthy ≠ open) |
 | `recover` | Offline + device drill |
 | `rebind` | New machine reseal |
@@ -305,6 +310,7 @@ keeper yubi-probe   # must reject solo Yubi
 | Onboard / loop | `keeper` · `keeper loop` · `keeper loop --practice` |
 | Init | `init --escrow PATH` |
 | Put | `put NAME` or `put NAME --file PATH` |
+| Put (no passphrase) | `put-escrow NAME --escrow PATH` (and `--file`) |
 | Get (daily) | `get NAME` |
 | Get (no passphrase) | `get NAME --escrow PATH` |
 | Recover drill | `recover --escrow PATH` |

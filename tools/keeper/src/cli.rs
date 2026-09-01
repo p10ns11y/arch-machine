@@ -3,7 +3,8 @@
 use crate::ceremony::{
     change_passphrase, drill, enroll_yubikey, get_secret, get_secret_with_escrow,
     get_secret_yubi_device, get_secret_yubi_escrow, init_vault, list_secret_names, put_secret,
-    rebind_device, reset_passphrase_with_escrow, status, try_unlock_yubi_only,
+    put_secret_with_escrow, rebind_device, reset_passphrase_with_escrow, status,
+    try_unlock_yubi_only,
 };
 use crate::interactive::{
     escrow_under_home, run_interactive_session, run_loop, run_onboard, ScriptedIo, TtyIo,
@@ -55,6 +56,7 @@ pub enum Commands {
         root: Option<PathBuf>,
     },
     /// Store a named secret (passphrase + device). Prefer omit --value: prompts non-echo.
+    /// No passphrase? Use `put-escrow`.
     Put {
         name: String,
         /// Deprecated: lands in shell history. Prefer omit (prompt) or --file.
@@ -62,6 +64,20 @@ pub enum Commands {
         value: Option<String>,
         #[arg(long)]
         file: Option<PathBuf>,
+        #[arg(long, env = "KEEPER_ROOT")]
+        root: Option<PathBuf>,
+    },
+    /// Store a named secret via offline escrow + device (no passphrase)
+    #[command(name = "put-escrow")]
+    PutEscrow {
+        name: String,
+        /// Deprecated: lands in shell history. Prefer omit (prompt) or --file.
+        #[arg(long, conflicts_with = "file")]
+        value: Option<String>,
+        #[arg(long)]
+        file: Option<PathBuf>,
+        #[arg(long)]
+        escrow: PathBuf,
         #[arg(long, env = "KEEPER_ROOT")]
         root: Option<PathBuf>,
     },
@@ -184,7 +200,7 @@ fn read_passphrase() -> Result<String, String> {
     }
     Err(
         "set KEEPER_PASSPHRASE or KEEPER_PASSPHRASE_FILE, or run in a TTY / `keeper loop`\n\
-         forgot passphrase?  get NAME --escrow file   or   get NAME --yubi"
+         forgot passphrase?  get NAME --escrow file · put-escrow NAME --escrow file · get NAME --yubi"
             .into(),
     )
 }
@@ -192,6 +208,19 @@ fn read_passphrase() -> Result<String, String> {
 fn atty_stdin() -> bool {
     // Avoid extra dep: libc is_terminal on stdin
     std::io::IsTerminal::is_terminal(&io::stdin())
+}
+
+fn resolve_secret_value(value: Option<String>, file: Option<PathBuf>) -> Result<String, String> {
+    if let Some(v) = value {
+        eprintln!(
+            "warning: --value lands in shell history; prefer omit (prompt) or --file"
+        );
+        return Ok(v);
+    }
+    if let Some(f) = file {
+        return fs::read_to_string(f).map_err(|e| e.to_string());
+    }
+    read_secret_value_interactive()
 }
 
 fn read_secret_value_interactive() -> Result<String, String> {
@@ -277,17 +306,29 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
         }) => {
             let root = resolve_root(root);
             let pass = read_passphrase()?;
-            let val = if let Some(v) = value {
-                eprintln!(
-                    "warning: --value lands in shell history; prefer `keeper put NAME` (prompt) or --file"
-                );
-                v
-            } else if let Some(f) = file {
-                fs::read_to_string(f).map_err(|e| e.to_string())?
-            } else {
-                read_secret_value_interactive()?
-            };
+            let val = resolve_secret_value(value, file)?;
             put_secret(&root, &pass, &name, &val).map_err(|e| e.to_string())?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&json!({ "ok": true, "name": name })).unwrap()
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        Some(Commands::PutEscrow {
+            name,
+            value,
+            file,
+            escrow,
+            root,
+        }) => {
+            let root = resolve_root(root);
+            if escrow_under_home(&escrow) {
+                eprintln!(
+                    "warning: escrow is under $HOME — copy OFF this laptop for real recovery"
+                );
+            }
+            let val = resolve_secret_value(value, file)?;
+            put_secret_with_escrow(&root, &escrow, &name, &val).map_err(|e| e.to_string())?;
             println!(
                 "{}",
                 serde_json::to_string_pretty(&json!({ "ok": true, "name": name })).unwrap()

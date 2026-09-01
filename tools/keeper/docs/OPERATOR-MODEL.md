@@ -86,6 +86,9 @@ keeper yubi-probe
 
 ```bash
 keeper get mfa --escrow /media/usb/keeper-escrow.json
+# store without passphrase (USB escrow + this device; never argv — use --file or loop prompts):
+keeper put-escrow mfa --escrow /media/usb/keeper-escrow.json --file /path/to/600-file
+# or loop: put-escrow mfa
 # or prove drill:
 keeper recover --escrow /media/usb/keeper-escrow.json
 # or if Yubi enrolled: get mfa --yubi  (Yubi + device)
