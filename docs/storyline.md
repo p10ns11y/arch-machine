@@ -5,21 +5,71 @@
 **Map:** [Building, landscape of the public stack](https://captain.kingsparrow.space/building)  
 **Not:** a merge plan for other git repos into this tree
 
-arch-machine is already on that map. It is the Daily foundations + infra row. The story is how the other public projects compose *onto* this hull, and why that mix is Diamond Age plus Culture, not a pick of one.
+arch-machine is already on that map. It is the Daily foundations + infra row. Other public projects compose *onto* this hull. The literary frame is not a pick between Diamond Age and the Culture. They are two chapters of one manual: atoms get cheaper; people do not get simpler.
+
+Operator source (same argument, public): [two-chapter manual](https://x.com/Peramanathan/status/2093930676223463676) · [do not wait for a Mind](https://x.com/Peramanathan/status/2093933409873584336).
 
 ---
 
-## Why both worlds
+## What arch names
 
-Niall Ferguson calls Neal Stephenson science fiction’s **arch-realist**. The foil is Iain M. Banks’ Culture, which Elon Musk had treated as the picture of AI abundance. Ferguson’s line is to forget effortless utopia and expect messy, unintended consequences. See [Elon’s Favorite Sci-Fi Prophet Was Wrong](https://niallferguson.substack.com/p/elons-favorite-sci-fi-prophet-was).
+**Arch** here is first the distro. Judd Vinet named Arch Linux for *the principal*, the same prefix as arch-enemy. Pronounce it `/ɑːrtʃ/` (archer), not ark. **arch-machine** is an Arch Linux workstation as a productized hull: thin install, profiles, control plane, vault, evidence.
 
-**Diamond Age (1995).** Matter compilers print goods from the Feed. The Source stays under a phyle. The Seed would compile locally and break that pipe. Nations give way to phyles. Nell’s Primer tutors a child. A human ractor still voices it. Compilers do not print character. Patents and the Feed keep most people on cheap rations. Stephenson names the tutor **pseudo-intelligence**, a product, not an oracle. [Wikipedia](https://en.wikipedia.org/wiki/The_Diamond_Age) · [The Atlantic on the Primer](https://www.theatlantic.com/technology/archive/2024/02/chatbots-ai-neal-stephenson-diamond-age/677364/) · [P2P Foundation on Feed vs Seed](https://blog.p2pfoundation.net/a-p2p-overview-of-neal-stephensons-diamond-age/).
+**archy** is the named controller of that hull. The suffix *-archy* means rule (monarchy, anarchy). It steers scripts and points at NEXT. It is not a starship Mind.
 
-**Culture machine.** Humanoids, drones, and Minds. Work that must happen is done by machines. “Money implies poverty.” Power sits with Minds that run ships and orbitals. Humans consult terminals. Banks placed humans between passengers, pets, and parasites, and also as the Minds’ reason to live. Remaining drama is Contact with poorer civilizations. [Wikipedia](https://en.wikipedia.org/wiki/The_Culture) · [The New Atlantis](https://www.thenewatlantis.com/publications/the-ambiguous-utopia-of-iain-m-banks) · [Banks, 2011](https://www.albedo1.com/the-iain-m-banks-interview-2011-falling-outside-the-normal-sci-fi-constraints/).
+Ferguson’s **arch-realist** (Stephenson as chief realist) is a separate intensifier. Happy collision, not the repo’s etymology. Omarchy is DHH’s Arch desktop. Related host, not this name.
 
-A [Banks vs Stephenson pairing](https://www.metavert.io/compare/iain-banks-vs-neal-stephenson) puts the fork in one sentence. Banks asks what we should build. Stephenson asks what we will actually build, given human nature.
+The hybrid is already the human condition. Digital and virtual time, and the footprints they leave, did not wait for this installer. This repo does not invent the composition. It is a local Seed and a Primer-shaped loop *inside* a life that is already online.
 
-This repo takes both. The hull, vault, drill, and evidence are Diamond Age. archy, groxy, `/arch-*`, and ensembly-shaped agent loops are Culture terminals. Complementary means the terminals never become the parent. `keeper` healthy still means you drilled once. It does not mean a Mind caught you.
+---
+
+## Two chapters, not rival prophets
+
+Niall Ferguson says forget easy AI abundance, read Stephenson, the future will be messy. See [Elon’s Favorite Sci-Fi Prophet Was Wrong](https://niallferguson.substack.com/p/elons-favorite-sci-fi-prophet-was). Banks already said the road is ugly. He did not stop at the mess.
+
+**Diamond Age (1995)** is the Culture still under construction. Matter compilers print food and goods. Poor thetes live on the free Feed. Rich Neo-Victorians live on manners and control of the Source. A stolen Primer raises Nell, a child the system would have discarded. Nanotech leaks. Compilers do not print character. [Wikipedia](https://en.wikipedia.org/wiki/The_Diamond_Age) · [The Atlantic on the Primer](https://www.theatlantic.com/technology/archive/2024/02/chatbots-ai-neal-stephenson-diamond-age/677364/) · [Feed vs Seed](https://blog.p2pfoundation.net/a-p2p-overview-of-neal-stephensons-diamond-age/).
+
+**The Culture** is what life looks like if intelligence and machines actually scale: no money, almost no want, work optional. A **Mind** is not a chatbot. It is a superintelligent AI that *is* the ship or the habitat. Minds keep the lights on. They also run Special Circumstances when a crueler society needs a shove. Plenty at home, dirty hands abroad. [Wikipedia](https://en.wikipedia.org/wiki/The_Culture) · [The New Atlantis](https://www.thenewatlantis.com/publications/the-ambiguous-utopia-of-iain-m-banks) · [Banks, 2011](https://www.albedo1.com/the-iain-m-banks-interview-2011-falling-outside-the-normal-sci-fi-constraints/).
+
+*Consider Phlebas* makes the theme blunt. Horza hates the Culture for handing the future to machines. He dies in the snow. The Mind lives, becomes a ship, and takes his name. Banks prints an appendix: billions dead, galactic needle barely moved. Abundance did not make the war kind. The war did not prove abundance was fake.
+
+Fast map:
+
+| Diamond Age (now / ugly middle) | Culture (if scale holds) |
+|---------------------------------|--------------------------|
+| Compilers | Minds that can make whatever you ask |
+| Thetes on the Feed | Citizens who never need a job |
+| Primer | A Mind as tutor and handler |
+| Leaked mites | Special Circumstances blowback |
+
+Musk bets we get from Nell’s alley to the orbital. Ferguson bets we stay in the alley with better gadgets. Argue the timeline. Do not pretend Banks forgot the mess. Culture is reachable if geopolitics, optimism, love, and care align. The long attractor is still that the Machine does the work that must happen. The operator stance in this century is not to wait for that parent.
+
+---
+
+## The Primer loop (this is the control plane)
+
+Nell’s education is not a playlist. It is a closed loop that rewrites itself around whatever she can barely handle.
+
+1. **World hits first.** Hunger, violence, a word she cannot read. Not theory.
+2. **The book names it.** A drunk becomes a troll. A locked door becomes a riddle. Naming is the first skill. Literacy is gated behind curiosity.
+3. **She acts inside the story.** Failure is cheap. The book will let her die in fiction and try again.
+4. **She acts in the alley.** Same move, worse stakes.
+5. **The book notices.** Success unlocks a harder layer. Failure reroutes. The tutor will not pretend she has passed.
+6. **Round and round.** Each orbit a little higher. Transfer: story → street → better story.
+
+Three human pieces, not the nanotech:
+
+- **A voice that cares.** For a long stretch the “AI” is Miranda, an actress who reads night after night. Warmth is pedagogy. A cold sequencer will not make a neglected child come back.
+- **Just-hard-enough.** Between boredom and panic. Too easy and she becomes a thete on a prettier Feed. Too hard and she slams the book.
+- **Moral rehearsal.** She learns when not to become her mother’s chaos. Stories give a second family with standards.
+
+Hackworth built the Primer for an equity lord’s granddaughter. Nell gets a stolen copy. Same loop, different starting wealth. Adaptive learning is how a person climbs. Who owns the tutor decides how many Nells get to climb.
+
+**archy** is this loop on a workstation, not a Mind. Keys and job lines are the world-hit. The TUI names the job. Dry-run and NEXT are cheap fiction. The shell satellite is the alley. Evidence is the book noticing. `keeper` drill is the exam the tutor will not fake. Grok `/arch-*` and a human operator are Miranda: a voice that comes back. Treat every model as leverage, not as a parent.
+
+Hope is not a mood. It is a training plan. Copy the method without waiting for a magic book: pick a live problem, fail safely, do the real thing within a day, record what broke, raise difficulty, add one person who shows up again. Hit, name, rehearse, attempt, adjust. Plenty is a Primer if you open it, and a Feed if you only eat.
+
+Do not become the thete.
 
 ---
 
@@ -85,13 +135,13 @@ Compose means PATH, session, plugin, or optional module. It does not mean copy t
 
 Numbered because order matters. Each step is still true if you stop there.
 
-1. **Thin host.** `./install.sh --thin`. Runtime under `/usr/share/tinfoil/`. No AUR brunch. Diamond Age Seed. You compile locally. You are not a client of someone else’s full profile.
+1. **Thin host.** `./install.sh --thin`. Runtime under `/usr/share/tinfoil/`. No AUR brunch. Seed, not Feed. You compile locally. You are not a client of someone else’s full profile.
 
-2. **Control plane.** `archy` is the Primer that shows NEXT and runs a script. It is not a GSV Mind. Eagle receives messages. Satellites own jobs. Jobs start, stream, and exit.
+2. **Control plane.** `archy` is the Primer loop: name the hit, cheap rehearsal, alley job, notice the result. It is not a GSV Mind. Eagle receives messages. Satellites own jobs. Jobs start, stream, and exit.
 
 3. **Ceremony.** `keeper` is any 2 of 3. Passphrase, offline escrow, device. `put-escrow` / `get-escrow` are the no-passphrase pair when the USB file is present. Healthy means recover worked once. An agent with `KEEPER_PASSPHRASE` in env is Special Circumstances with none of Banks’ niceness.
 
-4. **Terminals.** `groxy inject` notifies. `groxy acp serve` controls a remote agent. Neovim uses `grok agent stdio`. Plugin `/arch-*` talks to this repo. Culture Contact, Diamond Age caps. No ambient DM that guesses which Grok window is “it”.
+4. **Terminals.** `groxy inject` notifies. `groxy acp serve` controls a remote agent. Neovim uses `grok agent stdio`. Plugin `/arch-*` talks to this repo. Contact with Diamond Age caps. No ambient DM that guesses which Grok window is “it”.
 
 5. **Kernel contract.** shellyxz PATH and plugin isolation on the same machine. arch-machine install stays idempotent. Two kernels fighting is Feed politics. Pick one PATH story.
 
@@ -105,7 +155,7 @@ Numbered because order matters. Each step is still true if you stop there.
 
 10. **Evidence close.** `maintenance/extract-evidence.sh`. The white hole emits bundles, not vibes. Agents read logs. Humans still drill.
 
-Stop condition. If a compose step needs the passphrase on argv, or skips keeper drill, or treats archy as an open session, it is Culture theater. Refuse it.
+Stop condition. If a compose step needs the passphrase on argv, or skips keeper drill, or treats archy as a parent, it is Culture theater. Refuse it.
 
 ---
 
@@ -113,13 +163,15 @@ Stop condition. If a compose step needs the passphrase on argv, or skips keeper 
 
 | Refuse | Build toward |
 |--------|----------------|
+| Waiting for a Mind to raise you | Primer loop: hit, name, rehearse, attempt, adjust |
 | Unattended vault without drill | Agent ops under 2 of 3 and files, not argv |
 | Merging every map repo into this tree | PATH, plugin, optional module, or “runs on the host” |
 | archy as parent of last resort | Eagle + satellite + NEXT |
-| Publishing mesh | Private cooking stays private |
 | Feed-only install (`npx` as the source of truth) | Thin local binaries and `--agent-expand` PATH |
+| Publishing mesh | Private cooking stays private |
+| Pretending Banks is naive and Stephenson is the only realist | Two chapters. Argue the timeline. Train in the alley. |
 
-Ferguson is right that copper, chips, and power are not free, and that PI leaks. Banks is still useful as the *shape* of terminals and Contact. The composition is a workstation that can host agents without pretending the agents already won.
+The rise is already running. Goods get cheaper. Attention and character do not. Be Nell in the alley, not a spectator of orbitals.
 
 ---
 
