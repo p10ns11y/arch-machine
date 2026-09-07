@@ -277,42 +277,51 @@ def _nazhigai_heart_lines(tn: Any) -> List[str]:
     ]
 
 
-def _display_width(text: str) -> int:
-    """Terminal/monospace columns; skip combining marks; wide East-Asian = 2."""
+def _char_columns(char: str) -> int:
+    """Monospace cells for one code point. Tamil fallback glyphs run wide in Qt."""
     import unicodedata
 
-    width = 0
-    for char in text:
-        if unicodedata.combining(char):
-            continue
-        east = unicodedata.east_asian_width(char)
-        width += 2 if east in ("F", "W") else 1
-    return width
+    if unicodedata.combining(char):
+        return 0
+    code = ord(char)
+    if 0x0B80 <= code <= 0x0BFF:
+        return 2
+    east = unicodedata.east_asian_width(char)
+    return 2 if east in ("F", "W") else 1
 
 
-def _pad_right(text: str, width: int) -> str:
-    return text + (" " * max(0, width - _display_width(text)))
+def _display_width(text: str) -> int:
+    """Columns for layout; skip combining marks; Tamil and East-Asian wide = 2."""
+    return sum(_char_columns(char) for char in text)
 
 
-# φ and Fibonacci — vertical rhythm + band width for centered Quickshell tips.
-_PHI = (1.0 + 5.0**0.5) / 2.0
+# Quickshell Text.AlignHCenter ignores trailing Unicode whitespace (QTextOption).
+# Braille blank is a symbol, so it keeps line width and the block stays flush-left.
+_QT_PAD = "\u2800"
 _FIBONACCI = (1, 2, 3, 5, 8, 13, 21, 34, 55, 89)
-# Gaps in blank-line counts (Fibonacci): minor / major / cadence.
-_GAP_MINOR = 1   # date ↔ rule ↔ motif
-_GAP_MAJOR = 2   # motif ↔ title; between body sections
-_GAP_CADENCE = 3  # body ↔ footer (≈ φ²)
+_GAP_MINOR = 1
+_GAP_CADENCE = 2
 
 
 def _fib_ceil(columns: int) -> int:
-    """Next Fibonacci width ≥ columns (harmonious band for the tip)."""
+    """Next Fibonacci width ≥ columns (circadian tip band)."""
     for fib in _FIBONACCI:
         if fib >= columns:
             return fib
     return columns
 
 
+def _pad_right(text: str, width: int, fill: str = " ") -> str:
+    extra = max(0, width - _display_width(text))
+    return text + (fill * extra)
+
+
 def _gaps(count: int) -> List[str]:
     return [""] * count
+
+
+def _detail(text: str) -> str:
+    return f"  {text}"
 
 
 def _justify_block(lines: List[str], band: int) -> List[str]:
@@ -322,7 +331,7 @@ def _justify_block(lines: List[str], band: int) -> List[str]:
         if not line:
             out.append("")
         else:
-            out.append(_pad_right(line, band))
+            out.append(_pad_right(line, band, _QT_PAD))
     return out
 
 
@@ -330,146 +339,185 @@ def _rule(band: int) -> str:
     return "─" * band
 
 
-# Compact landscape glyphs — 3-line motifs (Fibonacci height).
+# Landscape glyphs — 5-line motifs, stretched to the copy column height.
 _TINAI_ASCII: Dict[str, tuple[str, ...]] = {
     "kurinji": (  # mountains
-        "  /\\    /\\",
-        " /  \\  /  \\",
-        "/    \\/    \\",
+        "   /\\    /\\",
+        "  /  \\  /  \\",
+        " /    \\/    \\",
+        "/      \\      \\",
+        "‾‾‾‾‾‾‾‾‾‾‾‾‾‾",
     ),
     "mullai": (  # forest
-        "  Y   Y   Y",
-        " /|\\ /|\\ /|\\",
-        " /|\\ /|\\ /|\\",
+        "  Y  Y  Y  Y",
+        " /|\\/|\\/|\\/|\\",
+        " /|\\/|\\/|\\/|\\",
+        " /|\\/|\\/|\\/|\\",
+        "‾‾‾‾‾‾‾‾‾‾‾‾‾",
     ),
     "marutham": (  # plains / fields
         "·  ·  ·  ·  ·",
         "~~~~~~~~~~~~~",
+        "=============",
+        "~~~~~~~~~~~~~",
         "_____________",
     ),
     "neythal": (  # seashore
-        "    ~   ~",
+        "   ~    ~",
+        " ~~  ~~  ~~",
+        "~  ~~  ~~  ~",
         " ~~  ~~  ~~",
         "~~~~~~~~~~~~",
     ),
     "palai": (  # wasteland / dune
-        "     .",
-        "  .     .",
+        "    .",
+        " .     .",
+        "    .",
         "~=~=~=~=~=~",
+        "~~~~~~~~~~~",
     ),
 }
 
 
 def _tinai_ascii(tinai: str) -> List[str]:
-    """Left-aligned motif (same indent family as details); band-pad later."""
-    motif = _TINAI_ASCII.get(tinai) or _TINAI_ASCII["marutham"]
-    return [f"  {line}" for line in motif]
+    motif = list(_TINAI_ASCII.get(tinai) or _TINAI_ASCII["marutham"])
+    width = max(_display_width(line) for line in motif)
+    return [_pad_right(line, width) for line in motif]
+
+
+def _latin_gloss(label: str) -> str:
+    """Latin-only form of a Perum/Ciṟu label (tests / fallback)."""
+    stripped = "".join(
+        char for char in label if not (0x0B80 <= ord(char) <= 0x0BFF)
+    )
+    return " ".join(stripped.split())
+
+
+def _flow_gloss(label: str) -> str:
+    """Keep Tamil + Latin; soften arrows, tildes, and time-range glue."""
+    text = " ".join(label.split())
+    text = text.replace("→", " into ")
+    text = text.replace("~", "")
+    text = text.replace("/", " / ")
+    text = " ".join(text.split())
+    return re.sub(r"\s+(\d{1,2}–\d{1,2})$", r", \1", text)
 
 
 def _field(label: str, value: str, label_width: int) -> str:
-    """Indented labeled detail under a section title."""
-    return f"  {_pad_right(label, label_width)}  {value}"
+    """Labeled detail in the text column (internal spaces; Qt counts those)."""
+    return f"{_pad_right(label, label_width)}  {value}"
 
 
-def _detail(text: str) -> str:
-    """Indented unlabeled detail (the section title already names it)."""
-    return f"  {text}"
+def _nazhigai_amount(part: Any) -> str:
+    if abs(part.nazhigai - round(part.nazhigai)) < 1e-9:
+        return f"{int(round(part.nazhigai))}"
+    return f"{part.nazhigai:g}"
 
 
-def _nazhigai_detail(tn: Any) -> str:
-    index = tn.nazhigai
-    ordinal = nazhigai_ordinal(index)
-    into_min = index * NAZHIGAI_MINUTES
-    unit = NAZHIGAI_DISPLAY
+def _count_words(count: int) -> str:
+    words = {
+        1: "one",
+        2: "two",
+        3: "three",
+        4: "four",
+        5: "five",
+        6: "six",
+        7: "seven",
+        8: "eight",
+        9: "nine",
+        10: "ten",
+    }
+    return words.get(count, str(count))
+
+
+def _jaamam_sentences(jam: Any) -> List[str]:
+    sentences = [f"Watching {jam.current} of {JAAMAMS_PER_DAY}."]
+    for part in jam.parts:
+        if part.full:
+            sentences.append(f"Jāmam {part.index} is a full watch (3 hours).")
+            continue
+        amount = _nazhigai_amount(part)
+        minutes = int(round(part.nazhigai * NAZHIGAI_MINUTES))
+        sentences.append(
+            f"Jāmam {part.index} holds {amount} {NAZHIGAI_DISPLAY} "
+            f"(about {minutes} minutes in this {SIRU_DISPLAY_TITLE})."
+        )
+    return sentences
+
+
+def _nazhigai_sentences(tn: Any) -> List[str]:
+    ordinal = nazhigai_ordinal(tn.nazhigai)
+    siru_title = siru_display(tn.siru)
+    elapsed_minutes = tn.nazhigai * NAZHIGAI_MINUTES
+    sentences = [f"{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}."]
     if ordinal == 1:
-        return f"first {NAZHIGAI_MINUTES} minutes of this {SIRU_DISPLAY_TITLE}"
-    if ordinal == 2:
-        return f"after {into_min} minutes, first {unit} over"
-    return f"after {into_min} minutes, first {ordinal - 1} {unit} over"
+        sentences.append(
+            f"The first {NAZHIGAI_MINUTES} minutes of this {SIRU_DISPLAY_TITLE}."
+        )
+    elif ordinal == 2:
+        sentences.append(
+            f"After {elapsed_minutes} minutes, the first {NAZHIGAI_DISPLAY} is over."
+        )
+    else:
+        finished = ordinal - 1
+        verb = "is" if finished == 1 else "are"
+        sentences.append(
+            f"After {elapsed_minutes} minutes, the first "
+            f"{_count_words(finished)} {NAZHIGAI_DISPLAY} {verb} over."
+        )
+    return sentences
 
 
 def tn_tooltip_plain(
     tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
 ) -> str:
-    """Plain tooltip composed on a Fibonacci band with φ vertical rhythm."""
+    """Plain tooltip: landscape motif on top, calendar sentences below."""
     del state
     meta = TINAI_META[tn.tinai]
     landscape = meta["landscape"].title()
     tinai_name = tinai_display(tn.tinai)
     jam = tn.jaamam
-    ordinal = nazhigai_ordinal(tn.nazhigai)
-    siru_title = siru_display(tn.siru)
-    tinai_title = f"{TINAI_DISPLAY_TITLE}  │  {landscape} — {tinai_name}"
     date = _date_line(now)
-
-    field_labels = [PERUM_DISPLAY_TITLE, SIRU_DISPLAY_TITLE, "split"]
-    field_labels.extend(
-        ("›" if part.index == jam.current else "·") + str(part.index)
-        for part in jam.parts
-    )
-    field_width = max(_display_width(label) for label in field_labels)
-
-    ascii_block = _tinai_ascii(str(tn.tinai))
-
-    sections: List[List[str]] = [
-        [
-            POZHUTU_DISPLAY_TITLE,
-            _field(PERUM_DISPLAY_TITLE, PERUM_LABEL[tn.perum], field_width),
-            _field(SIRU_DISPLAY_TITLE, SIRU_LABEL[tn.siru], field_width),
-        ],
-        [
-            JAAMAM_DISPLAY_TITLE,
-            _detail(f"watching {jam.current} of {JAAMAMS_PER_DAY}"),
-            _field("split", jam.label, field_width),
-        ],
-    ]
-    for part in jam.parts:
-        mark = "›" if part.index == jam.current else "·"
-        sections[-1].append(
-            _field(f"{mark}{part.index}", _jaamam_part_sense(part), field_width)
-        )
-    sections.append(
-        [
-            NAZHIGAI_DISPLAY_TITLE,
-            _detail(f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"),
-            _detail(_nazhigai_detail(tn)),
-        ]
+    field_width = max(
+        _display_width(PERUM_DISPLAY_TITLE),
+        _display_width(SIRU_DISPLAY_TITLE),
     )
 
-    body: List[str] = []
-    for section in sections:
-        if body:
-            body.extend(_gaps(_GAP_MAJOR))
-        body.extend(section)
-
-    theme_block = ["Theme", _detail(tn.theme)]
-
-    # Content measure → Fibonacci band (φ-harmonious width under center align).
-    measure = [
-        date,
-        tinai_title,
-        *ascii_block,
-        *body,
-        *theme_block,
+    copy: List[str] = [
+        TINAI_DISPLAY_TITLE,
+        f"  {landscape} — {tinai_name}",
+        "",
+        POZHUTU_DISPLAY_TITLE,
+        f"  {_field(PERUM_DISPLAY_TITLE, _flow_gloss(PERUM_LABEL[tn.perum]), field_width)}",
+        f"  {_field(SIRU_DISPLAY_TITLE, _flow_gloss(SIRU_LABEL[tn.siru]), field_width)}",
+        "",
+        JAAMAM_DISPLAY_TITLE,
+        *[f"  {sentence}" for sentence in _jaamam_sentences(jam)],
+        "",
+        NAZHIGAI_DISPLAY_TITLE,
+        *[f"  {sentence}" for sentence in _nazhigai_sentences(tn)],
     ]
-    band = _fib_ceil(max(_display_width(line) for line in measure if line.strip()))
+    copy_width = max(
+        (_display_width(line) for line in copy if line.strip()),
+        default=0,
+    )
+    even_copy = [
+        "" if not line.strip() else _pad_right(line, copy_width, _QT_PAD)
+        for line in copy
+    ]
+    art = _tinai_ascii(str(tn.tinai))
+    theme_line = f"Theme  {tn.theme}"
 
     composed: List[str] = [
         date,
-        *_gaps(_GAP_MINOR),
-        _rule(band),
-        *_gaps(_GAP_MINOR),
-        *ascii_block,
-        *_gaps(_GAP_MAJOR),
-        tinai_title,
-        *_gaps(_GAP_MAJOR),
-        *body,
-        *_gaps(_GAP_CADENCE),
-        _rule(band),
-        *_gaps(_GAP_MINOR),
-        *theme_block,
+        _rule(copy_width),
+        *art,
+        "",
+        *even_copy,
+        _rule(copy_width),
+        theme_line,
     ]
-    return "\n".join(_justify_block(composed, band))
+    return "\n".join(composed)
 
 
 
