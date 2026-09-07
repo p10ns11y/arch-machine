@@ -31,18 +31,17 @@ def wrap_tooltip(text: str, width: int) -> str:
     import re
 
     if "\n" in text:
-        paragraphs = text.splitlines()
+        paragraphs = [line for line in text.splitlines() if line.strip()]
     else:
+        # Period-space only — keep "; next…" and URLs in the same breath group.
         paragraphs = [
             part.strip()
-            for part in re.split(r"(?<=[.!;])\s+", text)
+            for part in re.split(r"(?<=\.)\s+", text)
             if part.strip()
         ] or [text]
 
     blocks: list[str] = []
     for paragraph in paragraphs:
-        if not paragraph.strip():
-            continue
         wrapped = textwrap.wrap(
             paragraph,
             width=width,
