@@ -274,7 +274,10 @@ def test_waybar_payload_plain_for_omarchy_shell():
     perum_line = next(line for line in lines if "Perum" in line)
     siru_line = next(line for line in lines if "Ciṟu" in line)
     assert perum_line.startswith("  ") and siru_line.startswith("  ")
-    assert perum_line.index(" │ ") == siru_line.index(" │ ")
+    assert " │ " in perum_line and " │ " in siru_line
+    assert display_width(perum_line.split(" │ ", 1)[0]) == display_width(
+        siru_line.split(" │ ", 1)[0]
+    )
     assert lines[-1].startswith("Theme")
     assert set(lines[-2]) == {"─"}
     assert tip.index("Tiṇai") < tip.index("Poḻutu") < tip.index("Jāmam")
