@@ -294,55 +294,76 @@ def _pad_right(text: str, width: int) -> str:
     return text + (" " * max(0, width - _display_width(text)))
 
 
-def _rule_for(lines: List[str], *, minimum: int = 24) -> str:
-    widest = max(
-        (_display_width(line) for line in lines if line.strip()),
-        default=minimum,
-    )
-    return "─" * max(minimum, widest)
+# φ and Fibonacci — vertical rhythm + band width for centered Quickshell tips.
+_PHI = (1.0 + 5.0**0.5) / 2.0
+_FIBONACCI = (1, 2, 3, 5, 8, 13, 21, 34, 55, 89)
+# Gaps in blank-line counts (Fibonacci): minor / major / cadence.
+_GAP_MINOR = 1   # date ↔ rule ↔ motif
+_GAP_MAJOR = 2   # motif ↔ title; between body sections
+_GAP_CADENCE = 3  # body ↔ footer (≈ φ²)
 
 
-# Compact landscape glyphs for plain tooltips (one motif per tiṇai).
+def _fib_ceil(columns: int) -> int:
+    """Next Fibonacci width ≥ columns (harmonious band for the tip)."""
+    for fib in _FIBONACCI:
+        if fib >= columns:
+            return fib
+    return columns
+
+
+def _gaps(count: int) -> List[str]:
+    return [""] * count
+
+
+def _justify_block(lines: List[str], band: int) -> List[str]:
+    """Pad every non-empty line to `band` so AlignHCenter keeps a flush left edge."""
+    out: List[str] = []
+    for line in lines:
+        if not line:
+            out.append("")
+        else:
+            out.append(_pad_right(line, band))
+    return out
+
+
+def _rule(band: int) -> str:
+    return "─" * band
+
+
+# Compact landscape glyphs — 3-line motifs (Fibonacci height).
 _TINAI_ASCII: Dict[str, tuple[str, ...]] = {
     "kurinji": (  # mountains
-        "      /\\    /\\",
-        "     /  \\  /  \\",
-        "    /    \\/    \\",
+        "  /\\    /\\",
+        " /  \\  /  \\",
+        "/    \\/    \\",
     ),
     "mullai": (  # forest
-        "      Y   Y   Y",
-        "     /|\\ /|\\ /|\\",
-        "    /_|\\_/_|\\_/_|\\",
+        "  Y   Y   Y",
+        " /|\\ /|\\ /|\\",
+        " /|\\ /|\\ /|\\",
     ),
     "marutham": (  # plains / fields
-        "    ·  ·  ·  ·  ·",
-        "   ~~~~~~~~~~~~~~~",
-        "  _________________",
+        "·  ·  ·  ·  ·",
+        "~~~~~~~~~~~~~",
+        "_____________",
     ),
     "neythal": (  # seashore
-        "        ~   ~",
-        "     ~~  ~~  ~~",
-        "    ~~~~~~~~~~~~",
+        "    ~   ~",
+        " ~~  ~~  ~~",
+        "~~~~~~~~~~~~",
     ),
     "palai": (  # wasteland / dune
-        "         .",
-        "      .     .",
-        "    ~=~=~=~=~=~",
+        "     .",
+        "  .     .",
+        "~=~=~=~=~=~",
     ),
 }
 
 
-def _center_ascii(lines: tuple[str, ...] | list[str], width: int) -> List[str]:
-    """Pad each ASCII line so the motif sits under the date/rule band."""
-    return [
-        (" " * max(0, (width - _display_width(line)) // 2)) + line
-        for line in lines
-    ]
-
-
-def _tinai_ascii(tinai: str, width: int) -> List[str]:
+def _tinai_ascii(tinai: str) -> List[str]:
+    """Left-aligned motif (same indent family as details); band-pad later."""
     motif = _TINAI_ASCII.get(tinai) or _TINAI_ASCII["marutham"]
-    return _center_ascii(motif, width)
+    return [f"  {line}" for line in motif]
 
 
 def _field(label: str, value: str, label_width: int) -> str:
@@ -370,7 +391,7 @@ def _nazhigai_detail(tn: Any) -> str:
 def tn_tooltip_plain(
     tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
 ) -> str:
-    """Plain tooltip: date → tiṇai ASCII → Tiṇai title → other sections."""
+    """Plain tooltip composed on a Fibonacci band with φ vertical rhythm."""
     del state
     meta = TINAI_META[tn.tinai]
     landscape = meta["landscape"].title()
@@ -379,6 +400,7 @@ def tn_tooltip_plain(
     ordinal = nazhigai_ordinal(tn.nazhigai)
     siru_title = siru_display(tn.siru)
     tinai_title = f"{TINAI_DISPLAY_TITLE}  │  {landscape} — {tinai_name}"
+    date = _date_line(now)
 
     field_labels = [PERUM_DISPLAY_TITLE, SIRU_DISPLAY_TITLE, "split"]
     field_labels.extend(
@@ -387,21 +409,9 @@ def tn_tooltip_plain(
     )
     field_width = max(_display_width(label) for label in field_labels)
 
-    # Band width from date + title + field rows (ASCII centered to this).
-    measure_lines = [
-        _date_line(now),
-        tinai_title,
-        _field(PERUM_DISPLAY_TITLE, PERUM_LABEL[tn.perum], field_width),
-        _field(SIRU_DISPLAY_TITLE, SIRU_LABEL[tn.siru], field_width),
-        _field("split", jam.label, field_width),
-        _detail(f"watching {jam.current} of {JAAMAMS_PER_DAY}"),
-        _detail(f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"),
-        _detail(tn.theme),
-    ]
-    band = max(_display_width(line) for line in measure_lines)
-    ascii_block = _tinai_ascii(str(tn.tinai), band)
+    ascii_block = _tinai_ascii(str(tn.tinai))
 
-    blocks: List[List[str]] = [
+    sections: List[List[str]] = [
         [
             POZHUTU_DISPLAY_TITLE,
             _field(PERUM_DISPLAY_TITLE, PERUM_LABEL[tn.perum], field_width),
@@ -415,11 +425,10 @@ def tn_tooltip_plain(
     ]
     for part in jam.parts:
         mark = "›" if part.index == jam.current else "·"
-        blocks[-1].append(
+        sections[-1].append(
             _field(f"{mark}{part.index}", _jaamam_part_sense(part), field_width)
         )
-
-    blocks.append(
+    sections.append(
         [
             NAZHIGAI_DISPLAY_TITLE,
             _detail(f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"),
@@ -427,36 +436,41 @@ def tn_tooltip_plain(
         ]
     )
 
-    gap = ["", ""]
     body: List[str] = []
-    for block in blocks:
+    for section in sections:
         if body:
-            body.extend(gap)
-        body.extend(block)
+            body.extend(_gaps(_GAP_MAJOR))
+        body.extend(section)
 
     theme_block = ["Theme", _detail(tn.theme)]
-    rule = _rule_for(
-        [_date_line(now), tinai_title, *ascii_block, *body, *theme_block]
-    )
-    return "\n".join(
-        [
-            _date_line(now),
-            "",
-            rule,
-            "",
-            *ascii_block,
-            "",
-            tinai_title,
-            "",
-            "",
-            *body,
-            "",
-            "",
-            rule,
-            "",
-            *theme_block,
-        ]
-    )
+
+    # Content measure → Fibonacci band (φ-harmonious width under center align).
+    measure = [
+        date,
+        tinai_title,
+        *ascii_block,
+        *body,
+        *theme_block,
+    ]
+    band = _fib_ceil(max(_display_width(line) for line in measure if line.strip()))
+
+    composed: List[str] = [
+        date,
+        *_gaps(_GAP_MINOR),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *ascii_block,
+        *_gaps(_GAP_MAJOR),
+        tinai_title,
+        *_gaps(_GAP_MAJOR),
+        *body,
+        *_gaps(_GAP_CADENCE),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *theme_block,
+    ]
+    return "\n".join(_justify_block(composed, band))
+
 
 
 
@@ -503,31 +517,32 @@ def tn_tooltip_markup(
 def circadian_tooltip_plain(
     state: Dict[str, Any], now: datetime
 ) -> str:
-    """Plain circadian tooltip — section title + indented details."""
+    """Plain circadian tooltip — same Fibonacci band + φ rhythm as TN."""
     phase = str(state.get("phase") or "unknown")
     theme = str(state.get("theme") or "eye-comfort")
     scene = str(state.get("scene") or "")
+    date = _date_line(now)
     body = ["Phase", _detail(phase)]
     if scene:
         body.append(_detail(scene))
     if state.get("cct_k") is not None:
         body.append(_detail(f"≈{state['cct_k']}K"))
     theme_block = ["Theme", _detail(theme)]
-    rule = _rule_for([_date_line(now), *body, *theme_block])
-    return "\n".join(
-        [
-            _date_line(now),
-            "",
-            rule,
-            "",
-            *body,
-            "",
-            "",
-            rule,
-            "",
-            *theme_block,
-        ]
-    )
+    measure = [date, *body, *theme_block]
+    band = _fib_ceil(max(_display_width(line) for line in measure if line.strip()))
+    composed = [
+        date,
+        *_gaps(_GAP_MINOR),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *body,
+        *_gaps(_GAP_CADENCE),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *theme_block,
+    ]
+    return "\n".join(_justify_block(composed, band))
+
 
 
 def tn_waybar_payload(
