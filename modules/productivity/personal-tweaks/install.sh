@@ -7,7 +7,13 @@ set -euo pipefail
 HERE="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 YES=0
 DRY=0
-PLUGINS_ROOT="${PLUGINS_ROOT:-$HOME/Work/personal/plugins}"
+if [[ -z "${PLUGINS_ROOT:-}" ]]; then
+  if [[ -d "$HOME/dev/agentic-reactor/plugins" ]]; then
+    PLUGINS_ROOT="$HOME/dev/agentic-reactor/plugins"
+  else
+    PLUGINS_ROOT="$HOME/Work/personal/plugins"
+  fi
+fi
 KANITHANJ_URL="${KANITHANJ_URL:-https://github.com/p10ns11y/collab-finder/releases/download/v2/kanithanj.ai-linux-x86_64}"
 
 while [[ $# -gt 0 ]]; do

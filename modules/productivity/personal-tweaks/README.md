@@ -13,9 +13,9 @@ existing CLIs). Do **not** reinstall Waybar.
 omarchy restart shell
 ```
 
-Needs: `focus-now` and `eye-comfort-theme` on PATH; `~/Work/personal/plugins`
-(or `PLUGINS_ROOT`) with `mission-map`; network for the v2 binary if
-`kanithanj.ai` is not on PATH yet.
+Needs: `focus-now` and `eye-comfort-theme` on PATH; `mission-map` under
+`~/dev/agentic-reactor/plugins` (fallback `~/Work/personal/plugins`, or
+`PLUGINS_ROOT`); network for the v2 binary if `kanithanj.ai` is not on PATH yet.
 
 After `omarchy refresh shell`, the theme-set / post-update hooks call
 `apply-shell-bar.sh`. You can also run that script alone.
