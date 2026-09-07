@@ -250,8 +250,8 @@ def test_waybar_payload():
 
 
 def test_waybar_payload_plain_for_omarchy_shell():
-    """Quickshell plain tip: section titles, indented details, aligned fields."""
-    from waybar_status import _display_width as display_width
+    """Quickshell plain tip: tiṇai ASCII, then clear section hierarchy."""
+    from waybar_status import _display_width as display_width, _TINAI_ASCII
 
     tip = tn_waybar_payload(
         state={"tinai": "marutham", "calendar": "tamil_nadu"},
@@ -259,31 +259,33 @@ def test_waybar_payload_plain_for_omarchy_shell():
         plain_tooltip=True,
     )["tooltip"]
     assert "<span" not in tip and "<b>" not in tip
-    assert "Marutam" in tip and "Tiṇai" in tip
+    assert "Marutam" in tip
+    assert "Tiṇai  │  Plains — Marutam" in tip
     assert "eye-comfort-tn-marutham" in tip
     assert "›" in tip and "watching " in tip
+    # Plains motif present between date and Tiṇai title
+    for motif_line in _TINAI_ASCII["marutham"]:
+        assert motif_line.strip() in tip or motif_line in tip
     lines = tip.splitlines()
     assert lines[0].startswith("7 September")
-    assert lines[1] == ""
     assert set(lines[2]) == {"─"}
-    assert display_width(lines[2]) >= display_width(lines[0])
-
-    tinai_i = lines.index("Tiṇai")
-    assert lines[tinai_i + 1].startswith("  ")
-    assert "Plains" in lines[tinai_i + 1] and "Marutam" in lines[tinai_i + 1]
-
+    title_i = next(i for i, line in enumerate(lines) if line.startswith("Tiṇai  │"))
+    assert any("~" in line or "·" in line or "_" in line for line in lines[3:title_i])
+    assert lines[title_i].startswith("Tiṇai  │")
     pozhutu_i = lines.index("Poḻutu")
-    perum_line = next(line for line in lines if "Perum" in line)
-    siru_line = next(line for line in lines if "Ciṟu" in line)
-    assert perum_line.startswith("  ") and siru_line.startswith("  ")
-    assert "Perum" in perum_line and "Ciṟu" in siru_line
-
+    assert pozhutu_i > title_i
+    assert tip.index("Poḻutu") < tip.index("Jāmam")
     assert lines[-2] == "Theme"
-    assert lines[-1].startswith("  ") and "eye-comfort-tn-marutham" in lines[-1]
-    assert set(lines[-4]) == {"─"}
-    assert tip.index("Tiṇai") < tip.index("Poḻutu") < tip.index("Jāmam")
-    assert lines[tinai_i + 2] == "" and lines[tinai_i + 3] == ""
-    assert pozhutu_i == tinai_i + 4
+    assert "eye-comfort-tn-marutham" in lines[-1]
+
+
+def test_tinai_ascii_all_landscapes():
+    from waybar_status import _TINAI_ASCII, _tinai_ascii
+
+    for tinai in ("kurinji", "mullai", "marutham", "neythal", "palai"):
+        art = _tinai_ascii(tinai, 40)
+        assert len(art) == 3
+        assert all(isinstance(line, str) for line in art)
 
 
 def test_parse_aliases():
@@ -368,6 +370,7 @@ if __name__ == "__main__":
     test_resolve_flags()
     test_waybar_payload()
     test_waybar_payload_plain_for_omarchy_shell()
+    test_tinai_ascii_all_landscapes()
     test_parse_aliases()
     test_all_tinai_siru_contrast()
     test_bad_inputs()

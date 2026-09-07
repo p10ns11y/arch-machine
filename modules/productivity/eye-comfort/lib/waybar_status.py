@@ -302,6 +302,49 @@ def _rule_for(lines: List[str], *, minimum: int = 24) -> str:
     return "─" * max(minimum, widest)
 
 
+# Compact landscape glyphs for plain tooltips (one motif per tiṇai).
+_TINAI_ASCII: Dict[str, tuple[str, ...]] = {
+    "kurinji": (  # mountains
+        "      /\\    /\\",
+        "     /  \\  /  \\",
+        "    /    \\/    \\",
+    ),
+    "mullai": (  # forest
+        "      Y   Y   Y",
+        "     /|\\ /|\\ /|\\",
+        "    /_|\\_/_|\\_/_|\\",
+    ),
+    "marutham": (  # plains / fields
+        "    ·  ·  ·  ·  ·",
+        "   ~~~~~~~~~~~~~~~",
+        "  _________________",
+    ),
+    "neythal": (  # seashore
+        "        ~   ~",
+        "     ~~  ~~  ~~",
+        "    ~~~~~~~~~~~~",
+    ),
+    "palai": (  # wasteland / dune
+        "         .",
+        "      .     .",
+        "    ~=~=~=~=~=~",
+    ),
+}
+
+
+def _center_ascii(lines: tuple[str, ...] | list[str], width: int) -> List[str]:
+    """Pad each ASCII line so the motif sits under the date/rule band."""
+    return [
+        (" " * max(0, (width - _display_width(line)) // 2)) + line
+        for line in lines
+    ]
+
+
+def _tinai_ascii(tinai: str, width: int) -> List[str]:
+    motif = _TINAI_ASCII.get(tinai) or _TINAI_ASCII["marutham"]
+    return _center_ascii(motif, width)
+
+
 def _field(label: str, value: str, label_width: int) -> str:
     """Indented labeled detail under a section title."""
     return f"  {_pad_right(label, label_width)}  {value}"
@@ -327,7 +370,7 @@ def _nazhigai_detail(tn: Any) -> str:
 def tn_tooltip_plain(
     tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
 ) -> str:
-    """Plain tooltip: section titles name the thing; indented lines are details."""
+    """Plain tooltip: date → tiṇai ASCII → Tiṇai title → other sections."""
     del state
     meta = TINAI_META[tn.tinai]
     landscape = meta["landscape"].title()
@@ -335,6 +378,7 @@ def tn_tooltip_plain(
     jam = tn.jaamam
     ordinal = nazhigai_ordinal(tn.nazhigai)
     siru_title = siru_display(tn.siru)
+    tinai_title = f"{TINAI_DISPLAY_TITLE}  │  {landscape} — {tinai_name}"
 
     field_labels = [PERUM_DISPLAY_TITLE, SIRU_DISPLAY_TITLE, "split"]
     field_labels.extend(
@@ -343,11 +387,21 @@ def tn_tooltip_plain(
     )
     field_width = max(_display_width(label) for label in field_labels)
 
+    # Band width from date + title + field rows (ASCII centered to this).
+    measure_lines = [
+        _date_line(now),
+        tinai_title,
+        _field(PERUM_DISPLAY_TITLE, PERUM_LABEL[tn.perum], field_width),
+        _field(SIRU_DISPLAY_TITLE, SIRU_LABEL[tn.siru], field_width),
+        _field("split", jam.label, field_width),
+        _detail(f"watching {jam.current} of {JAAMAMS_PER_DAY}"),
+        _detail(f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"),
+        _detail(tn.theme),
+    ]
+    band = max(_display_width(line) for line in measure_lines)
+    ascii_block = _tinai_ascii(str(tn.tinai), band)
+
     blocks: List[List[str]] = [
-        [
-            TINAI_DISPLAY_TITLE,
-            _detail(f"{landscape} — {tinai_name}"),
-        ],
         [
             POZHUTU_DISPLAY_TITLE,
             _field(PERUM_DISPLAY_TITLE, PERUM_LABEL[tn.perum], field_width),
@@ -381,12 +435,19 @@ def tn_tooltip_plain(
         body.extend(block)
 
     theme_block = ["Theme", _detail(tn.theme)]
-    rule = _rule_for([_date_line(now), *body, *theme_block])
+    rule = _rule_for(
+        [_date_line(now), tinai_title, *ascii_block, *body, *theme_block]
+    )
     return "\n".join(
         [
             _date_line(now),
             "",
             rule,
+            "",
+            *ascii_block,
+            "",
+            tinai_title,
+            "",
             "",
             *body,
             "",
@@ -396,6 +457,7 @@ def tn_tooltip_plain(
             *theme_block,
         ]
     )
+
 
 
 def tn_tooltip_markup(
