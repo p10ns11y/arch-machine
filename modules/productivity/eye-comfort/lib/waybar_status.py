@@ -1,14 +1,19 @@
-"""Waybar / notify payloads for eye-comfort (TN + circadian).
+"""Waybar / notify / Omarchy-shell payloads for eye-comfort (TN + circadian).
 
 Compact bar text; rich tooltip acts as the lightweight “extra widget”.
 Reads last apply from state.json when present; live-resolves clock fields.
 
-Waybar tooltips accept Pango markup — hierarchy lives there, not in the bar chip.
+Waybar GTK tooltips accept Pango markup. Omarchy 4 Quickshell command-module
+tooltips are plain text — tags render literally — so default is auto: Pango
+only while a `waybar` process is running (override with EYE_COMFORT_TOOLTIP).
 """
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -128,13 +133,43 @@ def _pango_esc(text: str) -> str:
 
 
 def _plain_from_pango(markup: str) -> str:
-    """Drop Pango tags for notify-send / CLI; keep newlines and wording."""
+    """Drop Pango tags for notify-send / CLI / Quickshell; keep newlines and wording."""
     return (
         _STRIP_PANGO.sub("", markup)
         .replace("&amp;", "&")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
     )
+
+
+def wants_pango_tooltip() -> bool:
+    """True when the bar host parses Pango (Waybar); False for Omarchy shell."""
+    env = (os.environ.get("EYE_COMFORT_TOOLTIP") or "").strip().lower()
+    if env in ("plain", "text", "none", "0", "false", "no"):
+        return False
+    if env in ("pango", "markup", "waybar", "1", "true", "yes"):
+        return True
+    pgrep = shutil.which("pgrep")
+    if not pgrep:
+        return False
+    try:
+        completed = subprocess.run(
+            [pgrep, "-x", "waybar"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return completed.returncode == 0
+    except OSError:
+        return False
+
+
+def finalize_tooltip(markup: str, *, plain: Optional[bool] = None) -> str:
+    """Return tooltip text for the active bar host."""
+    use_plain = wants_pango_tooltip() is False if plain is None else plain
+    if not use_plain:
+        return markup
+    return _plain_from_pango(markup).lstrip("\n")
 
 
 def _visible_width(markup: str) -> int:
@@ -286,6 +321,7 @@ def tn_waybar_payload(
     *,
     state: Optional[Dict[str, Any]] = None,
     now: Optional[datetime] = None,
+    plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Live TN bar + tooltip (tinai from last apply when available)."""
     st = state if state is not None else load_state()
@@ -308,7 +344,9 @@ def tn_waybar_payload(
         f"{tinai_display(tn.tinai)} · {siru_display(tn.siru)} · "
         f"N{nazhigai_ordinal(tn.nazhigai)}"
     )
-    tooltip = tn_tooltip_markup(tn, now, state=st)
+    tooltip = finalize_tooltip(
+        tn_tooltip_markup(tn, now, state=st), plain=plain_tooltip
+    )
     return {
         "text": text,
         "tooltip": tooltip,
@@ -319,7 +357,10 @@ def tn_waybar_payload(
 
 
 def circadian_waybar_payload(
-    state: Dict[str, Any], now: Optional[datetime] = None
+    state: Dict[str, Any],
+    now: Optional[datetime] = None,
+    *,
+    plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     now = now or datetime.now()
     activate_pango_surface(state)
@@ -353,7 +394,9 @@ def circadian_waybar_payload(
     )
     return {
         "text": text,
-        "tooltip": "\n".join(_center_first_content_line(lines)),
+        "tooltip": finalize_tooltip(
+            "\n".join(_center_first_content_line(lines)), plain=plain_tooltip
+        ),
         "class": f"eye-comfort eye-comfort-{phase}",
         "alt": "circadian",
     }
@@ -364,19 +407,25 @@ def waybar_payload(
     state_path: Optional[Path] = None,
     now: Optional[datetime] = None,
     force_tn: bool = False,
+    plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     st = load_state(state_path)
     if force_tn or _is_tn(st) or not st:
         try:
-            return tn_waybar_payload(state=st, now=now)
+            return tn_waybar_payload(
+                state=st, now=now, plain_tooltip=plain_tooltip
+            )
         except (ValueError, RuntimeError) as e:
+            err_markup = f"eye-comfort waybar error: {_pango_esc(e)}"
             return {
                 "text": "eye-comfort?",
-                "tooltip": f"eye-comfort waybar error: {_pango_esc(e)}",
+                "tooltip": finalize_tooltip(err_markup, plain=plain_tooltip),
                 "class": "eye-comfort-error",
                 "alt": "error",
             }
-    return circadian_waybar_payload(st, now=now)
+    return circadian_waybar_payload(
+        st, now=now, plain_tooltip=plain_tooltip
+    )
 
 
 def status_text(*, state_path: Optional[Path] = None, now: Optional[datetime] = None) -> str:

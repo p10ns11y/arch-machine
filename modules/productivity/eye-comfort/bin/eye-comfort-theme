@@ -17,7 +17,10 @@ MODE (positional, default auto) — circadian:
   day|light                         Alias → midday
   dark                              Alias → night
   status                            Human scene (reads state + live clock)
-  waybar                            Waybar JSON {text,tooltip,class} (no apply)
+  waybar [--plain|--pango]          Bar JSON {text,tooltip,class} (no apply)
+                                    Default tooltip: Pango if waybar runs,
+                                    else plain (Omarchy 4 Quickshell).
+                                    Or set EYE_COMFORT_TOOLTIP=plain|pango.
 
 Tamil Nadu (cultural overlay; eye comfort still primary):
   tn                                Resolve Perum × Siru × Tinai × Nazhigai × Jaamam
@@ -111,6 +114,7 @@ REDUCED_MOTION=0
 NO_DYNAMIC=0
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/eye-comfort"
 PHASE_FLAG=""
+TOOLTIP_MODE=""  # empty=auto; plain|pango
 
 ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -120,6 +124,8 @@ while [[ $# -gt 0 ]]; do
     --json) JSON=1; shift ;;
     --css) CSS=1; shift ;;
     --no-render) NO_RENDER=1; shift ;;
+    --plain|--text) TOOLTIP_MODE="plain"; shift ;;
+    --pango|--markup) TOOLTIP_MODE="pango"; shift ;;
     --high-contrast) HIGH_CONTRAST=1; shift ;;
     --reduced-motion) REDUCED_MOTION=1; shift ;;
     --no-dynamic) NO_DYNAMIC=1; shift ;;
@@ -236,6 +242,7 @@ export EC_HIGH_CONTRAST="$HIGH_CONTRAST"
 export EC_REDUCED_MOTION="$REDUCED_MOTION"
 export EC_NO_DYNAMIC="$NO_DYNAMIC"
 export EC_STATE_DIR="$STATE_DIR"
+export EC_TOOLTIP_MODE="$TOOLTIP_MODE"
 
 python3 - <<'PY'
 import json
@@ -261,8 +268,19 @@ if env_bool("EC_STATUS"):
     mode = os.environ.get("EC_MODE", "status")
     state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
     sp = (state_dir / "state.json") if state_dir.as_posix() else None
+    tooltip_mode = (os.environ.get("EC_TOOLTIP_MODE") or "").strip().lower()
+    plain_tooltip = None
+    if tooltip_mode in ("plain", "text"):
+        plain_tooltip = True
+    elif tooltip_mode in ("pango", "markup"):
+        plain_tooltip = False
     if mode == "waybar":
-        print(json.dumps(waybar_payload(state_path=sp), ensure_ascii=False))
+        print(
+            json.dumps(
+                waybar_payload(state_path=sp, plain_tooltip=plain_tooltip),
+                ensure_ascii=False,
+            )
+        )
     else:
         print(status_text(state_path=sp))
     sys.exit(0)

@@ -64,9 +64,12 @@ Then `omarchy restart shell`.
 Manual equivalent:
 
 ```json
-{ "id": "eye-comfort", "type": "command", "exec": "eye-comfort-theme waybar", "interval": 60,
+{ "id": "eye-comfort", "type": "command", "exec": "eye-comfort-theme waybar --plain", "interval": 60,
   "onClick": "bash -c '${HOME}/.local/lib/eye-comfort/waybar/tn-status.sh notify'" }
 ```
+
+Omarchy 4 Quickshell tooltips are plain text (no Pango). `--plain` (or auto when
+`waybar` is not running) strips markup so tags do not show literally.
 
 Install still copies `~/.local/lib/eye-comfort/waybar/tn-status.sh` (notify helper).
 

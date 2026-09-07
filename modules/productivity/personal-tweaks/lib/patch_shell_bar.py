@@ -39,7 +39,7 @@ MISSION_CHIP: dict[str, Any] = {
 EYE_CHIP: dict[str, Any] = {
     "id": "eye-comfort",
     "type": "command",
-    "exec": "eye-comfort-theme waybar",
+    "exec": "eye-comfort-theme waybar --plain",
     "interval": 60,
     "onClick": "bash -c '${HOME}/.local/lib/eye-comfort/waybar/tn-status.sh notify'",
 }

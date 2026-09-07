@@ -200,6 +200,7 @@ def test_waybar_payload():
     p = tn_waybar_payload(
         state={"tinai": "neythal", "calendar": "tamil_nadu"},
         now=datetime(2026, 7, 14, 15, 0),
+        plain_tooltip=False,
     )
     # erpaadu 14:00 → 15:00 = 60 min → index 2 → ordinal 3
     assert p["text"] == "Neytal · Eṟpāṭu · N3"
@@ -228,6 +229,7 @@ def test_waybar_payload():
     p2 = waybar_payload(
         state_path=Path("/nonexistent/state.json"),
         now=datetime(2026, 7, 14, 10, 0),
+        plain_tooltip=False,
     )
     assert " · " in p2["text"]
     assert p2["alt"] in ("tn", "error")
@@ -236,6 +238,7 @@ def test_waybar_payload():
     p3 = tn_waybar_payload(
         state={"tinai": "marutham", "calendar": "tamil_nadu"},
         now=datetime(2026, 7, 14, 22, 24),
+        plain_tooltip=False,
     )
     assert p3["text"] == "Marutam · Yāmam · N2"
     assert "Running Nāḻikai <b>2</b>" in p3["tooltip"]
@@ -244,6 +247,21 @@ def test_waybar_payload():
     assert "Plains  —  Marutam" in p3["tooltip"]
     assert "marutham · Marutham" not in p3["tooltip"]
     assert "marutam · Marutam" not in p3["tooltip"]
+
+
+def test_waybar_payload_plain_for_omarchy_shell():
+    """Quickshell tooltips are plain text — Pango tags must not appear."""
+    tip = tn_waybar_payload(
+        state={"tinai": "marutham", "calendar": "tamil_nadu"},
+        now=datetime(2026, 9, 7, 13, 55),
+        plain_tooltip=True,
+    )["tooltip"]
+    assert "<span" not in tip
+    assert "</" not in tip
+    assert "<b>" not in tip
+    assert "Marutam" in tip
+    assert "Tiṇai" in tip
+    assert "eye-comfort-tn-marutham" in tip or "Theme" in tip
 
 def test_parse_aliases():
     assert parse_tinai("neytal") == "neythal"
@@ -300,10 +318,14 @@ def test_tooltip_pango_adapts_to_light_surface():
     assert activate_pango_surface(dark_state)["accent"] == _PANGO_DARK["accent"]
 
     tip_l = tn_waybar_payload(
-        state=light_state, now=datetime(2026, 7, 15, 17, 55)
+        state=light_state,
+        now=datetime(2026, 7, 15, 17, 55),
+        plain_tooltip=False,
     )["tooltip"]
     tip_d = tn_waybar_payload(
-        state=dark_state, now=datetime(2026, 7, 15, 22, 0)
+        state=dark_state,
+        now=datetime(2026, 7, 15, 22, 0),
+        plain_tooltip=False,
     )["tooltip"]
     assert _PANGO_LIGHT["accent"] in tip_l
     assert _PANGO_LIGHT["muted"] in tip_l
@@ -322,6 +344,7 @@ if __name__ == "__main__":
     test_wallpaper_fallback_chain()
     test_resolve_flags()
     test_waybar_payload()
+    test_waybar_payload_plain_for_omarchy_shell()
     test_parse_aliases()
     test_all_tinai_siru_contrast()
     test_bad_inputs()
