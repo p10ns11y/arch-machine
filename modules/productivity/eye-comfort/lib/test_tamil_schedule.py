@@ -250,7 +250,7 @@ def test_waybar_payload():
 
 
 def test_waybar_payload_plain_for_omarchy_shell():
-    """Quickshell tooltips are plain text — columns + rules carry emphasis."""
+    """Quickshell plain tip: section titles, indented details, aligned fields."""
     from waybar_status import _display_width as display_width
 
     tip = tn_waybar_payload(
@@ -267,30 +267,29 @@ def test_waybar_payload_plain_for_omarchy_shell():
     assert lines[1] == ""
     assert set(lines[2]) == {"─"}
     assert display_width(lines[2]) >= display_width(lines[0])
-    tinai_line = next(
-        line for line in lines if "Plains" in line and "Marutam" in line
-    )
-    assert tinai_line.startswith("Tiṇai")
-    assert "  │  " in tinai_line
+
+    tinai_i = lines.index("Tiṇai")
+    assert lines[tinai_i + 1].startswith("  ")
+    assert "Plains" in lines[tinai_i + 1] and "Marutam" in lines[tinai_i + 1]
+
+    pozhutu_i = lines.index("Poḻutu")
     perum_line = next(line for line in lines if "Perum" in line)
     siru_line = next(line for line in lines if "Ciṟu" in line)
     assert perum_line.startswith("  ") and siru_line.startswith("  ")
-    gutter = "  │  "
-    assert gutter in perum_line and gutter in siru_line
-    assert display_width(perum_line.split(gutter, 1)[0]) == display_width(
-        siru_line.split(gutter, 1)[0]
+    # Values share one column (pad_right + two spaces); compare display prefixes.
+    perum_value_at = perum_line.index("கார்")
+    siru_value_at = siru_line.index("எற்பாடு")
+    assert display_width(perum_line[:perum_value_at]) == display_width(
+        siru_line[:siru_value_at]
     )
-    assert lines[-1].startswith("Theme")
-    # Breath: blank above theme rule, blank below rule before Theme
-    assert lines[-2] == ""
-    assert set(lines[-3]) == {"─"}
-    assert lines[-4] == ""
+
+    assert lines[-2] == "Theme"
+    assert lines[-1].startswith("  ") and "eye-comfort-tn-marutham" in lines[-1]
+    assert set(lines[-4]) == {"─"}
     assert tip.index("Tiṇai") < tip.index("Poḻutu") < tip.index("Jāmam")
-    # Double blank between major sections (Tiṇai block → Poḻutu)
-    tinai_i = next(i for i, line in enumerate(lines) if "Plains" in line)
-    pozhutu_i = next(i for i, line in enumerate(lines) if line == "Poḻutu")
-    assert lines[tinai_i + 1] == "" and lines[tinai_i + 2] == ""
-    assert pozhutu_i == tinai_i + 3
+    assert lines[tinai_i + 2] == "" and lines[tinai_i + 3] == ""
+    assert pozhutu_i == tinai_i + 4
+
 
 def test_parse_aliases():
     assert parse_tinai("neytal") == "neythal"

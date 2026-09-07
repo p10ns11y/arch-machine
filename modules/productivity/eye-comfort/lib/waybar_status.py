@@ -302,9 +302,14 @@ def _rule_for(lines: List[str], *, minimum: int = 24) -> str:
     return "─" * max(minimum, widest)
 
 
-def _kv(key: str, value: str, key_width: int, *, indent: int = 0) -> str:
-    """Two-column row: padded key, airy gutter, value."""
-    return f"{' ' * indent}{_pad_right(key, key_width)}  │  {value}"
+def _field(label: str, value: str, label_width: int) -> str:
+    """Indented labeled detail under a section title."""
+    return f"  {_pad_right(label, label_width)}  {value}"
+
+
+def _detail(text: str) -> str:
+    """Indented unlabeled detail (the section title already names it)."""
+    return f"  {text}"
 
 
 def _nazhigai_detail(tn: Any) -> str:
@@ -319,16 +324,11 @@ def _nazhigai_detail(tn: Any) -> str:
     return f"after {into_min} minutes, first {ordinal - 1} {unit} over"
 
 
-def _section(*lines: str) -> List[str]:
-    """One meaning-group; caller supplies inter-section breath."""
-    return list(lines)
-
-
 def tn_tooltip_plain(
     tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
 ) -> str:
-    """Plain-text tooltip for Omarchy Quickshell — columns with calm section breath."""
-    del state  # reserved for future surface hints
+    """Plain tooltip: section titles name the thing; indented lines are details."""
+    del state
     meta = TINAI_META[tn.tinai]
     landscape = meta["landscape"].title()
     tinai_name = tinai_display(tn.tinai)
@@ -336,84 +336,52 @@ def tn_tooltip_plain(
     ordinal = nazhigai_ordinal(tn.nazhigai)
     siru_title = siru_display(tn.siru)
 
-    outer_width = max(
-        _display_width(key)
-        for key in (
-            TINAI_DISPLAY_TITLE,
-            JAAMAM_DISPLAY_TITLE,
-            NAZHIGAI_DISPLAY_TITLE,
-            "Theme",
-        )
+    field_labels = [PERUM_DISPLAY_TITLE, SIRU_DISPLAY_TITLE, "split"]
+    field_labels.extend(
+        ("›" if part.index == jam.current else "·") + str(part.index)
+        for part in jam.parts
     )
-    inner_width = max(
-        _display_width(PERUM_DISPLAY_TITLE),
-        _display_width(SIRU_DISPLAY_TITLE),
-        _display_width("Split"),
-    )
-    if jam.parts:
-        part_name_width = max(
-            _display_width(f"{JAAMAM_DISPLAY_TITLE} {part.index}")
-            for part in jam.parts
-        )
-    else:
-        part_name_width = _display_width(f"{JAAMAM_DISPLAY_TITLE} 8")
+    field_width = max(_display_width(label) for label in field_labels)
 
-    tinai_block = _section(
-        _kv(
+    blocks: List[List[str]] = [
+        [
             TINAI_DISPLAY_TITLE,
-            f"{landscape}  —  {tinai_name}",
-            outer_width,
-        ),
-    )
-    pozhutu_block = _section(
-        POZHUTU_DISPLAY_TITLE,
-        _kv(
-            PERUM_DISPLAY_TITLE,
-            PERUM_LABEL[tn.perum],
-            inner_width,
-            indent=2,
-        ),
-        _kv(
-            SIRU_DISPLAY_TITLE,
-            SIRU_LABEL[tn.siru],
-            inner_width,
-            indent=2,
-        ),
-    )
-    jaamam_rows = [
-        _kv(
+            _detail(f"{landscape} — {tinai_name}"),
+        ],
+        [
+            POZHUTU_DISPLAY_TITLE,
+            _field(PERUM_DISPLAY_TITLE, PERUM_LABEL[tn.perum], field_width),
+            _field(SIRU_DISPLAY_TITLE, SIRU_LABEL[tn.siru], field_width),
+        ],
+        [
             JAAMAM_DISPLAY_TITLE,
-            f"watching {jam.current} of {JAAMAMS_PER_DAY}",
-            outer_width,
-        ),
-        _kv("Split", jam.label, inner_width, indent=2),
+            _detail(f"watching {jam.current} of {JAAMAMS_PER_DAY}"),
+            _field("split", jam.label, field_width),
+        ],
     ]
     for part in jam.parts:
         mark = "›" if part.index == jam.current else "·"
-        name = _pad_right(
-            f"{JAAMAM_DISPLAY_TITLE} {part.index}", part_name_width
+        blocks[-1].append(
+            _field(f"{mark}{part.index}", _jaamam_part_sense(part), field_width)
         )
-        jaamam_rows.append(f"  {mark} {name}  │  {_jaamam_part_sense(part)}")
-    jaamam_block = _section(*jaamam_rows)
-    nazhigai_block = _section(
-        _kv(
+
+    blocks.append(
+        [
             NAZHIGAI_DISPLAY_TITLE,
-            f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}",
-            outer_width,
-        ),
-        _kv("", _nazhigai_detail(tn), outer_width),
+            _detail(f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"),
+            _detail(_nazhigai_detail(tn)),
+        ]
     )
 
-    # Rhythm: tight inside blocks; double blank between major groups (breath).
     gap = ["", ""]
     body: List[str] = []
-    for block in (tinai_block, pozhutu_block, jaamam_block, nazhigai_block):
+    for block in blocks:
         if body:
             body.extend(gap)
         body.extend(block)
 
-    theme_line = _kv("Theme", tn.theme, outer_width)
-    rule = _rule_for([_date_line(now), *body, theme_line])
+    theme_block = ["Theme", _detail(tn.theme)]
+    rule = _rule_for([_date_line(now), *body, *theme_block])
     return "\n".join(
         [
             _date_line(now),
@@ -425,7 +393,7 @@ def tn_tooltip_plain(
             "",
             rule,
             "",
-            theme_line,
+            *theme_block,
         ]
     )
 
@@ -473,22 +441,17 @@ def tn_tooltip_markup(
 def circadian_tooltip_plain(
     state: Dict[str, Any], now: datetime
 ) -> str:
-    """Plain circadian tooltip for Quickshell — same column grammar + breath."""
+    """Plain circadian tooltip — section title + indented details."""
     phase = str(state.get("phase") or "unknown")
     theme = str(state.get("theme") or "eye-comfort")
     scene = str(state.get("scene") or "")
-    key_width = max(
-        _display_width("Phase"),
-        _display_width("Theme"),
-        _display_width("Cct"),
-    )
-    body = [_kv("Phase", phase, key_width)]
+    body = ["Phase", _detail(phase)]
     if scene:
-        body.append(_kv("", scene, key_width))
+        body.append(_detail(scene))
     if state.get("cct_k") is not None:
-        body.append(_kv("Cct", f"≈{state['cct_k']}K", key_width))
-    theme_line = _kv("Theme", theme, key_width)
-    rule = _rule_for([_date_line(now), *body, theme_line])
+        body.append(_detail(f"≈{state['cct_k']}K"))
+    theme_block = ["Theme", _detail(theme)]
+    rule = _rule_for([_date_line(now), *body, *theme_block])
     return "\n".join(
         [
             _date_line(now),
@@ -500,7 +463,7 @@ def circadian_tooltip_plain(
             "",
             rule,
             "",
-            theme_line,
+            *theme_block,
         ]
     )
 
