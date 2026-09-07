@@ -236,7 +236,7 @@ def _jaamam_part_sense(part: Any) -> str:
 
 
 def _jaamam_heart_lines(tn: Any) -> List[str]:
-    """Living clock heart — current watch + Ciṟu split narrative."""
+    """Living clock heart — current watch + Ciṟu split narrative (Pango)."""
     jam = tn.jaamam
     lines = [
         _accent_b(JAAMAM_DISPLAY_TITLE),
@@ -255,7 +255,7 @@ def _jaamam_heart_lines(tn: Any) -> List[str]:
 
 
 def _nazhigai_heart_lines(tn: Any) -> List[str]:
-    """Nāḻikai as elapsed pulse inside the current Ciṟu (1-based ordinal copy)."""
+    """Nāḻikai as elapsed pulse inside the current Ciṟu (Pango; 1-based ordinal)."""
     index = tn.nazhigai  # 0-based storage
     ordinal = nazhigai_ordinal(index)
     into_min = index * NAZHIGAI_MINUTES
@@ -275,6 +275,72 @@ def _nazhigai_heart_lines(tn: Any) -> List[str]:
         ),
         _soft(f"  {_pango_esc(detail)}"),
     ]
+
+
+def _rule(width: int = 28) -> str:
+    return "─" * width
+
+
+def _nazhigai_detail(tn: Any) -> str:
+    index = tn.nazhigai
+    ordinal = nazhigai_ordinal(index)
+    into_min = index * NAZHIGAI_MINUTES
+    unit = NAZHIGAI_DISPLAY
+    if ordinal == 1:
+        return f"first {NAZHIGAI_MINUTES} minutes of this {SIRU_DISPLAY_TITLE}"
+    if ordinal == 2:
+        return f"after {into_min} minutes, first {unit} over"
+    return f"after {into_min} minutes, first {ordinal - 1} {unit} over"
+
+
+def tn_tooltip_plain(
+    tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
+) -> str:
+    """Plain-text tooltip for Omarchy Quickshell (no markup — structure = emphasis)."""
+    del state  # reserved for future surface hints
+    meta = TINAI_META[tn.tinai]
+    landscape = meta["landscape"].title()
+    tinai_name = tinai_display(tn.tinai)
+    perum_label = PERUM_LABEL[tn.perum]
+    siru_label = SIRU_LABEL[tn.siru]
+    jam = tn.jaamam
+    ordinal = nazhigai_ordinal(tn.nazhigai)
+    siru_title = siru_display(tn.siru)
+
+    lines: List[str] = [
+        _date_line(now),
+        _rule(),
+        "",
+        TINAI_DISPLAY_TITLE,
+        f"  {landscape}  —  {tinai_name}",
+        "",
+        POZHUTU_DISPLAY_TITLE,
+        f"  {PERUM_DISPLAY_TITLE:<6}  {perum_label}",
+        f"  {SIRU_DISPLAY_TITLE:<6}  {siru_label}",
+        "",
+        f"{JAAMAM_DISPLAY_TITLE}  ·  watching {jam.current} of {JAAMAMS_PER_DAY}",
+        f"  Split  ·  {jam.label}",
+        f"  This {SIRU_DISPLAY_TITLE} holds —",
+    ]
+    for part in jam.parts:
+        sense = _jaamam_part_sense(part)
+        name = f"{JAAMAM_DISPLAY_TITLE} {part.index}"
+        mark = "›" if part.index == jam.current else "·"
+        lines.append(f"    {mark} {name}  —  {sense}")
+    lines.extend(
+        [
+            "",
+            (
+                f"{NAZHIGAI_DISPLAY_TITLE}  ·  N{ordinal} of {NAZHIGAIS_PER_SIRU}"
+                f" into {siru_title}"
+            ),
+            f"  {_nazhigai_detail(tn)}",
+            "",
+            _rule(),
+            f"Theme  ·  {tn.theme}",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def tn_tooltip_markup(
@@ -317,6 +383,27 @@ def tn_tooltip_markup(
     return "\n".join(_center_first_content_line(lines))
 
 
+def circadian_tooltip_plain(
+    state: Dict[str, Any], now: datetime
+) -> str:
+    """Plain circadian tooltip for Quickshell."""
+    phase = str(state.get("phase") or "unknown")
+    theme = str(state.get("theme") or "eye-comfort")
+    scene = str(state.get("scene") or "")
+    lines = [
+        _date_line(now),
+        _rule(),
+        "",
+        phase,
+    ]
+    if scene:
+        lines.append(f"  {scene}")
+    if state.get("cct_k") is not None:
+        lines.append(f"  Cct  ·  ≈{state['cct_k']}K")
+    lines.extend(["", _rule(), f"Theme  ·  {theme}"])
+    return "\n".join(lines)
+
+
 def tn_waybar_payload(
     *,
     state: Optional[Dict[str, Any]] = None,
@@ -344,9 +431,11 @@ def tn_waybar_payload(
         f"{tinai_display(tn.tinai)} · {siru_display(tn.siru)} · "
         f"N{nazhigai_ordinal(tn.nazhigai)}"
     )
-    tooltip = finalize_tooltip(
-        tn_tooltip_markup(tn, now, state=st), plain=plain_tooltip
-    )
+    use_plain = wants_pango_tooltip() is False if plain_tooltip is None else plain_tooltip
+    if use_plain:
+        tooltip = tn_tooltip_plain(tn, now, state=st)
+    else:
+        tooltip = tn_tooltip_markup(tn, now, state=st)
     return {
         "text": text,
         "tooltip": tooltip,
@@ -363,40 +452,43 @@ def circadian_waybar_payload(
     plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     now = now or datetime.now()
-    activate_pango_surface(state)
     phase = str(state.get("phase") or "unknown")
     theme = str(state.get("theme") or "eye-comfort")
     scene = str(state.get("scene") or "")
     text = f"{phase}"
-    date = _pango_esc(_date_line(now))
-    scene_e = _pango_esc(scene) if scene else ""
-    theme_e = _pango_esc(theme)
-    phase_e = _pango_esc(phase)
-    lines = [
-        "",
-        _accent_b(date),
-        "",
-        f'<span font_weight="700">{phase_e}</span>',
-    ]
-    if scene_e:
-        lines.append(f"  {_muted(scene_e)}")
-    if state.get("cct_k") is not None:
-        lines.append(
-            f"  {_muted('Cct')}       ≈{_pango_esc(state['cct_k'])}K"
-        )
-    lines.extend(
-        [
+    use_plain = wants_pango_tooltip() is False if plain_tooltip is None else plain_tooltip
+    if use_plain:
+        tooltip = circadian_tooltip_plain(state, now)
+    else:
+        activate_pango_surface(state)
+        date = _pango_esc(_date_line(now))
+        scene_e = _pango_esc(scene) if scene else ""
+        theme_e = _pango_esc(theme)
+        phase_e = _pango_esc(phase)
+        lines = [
             "",
-            _muted("Theme"),
-            f"  {_muted(theme_e)}",
+            _accent_b(date),
             "",
+            f'<span font_weight="700">{phase_e}</span>',
         ]
-    )
+        if scene_e:
+            lines.append(f"  {_muted(scene_e)}")
+        if state.get("cct_k") is not None:
+            lines.append(
+                f"  {_muted('Cct')}       ≈{_pango_esc(state['cct_k'])}K"
+            )
+        lines.extend(
+            [
+                "",
+                _muted("Theme"),
+                f"  {_muted(theme_e)}",
+                "",
+            ]
+        )
+        tooltip = "\n".join(_center_first_content_line(lines))
     return {
         "text": text,
-        "tooltip": finalize_tooltip(
-            "\n".join(_center_first_content_line(lines)), plain=plain_tooltip
-        ),
+        "tooltip": tooltip,
         "class": f"eye-comfort eye-comfort-{phase}",
         "alt": "circadian",
     }

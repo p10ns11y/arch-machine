@@ -250,7 +250,7 @@ def test_waybar_payload():
 
 
 def test_waybar_payload_plain_for_omarchy_shell():
-    """Quickshell tooltips are plain text — Pango tags must not appear."""
+    """Quickshell tooltips are plain text — structure carries emphasis."""
     tip = tn_waybar_payload(
         state={"tinai": "marutham", "calendar": "tamil_nadu"},
         now=datetime(2026, 9, 7, 13, 55),
@@ -262,6 +262,13 @@ def test_waybar_payload_plain_for_omarchy_shell():
     assert "Marutam" in tip
     assert "Tiṇai" in tip
     assert "eye-comfort-tn-marutham" in tip or "Theme" in tip
+    assert "─" in tip  # hairline rules around date / theme
+    assert "›" in tip  # current jāmam marker
+    assert "watching " in tip
+    assert "N" in tip and " of 10 into " in tip
+    assert tip.index("Tiṇai") < tip.index("Poḻutu") < tip.index("Jāmam")
+    assert tip.strip().startswith("7 September")
+    assert "Theme  ·  " in tip
 
 def test_parse_aliases():
     assert parse_tinai("neytal") == "neythal"
