@@ -13,24 +13,35 @@ import subprocess
 import sys
 import textwrap
 
-DEFAULT_WIDTH = 56
+DEFAULT_WIDTH = 52
 
 
 def tooltip_width() -> int:
     raw = os.environ.get("MM_TOOLTIP_WIDTH", str(DEFAULT_WIDTH))
     try:
-        return max(24, int(raw))
+        return max(28, int(raw))
     except ValueError:
         return DEFAULT_WIDTH
 
 
 def wrap_tooltip(text: str, width: int) -> str:
+    """Wrap for Quickshell; blank line between sentences for breath."""
     if not text:
         return text
-    lines: list[str] = []
-    for paragraph in text.splitlines() or [text]:
+    import re
+
+    if "\n" in text:
+        paragraphs = text.splitlines()
+    else:
+        paragraphs = [
+            part.strip()
+            for part in re.split(r"(?<=[.!;])\s+", text)
+            if part.strip()
+        ] or [text]
+
+    blocks: list[str] = []
+    for paragraph in paragraphs:
         if not paragraph.strip():
-            lines.append("")
             continue
         wrapped = textwrap.wrap(
             paragraph,
@@ -38,8 +49,8 @@ def wrap_tooltip(text: str, width: int) -> str:
             break_long_words=True,
             break_on_hyphens=False,
         )
-        lines.extend(wrapped or [paragraph])
-    return "\n".join(lines)
+        blocks.append("\n".join(wrapped or [paragraph]))
+    return "\n\n".join(blocks)
 
 
 def load_payload() -> dict:

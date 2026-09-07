@@ -7,9 +7,13 @@ from mm_bar_json import wrap_tooltip
 
 
 def test_wrap_breaks_long_single_line():
-    tip = "Submit one relevant application next week — do not wait for replies. " * 3
+    tip = (
+        "Submit one relevant application next week — do not wait for replies. "
+        "live-check then submit next week's pack (2026-09-11)."
+    )
     out = wrap_tooltip(tip, 40)
     assert "\n" in out
+    assert "\n\n" in out  # breath between sentences
     assert all(len(line) <= 40 for line in out.splitlines() if line)
     assert "Submit one relevant" in out
 

@@ -264,23 +264,33 @@ def test_waybar_payload_plain_for_omarchy_shell():
     assert "›" in tip and "watching " in tip
     lines = tip.splitlines()
     assert lines[0].startswith("7 September")
-    assert set(lines[1]) == {"─"}
-    assert display_width(lines[1]) >= display_width(lines[0])
+    assert lines[1] == ""
+    assert set(lines[2]) == {"─"}
+    assert display_width(lines[2]) >= display_width(lines[0])
     tinai_line = next(
         line for line in lines if "Plains" in line and "Marutam" in line
     )
     assert tinai_line.startswith("Tiṇai")
-    assert " │ " in tinai_line
+    assert "  │  " in tinai_line
     perum_line = next(line for line in lines if "Perum" in line)
     siru_line = next(line for line in lines if "Ciṟu" in line)
     assert perum_line.startswith("  ") and siru_line.startswith("  ")
-    assert " │ " in perum_line and " │ " in siru_line
-    assert display_width(perum_line.split(" │ ", 1)[0]) == display_width(
-        siru_line.split(" │ ", 1)[0]
+    gutter = "  │  "
+    assert gutter in perum_line and gutter in siru_line
+    assert display_width(perum_line.split(gutter, 1)[0]) == display_width(
+        siru_line.split(gutter, 1)[0]
     )
     assert lines[-1].startswith("Theme")
-    assert set(lines[-2]) == {"─"}
+    # Breath: blank above theme rule, blank below rule before Theme
+    assert lines[-2] == ""
+    assert set(lines[-3]) == {"─"}
+    assert lines[-4] == ""
     assert tip.index("Tiṇai") < tip.index("Poḻutu") < tip.index("Jāmam")
+    # Double blank between major sections (Tiṇai block → Poḻutu)
+    tinai_i = next(i for i, line in enumerate(lines) if "Plains" in line)
+    pozhutu_i = next(i for i, line in enumerate(lines) if line == "Poḻutu")
+    assert lines[tinai_i + 1] == "" and lines[tinai_i + 2] == ""
+    assert pozhutu_i == tinai_i + 3
 
 def test_parse_aliases():
     assert parse_tinai("neytal") == "neythal"
