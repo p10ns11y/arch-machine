@@ -9,6 +9,11 @@
 - [ ] `install.sh` thin + profile contracts preserved
 - [ ] Tone: professional/vigilant default (full lore only in FUNREADME.md)
 
+**Harness** (check one):
+- [ ] OpenCode
+- [ ] Grok Build
+- [ ] cursor-agent
+
 **Evidence for this PR**:
 - Bundle: `logs/evidence-bundle-YYYYMMDD-HHMMSS.*` (if applicable)
 
