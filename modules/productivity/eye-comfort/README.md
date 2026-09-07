@@ -53,10 +53,25 @@ eye-comfort-theme tn --lat 13.08 --lon 80.27 --json
 
 Packages: `eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}`.
 
-### Waybar (TN schedule on the bar)
+### Shell bar (TN schedule on the bar)
 
-Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your**
-`~/.config/waybar/config.jsonc` (never edit `~/.local/share/omarchy/`):
+**Omarchy 4+ (Quickshell):** prefer
+[`../personal-tweaks`](../personal-tweaks/) — it inserts an `eye-comfort`
+`type: command` module into `~/.config/omarchy/shell.json` (exec:
+`eye-comfort-theme waybar`) after weather, clear of `omarchy.indicators`.
+Then `omarchy restart shell`.
+
+Manual equivalent:
+
+```json
+{ "id": "eye-comfort", "type": "command", "exec": "eye-comfort-theme waybar", "interval": 60,
+  "onClick": "bash -c '${HOME}/.local/lib/eye-comfort/waybar/tn-status.sh notify'" }
+```
+
+Install still copies `~/.local/lib/eye-comfort/waybar/tn-status.sh` (notify helper).
+
+**Omarchy ≤3 (Waybar):** enable in **your** `~/.config/waybar/config.jsonc`
+(never edit `/usr/share/omarchy/`):
 
 1. Add `"custom/eye-comfort"` to `modules-center` (or `modules-right`).
 2. Paste the module block from [`waybar/module.jsonc`](waybar/module.jsonc).
@@ -64,7 +79,6 @@ Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your*
    `~/.config/waybar/eye-comfort/eye-comfort.css` and add to `~/.config/waybar/style.css`:
    `@import "eye-comfort/eye-comfort.css";`
    (Waybar does not resolve `file://` URLs; or paste the rules).
-   This adds chip margin (stops clock `…2026` glued to `marutham`) and tooltip padding.
 4. Restart Waybar (`omarchy restart waybar` / the eye-comfort wrapper).
 
 | Surface | Shows |
@@ -73,8 +87,6 @@ Install copies `~/.local/lib/eye-comfort/waybar/tn-status.sh`. Enable in **your*
 | **Tooltip** | Date → Tiṇai → Poḻutu (Perum+Ciṟu) → Jāmam/Nāḻikai heart → Theme (Pango) |
 | **Click** | `notify-send` plain-text body (same content, no markup) |
 | **CLI** | `eye-comfort-theme status` · `eye-comfort-theme waybar` |
-
-Does not change the existing `omarchy-restart-waybar` PATH wrappers.
 
 ## Layout
 
