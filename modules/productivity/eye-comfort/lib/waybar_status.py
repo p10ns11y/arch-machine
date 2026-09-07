@@ -1,14 +1,19 @@
-"""Waybar / notify payloads for eye-comfort (TN + circadian).
+"""Waybar / notify / Omarchy-shell payloads for eye-comfort (TN + circadian).
 
 Compact bar text; rich tooltip acts as the lightweight “extra widget”.
 Reads last apply from state.json when present; live-resolves clock fields.
 
-Waybar tooltips accept Pango markup — hierarchy lives there, not in the bar chip.
+Waybar GTK tooltips accept Pango markup. Omarchy 4 Quickshell command-module
+tooltips are plain text — tags render literally — so default is auto: Pango
+only while a `waybar` process is running (override with EYE_COMFORT_TOOLTIP).
 """
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -128,13 +133,43 @@ def _pango_esc(text: str) -> str:
 
 
 def _plain_from_pango(markup: str) -> str:
-    """Drop Pango tags for notify-send / CLI; keep newlines and wording."""
+    """Drop Pango tags for notify-send / CLI / Quickshell; keep newlines and wording."""
     return (
         _STRIP_PANGO.sub("", markup)
         .replace("&amp;", "&")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
     )
+
+
+def wants_pango_tooltip() -> bool:
+    """True when the bar host parses Pango (Waybar); False for Omarchy shell."""
+    env = (os.environ.get("EYE_COMFORT_TOOLTIP") or "").strip().lower()
+    if env in ("plain", "text", "none", "0", "false", "no"):
+        return False
+    if env in ("pango", "markup", "waybar", "1", "true", "yes"):
+        return True
+    pgrep = shutil.which("pgrep")
+    if not pgrep:
+        return False
+    try:
+        completed = subprocess.run(
+            [pgrep, "-x", "waybar"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return completed.returncode == 0
+    except OSError:
+        return False
+
+
+def finalize_tooltip(markup: str, *, plain: Optional[bool] = None) -> str:
+    """Return tooltip text for the active bar host."""
+    use_plain = wants_pango_tooltip() is False if plain is None else plain
+    if not use_plain:
+        return markup
+    return _plain_from_pango(markup).lstrip("\n")
 
 
 def _visible_width(markup: str) -> int:
@@ -201,7 +236,7 @@ def _jaamam_part_sense(part: Any) -> str:
 
 
 def _jaamam_heart_lines(tn: Any) -> List[str]:
-    """Living clock heart — current watch + Ciṟu split narrative."""
+    """Living clock heart — current watch + Ciṟu split narrative (Pango)."""
     jam = tn.jaamam
     lines = [
         _accent_b(JAAMAM_DISPLAY_TITLE),
@@ -220,7 +255,7 @@ def _jaamam_heart_lines(tn: Any) -> List[str]:
 
 
 def _nazhigai_heart_lines(tn: Any) -> List[str]:
-    """Nāḻikai as elapsed pulse inside the current Ciṟu (1-based ordinal copy)."""
+    """Nāḻikai as elapsed pulse inside the current Ciṟu (Pango; 1-based ordinal)."""
     index = tn.nazhigai  # 0-based storage
     ordinal = nazhigai_ordinal(index)
     into_min = index * NAZHIGAI_MINUTES
@@ -240,6 +275,203 @@ def _nazhigai_heart_lines(tn: Any) -> List[str]:
         ),
         _soft(f"  {_pango_esc(detail)}"),
     ]
+
+
+def _display_width(text: str) -> int:
+    """Terminal/monospace columns; skip combining marks; wide East-Asian = 2."""
+    import unicodedata
+
+    width = 0
+    for char in text:
+        if unicodedata.combining(char):
+            continue
+        east = unicodedata.east_asian_width(char)
+        width += 2 if east in ("F", "W") else 1
+    return width
+
+
+def _pad_right(text: str, width: int) -> str:
+    return text + (" " * max(0, width - _display_width(text)))
+
+
+# φ and Fibonacci — vertical rhythm + band width for centered Quickshell tips.
+_PHI = (1.0 + 5.0**0.5) / 2.0
+_FIBONACCI = (1, 2, 3, 5, 8, 13, 21, 34, 55, 89)
+# Gaps in blank-line counts (Fibonacci): minor / major / cadence.
+_GAP_MINOR = 1   # date ↔ rule ↔ motif
+_GAP_MAJOR = 2   # motif ↔ title; between body sections
+_GAP_CADENCE = 3  # body ↔ footer (≈ φ²)
+
+
+def _fib_ceil(columns: int) -> int:
+    """Next Fibonacci width ≥ columns (harmonious band for the tip)."""
+    for fib in _FIBONACCI:
+        if fib >= columns:
+            return fib
+    return columns
+
+
+def _gaps(count: int) -> List[str]:
+    return [""] * count
+
+
+def _justify_block(lines: List[str], band: int) -> List[str]:
+    """Pad every non-empty line to `band` so AlignHCenter keeps a flush left edge."""
+    out: List[str] = []
+    for line in lines:
+        if not line:
+            out.append("")
+        else:
+            out.append(_pad_right(line, band))
+    return out
+
+
+def _rule(band: int) -> str:
+    return "─" * band
+
+
+# Compact landscape glyphs — 3-line motifs (Fibonacci height).
+_TINAI_ASCII: Dict[str, tuple[str, ...]] = {
+    "kurinji": (  # mountains
+        "  /\\    /\\",
+        " /  \\  /  \\",
+        "/    \\/    \\",
+    ),
+    "mullai": (  # forest
+        "  Y   Y   Y",
+        " /|\\ /|\\ /|\\",
+        " /|\\ /|\\ /|\\",
+    ),
+    "marutham": (  # plains / fields
+        "·  ·  ·  ·  ·",
+        "~~~~~~~~~~~~~",
+        "_____________",
+    ),
+    "neythal": (  # seashore
+        "    ~   ~",
+        " ~~  ~~  ~~",
+        "~~~~~~~~~~~~",
+    ),
+    "palai": (  # wasteland / dune
+        "     .",
+        "  .     .",
+        "~=~=~=~=~=~",
+    ),
+}
+
+
+def _tinai_ascii(tinai: str) -> List[str]:
+    """Left-aligned motif (same indent family as details); band-pad later."""
+    motif = _TINAI_ASCII.get(tinai) or _TINAI_ASCII["marutham"]
+    return [f"  {line}" for line in motif]
+
+
+def _field(label: str, value: str, label_width: int) -> str:
+    """Indented labeled detail under a section title."""
+    return f"  {_pad_right(label, label_width)}  {value}"
+
+
+def _detail(text: str) -> str:
+    """Indented unlabeled detail (the section title already names it)."""
+    return f"  {text}"
+
+
+def _nazhigai_detail(tn: Any) -> str:
+    index = tn.nazhigai
+    ordinal = nazhigai_ordinal(index)
+    into_min = index * NAZHIGAI_MINUTES
+    unit = NAZHIGAI_DISPLAY
+    if ordinal == 1:
+        return f"first {NAZHIGAI_MINUTES} minutes of this {SIRU_DISPLAY_TITLE}"
+    if ordinal == 2:
+        return f"after {into_min} minutes, first {unit} over"
+    return f"after {into_min} minutes, first {ordinal - 1} {unit} over"
+
+
+def tn_tooltip_plain(
+    tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
+) -> str:
+    """Plain tooltip composed on a Fibonacci band with φ vertical rhythm."""
+    del state
+    meta = TINAI_META[tn.tinai]
+    landscape = meta["landscape"].title()
+    tinai_name = tinai_display(tn.tinai)
+    jam = tn.jaamam
+    ordinal = nazhigai_ordinal(tn.nazhigai)
+    siru_title = siru_display(tn.siru)
+    tinai_title = f"{TINAI_DISPLAY_TITLE}  │  {landscape} — {tinai_name}"
+    date = _date_line(now)
+
+    field_labels = [PERUM_DISPLAY_TITLE, SIRU_DISPLAY_TITLE, "split"]
+    field_labels.extend(
+        ("›" if part.index == jam.current else "·") + str(part.index)
+        for part in jam.parts
+    )
+    field_width = max(_display_width(label) for label in field_labels)
+
+    ascii_block = _tinai_ascii(str(tn.tinai))
+
+    sections: List[List[str]] = [
+        [
+            POZHUTU_DISPLAY_TITLE,
+            _field(PERUM_DISPLAY_TITLE, PERUM_LABEL[tn.perum], field_width),
+            _field(SIRU_DISPLAY_TITLE, SIRU_LABEL[tn.siru], field_width),
+        ],
+        [
+            JAAMAM_DISPLAY_TITLE,
+            _detail(f"watching {jam.current} of {JAAMAMS_PER_DAY}"),
+            _field("split", jam.label, field_width),
+        ],
+    ]
+    for part in jam.parts:
+        mark = "›" if part.index == jam.current else "·"
+        sections[-1].append(
+            _field(f"{mark}{part.index}", _jaamam_part_sense(part), field_width)
+        )
+    sections.append(
+        [
+            NAZHIGAI_DISPLAY_TITLE,
+            _detail(f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}"),
+            _detail(_nazhigai_detail(tn)),
+        ]
+    )
+
+    body: List[str] = []
+    for section in sections:
+        if body:
+            body.extend(_gaps(_GAP_MAJOR))
+        body.extend(section)
+
+    theme_block = ["Theme", _detail(tn.theme)]
+
+    # Content measure → Fibonacci band (φ-harmonious width under center align).
+    measure = [
+        date,
+        tinai_title,
+        *ascii_block,
+        *body,
+        *theme_block,
+    ]
+    band = _fib_ceil(max(_display_width(line) for line in measure if line.strip()))
+
+    composed: List[str] = [
+        date,
+        *_gaps(_GAP_MINOR),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *ascii_block,
+        *_gaps(_GAP_MAJOR),
+        tinai_title,
+        *_gaps(_GAP_MAJOR),
+        *body,
+        *_gaps(_GAP_CADENCE),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *theme_block,
+    ]
+    return "\n".join(_justify_block(composed, band))
+
+
 
 
 def tn_tooltip_markup(
@@ -282,10 +514,42 @@ def tn_tooltip_markup(
     return "\n".join(_center_first_content_line(lines))
 
 
+def circadian_tooltip_plain(
+    state: Dict[str, Any], now: datetime
+) -> str:
+    """Plain circadian tooltip — same Fibonacci band + φ rhythm as TN."""
+    phase = str(state.get("phase") or "unknown")
+    theme = str(state.get("theme") or "eye-comfort")
+    scene = str(state.get("scene") or "")
+    date = _date_line(now)
+    body = ["Phase", _detail(phase)]
+    if scene:
+        body.append(_detail(scene))
+    if state.get("cct_k") is not None:
+        body.append(_detail(f"≈{state['cct_k']}K"))
+    theme_block = ["Theme", _detail(theme)]
+    measure = [date, *body, *theme_block]
+    band = _fib_ceil(max(_display_width(line) for line in measure if line.strip()))
+    composed = [
+        date,
+        *_gaps(_GAP_MINOR),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *body,
+        *_gaps(_GAP_CADENCE),
+        _rule(band),
+        *_gaps(_GAP_MINOR),
+        *theme_block,
+    ]
+    return "\n".join(_justify_block(composed, band))
+
+
+
 def tn_waybar_payload(
     *,
     state: Optional[Dict[str, Any]] = None,
     now: Optional[datetime] = None,
+    plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Live TN bar + tooltip (tinai from last apply when available)."""
     st = state if state is not None else load_state()
@@ -308,7 +572,11 @@ def tn_waybar_payload(
         f"{tinai_display(tn.tinai)} · {siru_display(tn.siru)} · "
         f"N{nazhigai_ordinal(tn.nazhigai)}"
     )
-    tooltip = tn_tooltip_markup(tn, now, state=st)
+    use_plain = wants_pango_tooltip() is False if plain_tooltip is None else plain_tooltip
+    if use_plain:
+        tooltip = tn_tooltip_plain(tn, now, state=st)
+    else:
+        tooltip = tn_tooltip_markup(tn, now, state=st)
     return {
         "text": text,
         "tooltip": tooltip,
@@ -319,41 +587,49 @@ def tn_waybar_payload(
 
 
 def circadian_waybar_payload(
-    state: Dict[str, Any], now: Optional[datetime] = None
+    state: Dict[str, Any],
+    now: Optional[datetime] = None,
+    *,
+    plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     now = now or datetime.now()
-    activate_pango_surface(state)
     phase = str(state.get("phase") or "unknown")
     theme = str(state.get("theme") or "eye-comfort")
     scene = str(state.get("scene") or "")
     text = f"{phase}"
-    date = _pango_esc(_date_line(now))
-    scene_e = _pango_esc(scene) if scene else ""
-    theme_e = _pango_esc(theme)
-    phase_e = _pango_esc(phase)
-    lines = [
-        "",
-        _accent_b(date),
-        "",
-        f'<span font_weight="700">{phase_e}</span>',
-    ]
-    if scene_e:
-        lines.append(f"  {_muted(scene_e)}")
-    if state.get("cct_k") is not None:
-        lines.append(
-            f"  {_muted('Cct')}       ≈{_pango_esc(state['cct_k'])}K"
-        )
-    lines.extend(
-        [
+    use_plain = wants_pango_tooltip() is False if plain_tooltip is None else plain_tooltip
+    if use_plain:
+        tooltip = circadian_tooltip_plain(state, now)
+    else:
+        activate_pango_surface(state)
+        date = _pango_esc(_date_line(now))
+        scene_e = _pango_esc(scene) if scene else ""
+        theme_e = _pango_esc(theme)
+        phase_e = _pango_esc(phase)
+        lines = [
             "",
-            _muted("Theme"),
-            f"  {_muted(theme_e)}",
+            _accent_b(date),
             "",
+            f'<span font_weight="700">{phase_e}</span>',
         ]
-    )
+        if scene_e:
+            lines.append(f"  {_muted(scene_e)}")
+        if state.get("cct_k") is not None:
+            lines.append(
+                f"  {_muted('Cct')}       ≈{_pango_esc(state['cct_k'])}K"
+            )
+        lines.extend(
+            [
+                "",
+                _muted("Theme"),
+                f"  {_muted(theme_e)}",
+                "",
+            ]
+        )
+        tooltip = "\n".join(_center_first_content_line(lines))
     return {
         "text": text,
-        "tooltip": "\n".join(_center_first_content_line(lines)),
+        "tooltip": tooltip,
         "class": f"eye-comfort eye-comfort-{phase}",
         "alt": "circadian",
     }
@@ -364,19 +640,25 @@ def waybar_payload(
     state_path: Optional[Path] = None,
     now: Optional[datetime] = None,
     force_tn: bool = False,
+    plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     st = load_state(state_path)
     if force_tn or _is_tn(st) or not st:
         try:
-            return tn_waybar_payload(state=st, now=now)
+            return tn_waybar_payload(
+                state=st, now=now, plain_tooltip=plain_tooltip
+            )
         except (ValueError, RuntimeError) as e:
+            err_markup = f"eye-comfort waybar error: {_pango_esc(e)}"
             return {
                 "text": "eye-comfort?",
-                "tooltip": f"eye-comfort waybar error: {_pango_esc(e)}",
+                "tooltip": finalize_tooltip(err_markup, plain=plain_tooltip),
                 "class": "eye-comfort-error",
                 "alt": "error",
             }
-    return circadian_waybar_payload(st, now=now)
+    return circadian_waybar_payload(
+        st, now=now, plain_tooltip=plain_tooltip
+    )
 
 
 def status_text(*, state_path: Optional[Path] = None, now: Optional[datetime] = None) -> str:

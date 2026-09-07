@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Personal Omarchy tweaks: waybar heading chip, 20:00 timer, kanithanj.ai.
+# Personal Omarchy tweaks: shell bar chips (Omarchy 4), 20:00 timer, kanithanj.ai.
 # Usage: ./install.sh --yes [--dry-run]
-# Never writes ~/.local/share/omarchy/.
+# Never writes /usr/share/omarchy/ or ~/.local/share/omarchy/.
 set -euo pipefail
 
 HERE="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if (( !YES && !DRY )); then
-  echo "consent: re-run with --yes to write ~/.config/waybar, systemd user units, and ~/.local/bin" >&2
+  echo "consent: re-run with --yes to write ~/.config/omarchy/shell.json, systemd user units, and ~/.local/bin" >&2
   exit 2
 fi
 
@@ -49,11 +49,13 @@ APPS="$HOME/.local/share/applications"
 ICONS="$HOME/.local/share/icons/hicolor/128x128/apps"
 MM_SCRIPTS="$PLUGINS_ROOT/mission-map/scripts"
 LIB="$HERE/lib"
+LOCAL_LIB="$HOME/.local/lib/personal-tweaks"
 HOOKS_THEME="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
 HOOKS_UPDATE="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/post-update.d"
+SHELL_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/shell.json"
 
 run mkdir -p "$LOCAL_BIN" "$SYS_USER" "$APPS" "$ICONS" \
-  "$HOME/.local/lib/personal-tweaks" "$HOOKS_THEME" "$HOOKS_UPDATE"
+  "$LOCAL_LIB" "$HOOKS_THEME" "$HOOKS_UPDATE"
 
 if [[ -x "$MM_SCRIPTS/mm-lifeos-graph" ]]; then
   run ln -sfn "$MM_SCRIPTS/mm-lifeos-graph" "$LOCAL_BIN/mm-lifeos-graph"
@@ -74,10 +76,15 @@ fi
 run cp "$HERE/units/mission-map-graph.service" "$SYS_USER/"
 run cp "$HERE/units/mission-map-graph.timer" "$SYS_USER/"
 run cp "$HERE/desktop/kanithanj.ai.desktop" "$APPS/"
-run install -m 755 "$LIB/apply-waybar.sh" "$HOME/.local/lib/personal-tweaks/apply-waybar.sh"
-run install -m 755 "$LIB/backup-waybar.sh" "$HOME/.local/lib/personal-tweaks/backup-waybar.sh"
-run install -m 644 "$LIB/patch_waybar.py" "$HOME/.local/lib/personal-tweaks/patch_waybar.py"
-run install -m 644 "$HERE/waybar/mission-map.css" "$HOME/.local/lib/personal-tweaks/mission-map.css"
+run install -m 755 "$LIB/apply-shell-bar.sh" "$LOCAL_LIB/apply-shell-bar.sh"
+run install -m 644 "$LIB/patch_shell_bar.py" "$LOCAL_LIB/patch_shell_bar.py"
+run install -m 644 "$LIB/mm_bar_json.py" "$LOCAL_LIB/mm_bar_json.py"
+run install -m 755 "$LIB/mm-bar-json" "$LOCAL_BIN/mm-bar-json"
+# Keep Waybar helpers for Omarchy ≤3 hosts / archaeology; hooks no longer call them.
+run install -m 755 "$LIB/apply-waybar.sh" "$LOCAL_LIB/apply-waybar.sh"
+run install -m 755 "$LIB/backup-waybar.sh" "$LOCAL_LIB/backup-waybar.sh"
+run install -m 644 "$LIB/patch_waybar.py" "$LOCAL_LIB/patch_waybar.py"
+run install -m 644 "$HERE/waybar/mission-map.css" "$LOCAL_LIB/mission-map.css"
 run install -m 755 "$HERE/hooks/92-heading-chip.sh" "$HOOKS_THEME/92-heading-chip.sh"
 run install -m 755 "$HERE/hooks/92-heading-chip.sh" "$HOOKS_UPDATE/92-heading-chip.sh"
 
@@ -87,9 +94,13 @@ if [[ -f "$ICON_SRC" ]]; then
 fi
 
 if (( DRY )); then
-  echo "DRY: apply-waybar.sh"
+  echo "DRY: apply-shell-bar.sh (requires $SHELL_JSON)"
 else
-  PYTHONPATH="$LIB${PYTHONPATH:+:$PYTHONPATH}" "$LIB/apply-waybar.sh"
+  if [[ -f "$SHELL_JSON" ]]; then
+    PYTHONPATH="$LIB${PYTHONPATH:+:$PYTHONPATH}" "$LIB/apply-shell-bar.sh"
+  else
+    echo "skip shell bar: missing $SHELL_JSON (is Omarchy 4+ installed?)" >&2
+  fi
 fi
 
 if (( !DRY )); then
@@ -99,8 +110,8 @@ if (( !DRY )); then
 fi
 
 echo "personal-tweaks ok"
-echo "theme-set + post-update hooks re-apply the chip after Omarchy wipes waybar"
-echo "waybar backups: ~/.local/share/personal-tweaks/waybar-backups/ (last-good + stamps)"
-echo "restore: ~/.local/lib/personal-tweaks/backup-waybar.sh --restore last-good"
+echo "Omarchy 4: focus-now + mission-map on left; eye-comfort after weather; system-update on right"
+echo "theme-set + post-update hooks re-apply shell.json chips after refresh/update"
+echo "shell backups: ~/.local/share/personal-tweaks/shell-bar-backups/ (last-good + stamps)"
 echo "live map JSON stays in ~/.grok/mission-maps/ (not this repo)"
-echo "then: omarchy restart waybar"
+echo "then: omarchy restart shell   # not refresh"
