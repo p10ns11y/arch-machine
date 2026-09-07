@@ -250,13 +250,12 @@ def test_waybar_payload():
 
 
 def test_waybar_payload_plain_for_omarchy_shell():
-    """φ-band plain tip: equal-width lines, Fibonacci gaps, tiṇai motif."""
+    """Landscape motif on top, calendar sentences below with section pauses."""
     from waybar_status import (
         _TINAI_ASCII,
-        _display_width as display_width,
-        _fib_ceil,
-        _GAP_MAJOR,
-        _GAP_CADENCE,
+        _QT_PAD,
+        _flow_gloss,
+        _latin_gloss,
     )
 
     tip = tn_waybar_payload(
@@ -265,44 +264,52 @@ def test_waybar_payload_plain_for_omarchy_shell():
         plain_tooltip=True,
     )["tooltip"]
     assert "<span" not in tip and "<b>" not in tip
-    assert "Tiṇai  │  Plains — Marutam" in tip
+    assert "Plains — Marutam" in tip
+    assert "Tiṇai" in tip
+    assert "Poḻutu" in tip
+    assert tip.index("Poḻutu") < tip.index("Perum") < tip.index("Ciṟu")
+    assert "கார் Kār — Rainy / Monsoon" in tip
+    assert "நண்பகல்" in tip
+    assert "Watching " in tip
+    assert "full watch (3 hours)" in tip
+    assert "about " in tip and "minutes" in tip
+    assert "split" not in tip.lower()
+    assert " + " not in tip
+    assert "≈60m" not in tip
+    assert " │ " not in tip
     assert "eye-comfort-tn-marutham" in tip
-    assert "›" in tip and "watching " in tip
-    for motif_line in _TINAI_ASCII["marutham"]:
-        assert motif_line in tip
+    assert any(0x0B80 <= ord(char) <= 0x0BFF for char in tip)
 
     lines = tip.splitlines()
-    # Every non-empty line shares one Fibonacci band (flush under center-align).
-    widths = {display_width(line) for line in lines if line.strip()}
-    assert len(widths) == 1
-    band = next(iter(widths))
-    assert band in (1, 2, 3, 5, 8, 13, 21, 34, 55, 89) or band == _fib_ceil(band)
-
-    assert lines[0].startswith("7 September")
-    title_i = next(i for i, line in enumerate(lines) if line.startswith("Tiṇai  │"))
-    assert title_i > 3
-    # Major gap (2 blanks) before Tiṇai title after motif
-    assert lines[title_i - 1] == "" and lines[title_i - 2] == ""
-    # Cadence gap (3 blanks) before footer rule
-    rule_indices = [i for i, line in enumerate(lines) if set(line.strip()) == {"─"}]
-    assert len(rule_indices) >= 2
-    footer_rule = rule_indices[-1]
-    assert lines[footer_rule - 1] == ""
-    assert lines[footer_rule - 2] == ""
-    assert lines[footer_rule - 3] == ""
-    assert _GAP_CADENCE == 3 and _GAP_MAJOR == 2
-    assert lines[-2].startswith("Theme")
-    assert "eye-comfort-tn-marutham" in lines[-1]
+    visible = [line.replace(_QT_PAD, "").rstrip() for line in lines]
+    assert visible[0].startswith("7 September")
+    assert "" in visible
+    motif_start = next(
+        i for i, line in enumerate(visible) if _TINAI_ASCII["marutham"][0] in line
+    )
+    title_i = next(i for i, line in enumerate(visible) if line.startswith("Tiṇai"))
+    assert motif_start < title_i
+    for offset, motif_line in enumerate(_TINAI_ASCII["marutham"]):
+        assert motif_line.rstrip() in visible[motif_start + offset]
+    assert visible[-1].startswith("Theme  eye-comfort-tn-marutham")
+    rules = [line for line in visible if line and set(line) == {"─"}]
+    assert len(rules) == 2
+    assert _latin_gloss("கார் Kār — Rainy/Monsoon") == "Kār — Rainy/Monsoon"
+    assert _flow_gloss("எற்பாடு Eṟpāṭu — Afternoon→Dusk ~14–18") == (
+        "எற்பாடு Eṟpāṭu — Afternoon into Dusk, 14–18"
+    )
 
 
 def test_tinai_ascii_all_landscapes():
-    from waybar_status import _TINAI_ASCII, _tinai_ascii
+    from waybar_status import _TINAI_ASCII, _display_width, _tinai_ascii
 
     for tinai in ("kurinji", "mullai", "marutham", "neythal", "palai"):
         art = _tinai_ascii(tinai)
-        assert len(art) == 3
-        assert all(line.startswith("  ") for line in art)
+        assert len(art) == 5
         assert tinai in _TINAI_ASCII
+        widths = {_display_width(line) for line in art}
+        assert len(widths) == 1
+        assert art[0].rstrip() == _TINAI_ASCII[tinai][0].rstrip()
 
 
 def test_parse_aliases():
