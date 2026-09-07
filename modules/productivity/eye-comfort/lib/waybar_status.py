@@ -277,8 +277,34 @@ def _nazhigai_heart_lines(tn: Any) -> List[str]:
     ]
 
 
-def _rule(width: int = 28) -> str:
-    return "─" * width
+def _display_width(text: str) -> int:
+    """Terminal/monospace columns; skip combining marks; wide East-Asian = 2."""
+    import unicodedata
+
+    width = 0
+    for char in text:
+        if unicodedata.combining(char):
+            continue
+        east = unicodedata.east_asian_width(char)
+        width += 2 if east in ("F", "W") else 1
+    return width
+
+
+def _pad_right(text: str, width: int) -> str:
+    return text + (" " * max(0, width - _display_width(text)))
+
+
+def _rule_for(lines: List[str], *, minimum: int = 24) -> str:
+    widest = max(
+        (_display_width(line) for line in lines if line.strip()),
+        default=minimum,
+    )
+    return "─" * max(minimum, widest)
+
+
+def _kv(key: str, value: str, key_width: int, *, indent: int = 0) -> str:
+    """Two-column row: padded key, gutter, value (gutter survives Unicode pads)."""
+    return f"{' ' * indent}{_pad_right(key, key_width)} │ {value}"
 
 
 def _nazhigai_detail(tn: Any) -> str:
@@ -296,51 +322,94 @@ def _nazhigai_detail(tn: Any) -> str:
 def tn_tooltip_plain(
     tn: Any, now: datetime, *, state: Optional[Dict[str, Any]] = None
 ) -> str:
-    """Plain-text tooltip for Omarchy Quickshell (no markup — structure = emphasis)."""
+    """Plain-text tooltip for Omarchy Quickshell — width-aware columns + rules."""
     del state  # reserved for future surface hints
     meta = TINAI_META[tn.tinai]
     landscape = meta["landscape"].title()
     tinai_name = tinai_display(tn.tinai)
-    perum_label = PERUM_LABEL[tn.perum]
-    siru_label = SIRU_LABEL[tn.siru]
     jam = tn.jaamam
     ordinal = nazhigai_ordinal(tn.nazhigai)
     siru_title = siru_display(tn.siru)
 
-    lines: List[str] = [
+    outer_width = max(
+        _display_width(key)
+        for key in (
+            TINAI_DISPLAY_TITLE,
+            JAAMAM_DISPLAY_TITLE,
+            NAZHIGAI_DISPLAY_TITLE,
+            "Theme",
+        )
+    )
+    inner_width = max(
+        _display_width(PERUM_DISPLAY_TITLE),
+        _display_width(SIRU_DISPLAY_TITLE),
+        _display_width("Split"),
+    )
+    if jam.parts:
+        part_name_width = max(
+            _display_width(f"{JAAMAM_DISPLAY_TITLE} {part.index}")
+            for part in jam.parts
+        )
+    else:
+        part_name_width = _display_width(f"{JAAMAM_DISPLAY_TITLE} 8")
+
+    rows: List[str] = [
         _date_line(now),
-        _rule(),
-        "",
-        TINAI_DISPLAY_TITLE,
-        f"  {landscape}  —  {tinai_name}",
+        _kv(
+            TINAI_DISPLAY_TITLE,
+            f"{landscape}  —  {tinai_name}",
+            outer_width,
+        ),
         "",
         POZHUTU_DISPLAY_TITLE,
-        f"  {PERUM_DISPLAY_TITLE:<6}  {perum_label}",
-        f"  {SIRU_DISPLAY_TITLE:<6}  {siru_label}",
+        _kv(
+            PERUM_DISPLAY_TITLE,
+            PERUM_LABEL[tn.perum],
+            inner_width,
+            indent=2,
+        ),
+        _kv(
+            SIRU_DISPLAY_TITLE,
+            SIRU_LABEL[tn.siru],
+            inner_width,
+            indent=2,
+        ),
         "",
-        f"{JAAMAM_DISPLAY_TITLE}  ·  watching {jam.current} of {JAAMAMS_PER_DAY}",
-        f"  Split  ·  {jam.label}",
-        f"  This {SIRU_DISPLAY_TITLE} holds —",
+        _kv(
+            JAAMAM_DISPLAY_TITLE,
+            f"watching {jam.current} of {JAAMAMS_PER_DAY}",
+            outer_width,
+        ),
+        _kv("Split", jam.label, inner_width, indent=2),
     ]
     for part in jam.parts:
-        sense = _jaamam_part_sense(part)
-        name = f"{JAAMAM_DISPLAY_TITLE} {part.index}"
         mark = "›" if part.index == jam.current else "·"
-        lines.append(f"    {mark} {name}  —  {sense}")
-    lines.extend(
+        name = _pad_right(
+            f"{JAAMAM_DISPLAY_TITLE} {part.index}", part_name_width
+        )
+        rows.append(f"  {mark} {name} │ {_jaamam_part_sense(part)}")
+
+    rows.extend(
         [
             "",
-            (
-                f"{NAZHIGAI_DISPLAY_TITLE}  ·  N{ordinal} of {NAZHIGAIS_PER_SIRU}"
-                f" into {siru_title}"
+            _kv(
+                NAZHIGAI_DISPLAY_TITLE,
+                f"N{ordinal} of {NAZHIGAIS_PER_SIRU} into {siru_title}",
+                outer_width,
             ),
-            f"  {_nazhigai_detail(tn)}",
-            "",
-            _rule(),
-            f"Theme  ·  {tn.theme}",
+            _kv("", _nazhigai_detail(tn), outer_width),
+            _kv("Theme", tn.theme, outer_width),
         ]
     )
-    return "\n".join(lines)
+
+    rule = _rule_for(rows)
+    # Date / body / theme separated by full-width rules.
+    date_line = rows[0]
+    theme_line = rows[-1]
+    middle = rows[1:-1]
+    return "\n".join(
+        [date_line, rule, "", *middle, "", rule, theme_line]
+    )
 
 
 def tn_tooltip_markup(
@@ -386,22 +455,22 @@ def tn_tooltip_markup(
 def circadian_tooltip_plain(
     state: Dict[str, Any], now: datetime
 ) -> str:
-    """Plain circadian tooltip for Quickshell."""
+    """Plain circadian tooltip for Quickshell — same column grammar as TN."""
     phase = str(state.get("phase") or "unknown")
     theme = str(state.get("theme") or "eye-comfort")
     scene = str(state.get("scene") or "")
-    lines = [
+    key_width = max(_display_width("Phase"), _display_width("Theme"), _display_width("Cct"))
+    rows = [
         _date_line(now),
-        _rule(),
-        "",
-        phase,
+        _kv("Phase", phase, key_width),
     ]
     if scene:
-        lines.append(f"  {scene}")
+        rows.append(_kv("", scene, key_width))
     if state.get("cct_k") is not None:
-        lines.append(f"  Cct  ·  ≈{state['cct_k']}K")
-    lines.extend(["", _rule(), f"Theme  ·  {theme}"])
-    return "\n".join(lines)
+        rows.append(_kv("Cct", f"≈{state['cct_k']}K", key_width))
+    rows.append(_kv("Theme", theme, key_width))
+    rule = _rule_for(rows)
+    return "\n".join([rows[0], rule, "", *rows[1:-1], "", rule, rows[-1]])
 
 
 def tn_waybar_payload(

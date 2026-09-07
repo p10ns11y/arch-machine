@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Mission-map chip for Omarchy 4 shell (wrapped tooltip). Forwards open|notify.
+set -euo pipefail
+if [[ -f "${HOME}/.local/lib/personal-tweaks/mm_bar_json.py" ]]; then
+  LIB="${HOME}/.local/lib/personal-tweaks"
+else
+  LIB="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+fi
+export PYTHONPATH="$LIB${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m mm_bar_json "$@"

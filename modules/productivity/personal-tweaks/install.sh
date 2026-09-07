@@ -78,6 +78,8 @@ run cp "$HERE/units/mission-map-graph.timer" "$SYS_USER/"
 run cp "$HERE/desktop/kanithanj.ai.desktop" "$APPS/"
 run install -m 755 "$LIB/apply-shell-bar.sh" "$LOCAL_LIB/apply-shell-bar.sh"
 run install -m 644 "$LIB/patch_shell_bar.py" "$LOCAL_LIB/patch_shell_bar.py"
+run install -m 644 "$LIB/mm_bar_json.py" "$LOCAL_LIB/mm_bar_json.py"
+run install -m 755 "$LIB/mm-bar-json" "$LOCAL_BIN/mm-bar-json"
 # Keep Waybar helpers for Omarchy ≤3 hosts / archaeology; hooks no longer call them.
 run install -m 755 "$LIB/apply-waybar.sh" "$LOCAL_LIB/apply-waybar.sh"
 run install -m 755 "$LIB/backup-waybar.sh" "$LOCAL_LIB/backup-waybar.sh"

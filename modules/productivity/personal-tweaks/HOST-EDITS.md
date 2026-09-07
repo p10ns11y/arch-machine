@@ -7,7 +7,9 @@ What this module writes. **Never** edit `/usr/share/omarchy/` or `~/.local/share
 | Path | How | Why |
 |------|-----|-----|
 | `~/.local/bin/mm-lifeos-graph` | symlink to plugins `mission-map/scripts/` | Nightly + manual heading rewrite |
-| `~/.local/bin/mm-waybar` | symlink | Bar chip JSON + open kanithanj.ai |
+| `~/.local/bin/mm-bar-json` | copy | Omarchy 4 mission chip (wraps mm-waybar tooltip) |
+| `~/.local/lib/personal-tweaks/mm_bar_json.py` | copy | Tooltip wrap for Quickshell NoWrap |
+| `~/.local/bin/mm-waybar` | symlink | Underlying mission JSON (still used by mm-bar-json) |
 | `~/.local/bin/kanithanj.ai` | download GitHub `collab-finder` **v2** if missing | Heading cockpit |
 | `~/.config/systemd/user/mission-map-graph.{service,timer}` | copy | 20:00 local refresh |
 | `~/.config/omarchy/shell.json` | insert command modules | focus-now + mission-map (left); eye-comfort (center after weather); move system-update to right |

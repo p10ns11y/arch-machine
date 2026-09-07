@@ -250,25 +250,34 @@ def test_waybar_payload():
 
 
 def test_waybar_payload_plain_for_omarchy_shell():
-    """Quickshell tooltips are plain text — structure carries emphasis."""
+    """Quickshell tooltips are plain text — columns + rules carry emphasis."""
+    from waybar_status import _display_width as display_width
+
     tip = tn_waybar_payload(
         state={"tinai": "marutham", "calendar": "tamil_nadu"},
         now=datetime(2026, 9, 7, 13, 55),
         plain_tooltip=True,
     )["tooltip"]
-    assert "<span" not in tip
-    assert "</" not in tip
-    assert "<b>" not in tip
-    assert "Marutam" in tip
-    assert "Tiṇai" in tip
-    assert "eye-comfort-tn-marutham" in tip or "Theme" in tip
-    assert "─" in tip  # hairline rules around date / theme
-    assert "›" in tip  # current jāmam marker
-    assert "watching " in tip
-    assert "N" in tip and " of 10 into " in tip
+    assert "<span" not in tip and "<b>" not in tip
+    assert "Marutam" in tip and "Tiṇai" in tip
+    assert "eye-comfort-tn-marutham" in tip
+    assert "›" in tip and "watching " in tip
+    lines = tip.splitlines()
+    assert lines[0].startswith("7 September")
+    assert set(lines[1]) == {"─"}
+    assert display_width(lines[1]) >= display_width(lines[0])
+    tinai_line = next(
+        line for line in lines if "Plains" in line and "Marutam" in line
+    )
+    assert tinai_line.startswith("Tiṇai")
+    assert " │ " in tinai_line
+    perum_line = next(line for line in lines if "Perum" in line)
+    siru_line = next(line for line in lines if "Ciṟu" in line)
+    assert perum_line.startswith("  ") and siru_line.startswith("  ")
+    assert perum_line.index(" │ ") == siru_line.index(" │ ")
+    assert lines[-1].startswith("Theme")
+    assert set(lines[-2]) == {"─"}
     assert tip.index("Tiṇai") < tip.index("Poḻutu") < tip.index("Jāmam")
-    assert tip.strip().startswith("7 September")
-    assert "Theme  ·  " in tip
 
 def test_parse_aliases():
     assert parse_tinai("neytal") == "neythal"

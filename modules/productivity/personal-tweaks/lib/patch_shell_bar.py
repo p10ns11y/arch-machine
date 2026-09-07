@@ -31,9 +31,9 @@ FOCUS_CHIP: dict[str, Any] = {
 MISSION_CHIP: dict[str, Any] = {
     "id": "mission-map",
     "type": "command",
-    "exec": "mm-waybar",
+    "exec": "mm-bar-json",
     "interval": 120,
-    "onClick": "mm-waybar open",
+    "onClick": "mm-bar-json open",
 }
 
 EYE_CHIP: dict[str, Any] = {
