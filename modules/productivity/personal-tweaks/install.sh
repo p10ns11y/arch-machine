@@ -60,8 +60,11 @@ HOOKS_THEME="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/theme-set.d"
 HOOKS_UPDATE="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/hooks/post-update.d"
 SHELL_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/shell.json"
 
+FOCUS_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/focus-now"
+LIVE_JSON="$FOCUS_CFG/live.json"
+
 run mkdir -p "$LOCAL_BIN" "$SYS_USER" "$APPS" "$ICONS" \
-  "$LOCAL_LIB" "$HOOKS_THEME" "$HOOKS_UPDATE"
+  "$LOCAL_LIB" "$HOOKS_THEME" "$HOOKS_UPDATE" "$FOCUS_CFG"
 
 if [[ -x "$MM_SCRIPTS/mm-lifeos-graph" ]]; then
   run ln -sfn "$MM_SCRIPTS/mm-lifeos-graph" "$LOCAL_BIN/mm-lifeos-graph"
@@ -82,10 +85,35 @@ fi
 run cp "$HERE/units/mission-map-graph.service" "$SYS_USER/"
 run cp "$HERE/units/mission-map-graph.timer" "$SYS_USER/"
 run cp "$HERE/desktop/kanithanj.ai.desktop" "$APPS/"
+run install -m 755 "$HERE/bin/focus-now" "$LOCAL_BIN/focus-now"
 run install -m 755 "$LIB/apply-shell-bar.sh" "$LOCAL_LIB/apply-shell-bar.sh"
 run install -m 644 "$LIB/patch_shell_bar.py" "$LOCAL_LIB/patch_shell_bar.py"
+run install -m 644 "$LIB/ensure_focus_now_bind.py" "$LOCAL_LIB/ensure_focus_now_bind.py"
 run install -m 644 "$LIB/mm_bar_json.py" "$LOCAL_LIB/mm_bar_json.py"
 run install -m 755 "$LIB/mm-bar-json" "$LOCAL_BIN/mm-bar-json"
+
+# Seed live slot SoT once (do not overwrite operator choice).
+if [[ ! -f "$LIVE_JSON" ]]; then
+  if (( DRY )); then
+    echo "DRY: seed $LIVE_JSON"
+  else
+    cat >"$LIVE_JSON" <<'EOF'
+{
+  "slot": "2",
+  "name": "Cash / career",
+  "short": "CSH",
+  "horizon": "SpaceXAI acceptance — unknown ETA. Slot 2 ticks must be hiring-loop visible.",
+  "set_at": "1970-01-01"
+}
+EOF
+  fi
+fi
+
+if (( DRY )); then
+  echo "DRY: ensure_focus_now_bind.py → ~/.config/hypr/bindings.lua"
+else
+  python3 "$LIB/ensure_focus_now_bind.py" "$LOCAL_BIN/focus-now" || true
+fi
 # Keep Waybar helpers for Omarchy ≤3 hosts / archaeology; hooks no longer call them.
 run install -m 755 "$LIB/apply-waybar.sh" "$LOCAL_LIB/apply-waybar.sh"
 run install -m 755 "$LIB/backup-waybar.sh" "$LOCAL_LIB/backup-waybar.sh"
@@ -117,7 +145,9 @@ fi
 
 echo "personal-tweaks ok"
 echo "Omarchy 4: focus-now + mission-map on left; eye-comfort after weather; system-update on right"
+echo "focus-now → ~/.local/bin/focus-now (Omarchy menu picker; slot 1 = Season)"
+echo "bind: Super+Ctrl+semicolon in ~/.config/hypr/bindings.lua"
 echo "theme-set + post-update hooks re-apply shell.json chips after refresh/update"
 echo "shell backups: ~/.local/share/personal-tweaks/shell-bar-backups/ (last-good + stamps)"
 echo "live map JSON stays in ~/.grok/mission-maps/ (not this repo)"
-echo "then: omarchy restart shell   # not refresh"
+echo "then: omarchy restart shell   # not refresh; hyprctl reload if bind is new"
