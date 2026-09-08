@@ -80,6 +80,8 @@ def test_idempotent_refresh_keeps_single_chip():
     )
     assert focus["exec"] == FOCUS_CHIP["exec"]
     assert focus["type"] == "command"
+    assert focus["onClick"] == FOCUS_CHIP["onClick"]
+    assert focus["onRightClick"] == FOCUS_CHIP["onRightClick"]
 
 
 def test_apply_writes_and_backs_up(tmp_path: Path):

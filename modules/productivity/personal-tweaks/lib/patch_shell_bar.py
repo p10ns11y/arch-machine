@@ -26,6 +26,9 @@ FOCUS_CHIP: dict[str, Any] = {
     "type": "command",
     "exec": "focus-now",
     "interval": 30,
+    # Waybar had on-click → picker; Omarchy 4 command modules need onClick.
+    "onClick": "focus-now picker",
+    "onRightClick": "focus-now notify",
 }
 
 MISSION_CHIP: dict[str, Any] = {

@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""Focus-now: live slot SoT + Omarchy menu picker. Public labels only. No private/."""
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from datetime import date
+from pathlib import Path
+
+CONFIG = Path.home() / ".config" / "focus-now"
+LIVE_PATH = CONFIG / "live.json"
+FOCUS_NOTE = Path.home() / "life-os" / "UX" / "focus-now.md"
+LIVE_LINE_RE = re.compile(r"^\*\*Live today.*$", re.M)
+
+SLOTS = {
+    "1": {
+        "short": "SEA",
+        "name": "Season",
+        "row": "1  Season (calendar)",
+        "horizon": "calendar",
+    },
+    "2": {
+        "short": "CSH",
+        "name": "Cash / career",
+        "row": "2  Cash / career  [SpaceXAI filter]",
+        "horizon": "SpaceXAI",
+    },
+    "3": {
+        "short": "SON",
+        "name": "Son — close laptop",
+        "row": "3  Son — close laptop",
+        "horizon": "body",
+    },
+    "4": {
+        "short": "DBT",
+        "name": "Debt one-action",
+        "row": "4  Debt one-action then stop",
+        "horizon": "one-act",
+    },
+}
+
+HORIZON = "SpaceXAI acceptance — unknown ETA. Slot 2 ticks must be hiring-loop visible."
+
+
+def load_live() -> dict:
+    try:
+        payload = json.loads(LIVE_PATH.read_text(encoding="utf-8"))
+        slot = str(payload.get("slot", "?"))
+        if slot in SLOTS:
+            return payload
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {
+        "slot": "1",
+        "name": SLOTS["1"]["name"],
+        "short": "SEA",
+        "horizon": HORIZON,
+        "set_at": str(date.today()),
+    }
+
+
+def ping_waybar() -> None:
+    subprocess.run(["pkill", f"-RTMIN+11", "waybar"], check=False)
+
+
+def write_markdown(slot: str, name: str) -> None:
+    if not FOCUS_NOTE.is_file():
+        return
+    today = date.today().isoformat()
+    weekday = date.today().strftime("%A")
+    line = (
+        f"**Live today ({today}, {weekday}):** **slot {slot} — {name}.** "
+        "Set via Omarchy menu (chip click or Super+Ctrl+semicolon). "
+        "Horizon: SpaceXAI filters slot 2. "
+        "Slot 3 = close laptop."
+    )
+    text = FOCUS_NOTE.read_text(encoding="utf-8")
+    if LIVE_LINE_RE.search(text):
+        text = LIVE_LINE_RE.sub(line, text, count=1)
+    else:
+        text = text.rstrip() + "\n\n" + line + "\n"
+    FOCUS_NOTE.write_text(text, encoding="utf-8")
+
+
+def set_slot(slot: str) -> dict:
+    if slot not in SLOTS:
+        raise SystemExit(f"slot must be 1-4, got {slot!r}")
+    meta = SLOTS[slot]
+    payload = {
+        "slot": slot,
+        "name": meta["name"],
+        "short": meta["short"],
+        "horizon": HORIZON,
+        "set_at": str(date.today()),
+    }
+    CONFIG.mkdir(parents=True, exist_ok=True)
+    LIVE_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    write_markdown(slot, meta["name"])
+    ping_waybar()
+    subprocess.run(
+        [
+            "notify-send",
+            "--urgency=low",
+            "--app-name=Focus now",
+            f"Slot {slot} {meta['short']}",
+            f"{meta['name']}\n{HORIZON}",
+        ],
+        check=False,
+    )
+    return payload
+
+
+def picker() -> None:
+    """Omarchy 4: Quickshell menu select (Walker / omarchy-launch-walker removed)."""
+    # Toggle off if a prior picker is still waiting on the menu.
+    if (
+        subprocess.run(
+            ["pgrep", "-f", r"omarchy-menu-select .*Live slot"],
+            capture_output=True,
+        ).returncode
+        == 0
+    ):
+        subprocess.run(["omarchy-menu", "close"], check=False)
+        return
+
+    rows = [meta["row"] for meta in SLOTS.values()]
+    select = shutil.which("omarchy-menu-select") or shutil.which("omarchy")
+    if not select:
+        subprocess.run(
+            [
+                "notify-send",
+                "--urgency=critical",
+                "--app-name=Focus now",
+                "No slot picker",
+                "omarchy-menu-select missing (Omarchy 4 menu)",
+            ],
+            check=False,
+        )
+        return
+
+    if select.endswith("omarchy-menu-select"):
+        cmd = [
+            select,
+            "Live slot — SpaceXAI filters cash…",
+            *rows,
+            "--",
+            "--width",
+            "420",
+            "--maxheight",
+            "280",
+        ]
+    else:
+        cmd = [
+            select,
+            "menu",
+            "select",
+            "Live slot — SpaceXAI filters cash…",
+            *rows,
+            "--",
+            "--width",
+            "420",
+            "--maxheight",
+            "280",
+        ]
+
+    proc = subprocess.run(cmd, text=True, capture_output=True, check=False)
+    choice = (proc.stdout or "").strip()
+    if not choice:
+        return
+    # Label is "N  …"; menu may return "label\\tsubtext".
+    slot = choice.split("\t", 1)[0].strip()[:1]
+    if slot in SLOTS:
+        set_slot(slot)
+
+
+def chip_json() -> None:
+    live = load_live()
+    slot = str(live.get("slot", "?"))
+    meta = SLOTS.get(slot, {})
+    short = meta.get("short", live.get("short", "?"))
+    name = meta.get("name", live.get("name", "?"))
+    tooltip = (
+        f"Live slot {slot}: {name}\n"
+        f"Horizon: {HORIZON}\n"
+        "Click chip or Super+Ctrl+semicolon = slot picker\n"
+        "SoT: ~/.config/focus-now/live.json"
+    )
+    if len(sys.argv) > 1 and sys.argv[1] == "notify":
+        subprocess.run(
+            ["notify-send", "--urgency=low", "--app-name=Focus now", "Live slot", tooltip],
+            check=False,
+        )
+        return
+    sys.stdout.write(
+        json.dumps(
+            {
+                "text": f"{slot} {short}",
+                "tooltip": tooltip,
+                "class": f"slot-{slot}" if slot in SLOTS else "slot-unknown",
+            },
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    if not args or args[0] in ("chip", "notify"):
+        if args and args[0] == "notify":
+            sys.argv = [sys.argv[0], "notify"]
+        chip_json()
+        return
+    cmd = args[0]
+    if cmd == "get":
+        sys.stdout.write(json.dumps(load_live(), indent=2) + "\n")
+        return
+    if cmd == "set" and len(args) >= 2:
+        payload = set_slot(args[1])
+        sys.stdout.write(json.dumps(payload, indent=2) + "\n")
+        return
+    if cmd == "picker":
+        picker()
+        return
+    sys.stderr.write("usage: focus-now [chip|notify|get|set 1-4|picker]\n")
+    raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    main()

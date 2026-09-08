@@ -6,6 +6,9 @@ What this module writes. **Never** edit `/usr/share/omarchy/` or `~/.local/share
 
 | Path | How | Why |
 |------|-----|-----|
+| `~/.local/bin/focus-now` | copy `bin/focus-now` | Slot chip + Omarchy menu picker (Season/CSH/SON/DBT) |
+| `~/.config/focus-now/live.json` | seed once if missing | Live slot SoT (default CSH); never overwrite |
+| `~/.config/hypr/bindings.lua` | idempotent marker block | Super+Ctrl+semicolon → `focus-now picker` |
 | `~/.local/bin/mm-lifeos-graph` | symlink to plugins `mission-map/scripts/` | Nightly + manual heading rewrite |
 | `~/.local/bin/mm-bar-json` | copy | Omarchy 4 mission chip (wraps mm-waybar tooltip) |
 | `~/.local/lib/personal-tweaks/mm_bar_json.py` | copy | Tooltip wrap for Quickshell NoWrap |
@@ -13,8 +16,9 @@ What this module writes. **Never** edit `/usr/share/omarchy/` or `~/.local/share
 | `~/.local/bin/kanithanj.ai` | download GitHub `collab-finder` **v2** if missing | Heading cockpit |
 | `~/.config/systemd/user/mission-map-graph.{service,timer}` | copy | 20:00 local refresh |
 | `~/.config/omarchy/shell.json` | insert command modules | focus-now + mission-map (left); eye-comfort (center after weather); move system-update to right |
-| `~/.local/share/applications/kanithanj.ai.desktop` | copy | Walker |
-| `~/.local/lib/personal-tweaks/patch_shell_bar.py` | copy | Idempotent shell.json layout |
+| `~/.local/share/applications/kanithanj.ai.desktop` | copy | Launcher entry |
+| `~/.local/lib/personal-tweaks/patch_shell_bar.py` | copy | Idempotent shell.json layout (`onClick` picker) |
+| `~/.local/lib/personal-tweaks/ensure_focus_now_bind.py` | copy | Hypr bind helper |
 | `~/.local/lib/personal-tweaks/apply-shell-bar.sh` | copy | Re-apply after `omarchy refresh shell` |
 | `~/.config/omarchy/hooks/theme-set.d/92-heading-chip.sh` | copy | Re-apply chips after theme-set |
 | `~/.config/omarchy/hooks/post-update.d/92-heading-chip.sh` | copy | Re-apply after `omarchy update` |
