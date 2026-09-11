@@ -12,7 +12,10 @@ function emptyStatus() {
     perum: "",
     ciru: "",
     jamamSummary: "",
+    jamamDetails: [],
+    jamamSplits: [],
     nazhigaiSummary: "",
+    nazhigaiDetails: [],
     theme: "",
     weekDetail: "",
     chipText: "…",
@@ -70,6 +73,33 @@ function parseChipParts(text) {
   return { shortName: shortName, subtitle: subtitle }
 }
 
+
+// Jaamam grid: epoch hour 2, 3h each (matches eye-comfort tamil_schedule).
+function jamamWindow(index) {
+  var i = parseInt(index, 10)
+  if (!(i >= 1 && i <= 8)) return null
+  var start = (2 + (i - 1) * 3) % 24
+  var end = (start + 3) % 24
+  return { start: start, end: end }
+}
+
+function fmtHour(h) {
+  var n = Math.floor(Number(h)) % 24
+  if (n < 0) n += 24
+  return (n < 10 ? "0" : "") + n + ":00"
+}
+
+function jamamSplitLabel(index) {
+  var w = jamamWindow(index)
+  if (!w) return ""
+  return "Jāmam " + index + " — " + fmtHour(w.start) + " – " + fmtHour(w.end)
+}
+
+function parseJamamIndex(line) {
+  var m = String(line || "").match(/J[aā]mam\s+(\d+)/i)
+  return m ? parseInt(m[1], 10) : 0
+}
+
 function parseTooltip(tooltip, chipText) {
   var out = {
     dateLine: "",
@@ -77,9 +107,13 @@ function parseTooltip(tooltip, chipText) {
     perum: "",
     ciru: "",
     jamamSummary: "",
+    jamamDetails: [],
+    jamamSplits: [],
     nazhigaiSummary: "",
+    nazhigaiDetails: [],
     theme: ""
   }
+  var jamamIndexes = []
   var lines = String(tooltip || "").split("\n")
   var section = ""
   var gotDate = false
@@ -135,18 +169,31 @@ function parseTooltip(tooltip, chipText) {
       }
     }
 
-    if (section === "jamam" && !out.jamamSummary) {
-      // Prefer "Watching N of M." style; else first content line.
-      if (/^watching\b/i.test(line) || true) {
+    if (section === "jamam") {
+      if (/^watching\b/i.test(line)) {
         out.jamamSummary = line
         continue
       }
-    }
-
-    if (section === "nazhigai" && !out.nazhigaiSummary) {
-      out.nazhigaiSummary = line
+      var ji = parseJamamIndex(line)
+      if (ji) {
+        if (jamamIndexes.indexOf(ji) < 0) jamamIndexes.push(ji)
+        out.jamamDetails.push(line)
+        continue
+      }
+      if (line) out.jamamDetails.push(line)
       continue
     }
+
+    if (section === "nazhigai") {
+      if (!out.nazhigaiSummary) out.nazhigaiSummary = line
+      else out.nazhigaiDetails.push(line)
+      continue
+    }
+  }
+
+  for (var j = 0; j < jamamIndexes.length; j++) {
+    var lab = jamamSplitLabel(jamamIndexes[j])
+    if (lab) out.jamamSplits.push(lab)
   }
 
   // Fallback tinai from chip text first segment.
@@ -189,7 +236,10 @@ function parseWaybarJson(raw) {
   next.perum = parsed.perum
   next.ciru = parsed.ciru
   next.jamamSummary = parsed.jamamSummary
+  next.jamamDetails = parsed.jamamDetails || []
+  next.jamamSplits = parsed.jamamSplits || []
   next.nazhigaiSummary = parsed.nazhigaiSummary
+  next.nazhigaiDetails = parsed.nazhigaiDetails || []
   next.theme = parsed.theme
   next.weekDetail = parseWeekDetail(parsed.dateLine)
   next.loaded = true

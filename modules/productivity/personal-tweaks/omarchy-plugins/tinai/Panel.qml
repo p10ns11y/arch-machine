@@ -35,7 +35,10 @@ Panel {
   readonly property string perum: status.perum || ""
   readonly property string ciru: status.ciru || ""
   readonly property string jamamSummary: status.jamamSummary || ""
+  readonly property var jamamSplits: status.jamamSplits || []
+  readonly property var jamamDetails: status.jamamDetails || []
   readonly property string nazhigaiSummary: status.nazhigaiSummary || ""
+  readonly property var nazhigaiDetails: status.nazhigaiDetails || []
   readonly property string themeName: status.theme || ""
   readonly property string weekDetail: status.weekDetail || ""
   // Weather-compat: BarWidget chips often read `.label`
@@ -139,7 +142,7 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(360))
+    contentWidth: panel.fittedContentWidth(Style.space(380))
     contentHeight: panel.fittedContentHeight(column.implicitHeight)
 
     PanelKeyCatcher {
@@ -256,6 +259,30 @@ Panel {
           wrapMode: Text.Wrap
           elide: Text.ElideRight
         }
+        Repeater {
+          model: root.jamamSplits
+          delegate: Text {
+            required property var modelData
+            width: column.width
+            text: modelData
+            color: root.foreground
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            wrapMode: Text.Wrap
+          }
+        }
+        Repeater {
+          model: root.jamamDetails
+          delegate: Text {
+            required property var modelData
+            width: column.width
+            text: modelData
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.Wrap
+          }
+        }
 
         PanelSectionHeader {
           text: "NĀḺIKAI"
@@ -270,6 +297,18 @@ Panel {
           font.pixelSize: Style.font.bodySmall
           wrapMode: Text.Wrap
           elide: Text.ElideRight
+        }
+        Repeater {
+          model: root.nazhigaiDetails
+          delegate: Text {
+            required property var modelData
+            width: column.width
+            text: modelData
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.Wrap
+          }
         }
 
         Text {
