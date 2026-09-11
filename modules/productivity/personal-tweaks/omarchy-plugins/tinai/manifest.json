@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "tinai",
+  "name": "Ti\u1e47ai",
+  "version": "2.0.1",
+  "author": "kingsparrow",
+  "license": "MIT",
+  "description": "Structured Tamil landscape and time-of-day (ti\u1e47ai / po\u1e3butu) for the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Ti\u1e47ai",
+    "description": "Tamil landscape + po\u1e3butu; j\u0101mam clock split and n\u0101\u1e3bikai detail.",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "center",
+    "defaults": {
+      "refreshIntervalSec": 60
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 5,
+        "max": 3600,
+        "step": 5,
+        "defaultValue": 60
+      }
+    ]
+  }
+}

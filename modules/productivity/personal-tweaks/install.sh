@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Personal Omarchy tweaks: shell bar chips (Omarchy 4), 20:00 timer, kanithanj.ai.
+# Personal Omarchy tweaks: heading/tinai plugins (Omarchy 4), 20:00 timer, kanithanj.ai.
 # Usage: ./install.sh --yes [--dry-run]
 # Never writes /usr/share/omarchy/ or ~/.local/share/omarchy/.
 set -euo pipefail
@@ -91,13 +91,14 @@ run install -m 644 "$LIB/patch_shell_bar.py" "$LOCAL_LIB/patch_shell_bar.py"
 run install -m 644 "$LIB/ensure_focus_now_bind.py" "$LOCAL_LIB/ensure_focus_now_bind.py"
 run install -m 644 "$LIB/mm_bar_json.py" "$LOCAL_LIB/mm_bar_json.py"
 run install -m 755 "$LIB/mm-bar-json" "$LOCAL_BIN/mm-bar-json"
+run install -m 755 "$LIB/install_omarchy_plugins.sh" "$LOCAL_LIB/install_omarchy_plugins.sh"
 
 # Seed live slot SoT once (do not overwrite operator choice).
 if [[ ! -f "$LIVE_JSON" ]]; then
   if (( DRY )); then
     echo "DRY: seed $LIVE_JSON"
   else
-    cat >"$LIVE_JSON" <<'EOF'
+    cat >"$LIVE_JSON" <<'LIVE'
 {
   "slot": "2",
   "name": "Cash / career",
@@ -105,7 +106,7 @@ if [[ ! -f "$LIVE_JSON" ]]; then
   "horizon": "SpaceXAI acceptance — unknown ETA. Slot 2 ticks must be hiring-loop visible.",
   "set_at": "1970-01-01"
 }
-EOF
+LIVE
   fi
 fi
 
@@ -127,6 +128,13 @@ if [[ -f "$ICON_SRC" ]]; then
   run cp "$ICON_SRC" "$ICONS/kanithanj.ai.png"
 fi
 
+# Omarchy bar-widget plugins (preferred over command chips).
+if (( DRY )); then
+  PERSONAL_TWEAKS_DRY=1 "$LIB/install_omarchy_plugins.sh"
+else
+  "$LIB/install_omarchy_plugins.sh"
+fi
+
 if (( DRY )); then
   echo "DRY: apply-shell-bar.sh (requires $SHELL_JSON)"
 else
@@ -144,10 +152,12 @@ if (( !DRY )); then
 fi
 
 echo "personal-tweaks ok"
-echo "Omarchy 4: focus-now + mission-map on left; eye-comfort after weather; system-update on right"
-echo "focus-now → ~/.local/bin/focus-now (Omarchy menu picker; slot 1 = Season)"
+echo "Omarchy 4: heading (left) + tinai (center) plugins; system-update on right"
+echo "legacy command chips focus-now / mission-map / eye-comfort are removed from shell.json"
+echo "focus-now CLI → ~/.local/bin/focus-now (picker still used by heading panel)"
 echo "bind: Super+Ctrl+semicolon in ~/.config/hypr/bindings.lua"
-echo "theme-set + post-update hooks re-apply shell.json chips after refresh/update"
+echo "theme-set + post-update hooks re-apply shell.json layout after stock reset"
 echo "shell backups: ~/.local/share/personal-tweaks/shell-bar-backups/ (last-good + stamps)"
+echo "mesh plugin stays separate under ~/.config/omarchy/plugins/mesh/"
 echo "live map JSON stays in ~/.grok/mission-maps/ (not this repo)"
-echo "then: omarchy restart shell   # not refresh; hyprctl reload if bind is new"
+echo "then: omarchy restart shell   # never refresh; hyprctl reload if bind is new"

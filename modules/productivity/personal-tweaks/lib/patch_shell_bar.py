@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Idempotent Omarchy 4 shell.json bar chips (command modules).
+"""Idempotent Omarchy 4 shell.json bar layout for personal-tweaks plugins.
 
-Omarchy 4 replaced Waybar with Quickshell. Custom chips use bar.layout
-entries with type=command and Waybar-style JSON from existing CLIs.
+Omarchy 4 replaced Waybar with Quickshell. Heading + tinai are third-party
+bar-widget plugins (not command modules). Legacy focus-now / mission-map /
+eye-comfort command chips are removed on apply.
 
-Zoning (keeps omarchy.indicators clear of long text / tooltips):
-  left   — focus-now, mission-map (after workspaces)
-  center — leave indicators + clock; eye-comfort after weather
-  right  — move omarchy.system-update here when present in center
+Zoning (right-hand reach for heading actions):
+  left   — menu + workspaces only
+  center — tinai after weather
+  right  — heading after tray (easy reach); move system-update here when in center
 """
 
 from __future__ import annotations
@@ -21,31 +22,11 @@ from typing import Any
 
 KEEP_BACKUPS = 20
 
-FOCUS_CHIP: dict[str, Any] = {
-    "id": "focus-now",
-    "type": "command",
-    "exec": "focus-now",
-    "interval": 30,
-    # Waybar had on-click → picker; Omarchy 4 command modules need onClick.
-    "onClick": "focus-now picker",
-    "onRightClick": "focus-now notify",
-}
+HEADING_CHIP: dict[str, Any] = {"id": "heading"}
+TINAI_CHIP: dict[str, Any] = {"id": "tinai"}
 
-MISSION_CHIP: dict[str, Any] = {
-    "id": "mission-map",
-    "type": "command",
-    "exec": "mm-bar-json",
-    "interval": 120,
-    "onClick": "mm-bar-json open",
-}
-
-EYE_CHIP: dict[str, Any] = {
-    "id": "eye-comfort",
-    "type": "command",
-    "exec": "eye-comfort-theme waybar --plain",
-    "interval": 60,
-    "onClick": "bash -c '${HOME}/.local/lib/eye-comfort/waybar/tn-status.sh notify'",
-}
+# Deprecated command-module chips replaced by the plugins above.
+LEGACY_CHIP_IDS = frozenset({"focus-now", "mission-map", "eye-comfort"})
 
 
 def default_backup_root() -> Path:
@@ -72,6 +53,15 @@ def find_index(section: list[Any], chip_id: str) -> int | None:
         if widget_id(entry) == chip_id:
             return index
     return None
+
+
+def remove_ids(section: list[Any], chip_ids: set[str] | frozenset[str]) -> list[Any]:
+    return [entry for entry in section if widget_id(entry) not in chip_ids]
+
+
+def strip_from_layout(layout: dict[str, Any], chip_ids: set[str] | frozenset[str]) -> None:
+    for key in ("left", "center", "right"):
+        layout[key] = remove_ids(list(layout.get(key) or []), chip_ids)
 
 
 def upsert_after(
@@ -152,16 +142,23 @@ def apply_layout(doc: dict[str, Any]) -> dict[str, Any]:
     layout["center"] = center
     layout["right"] = right
 
-    # Prefer actionable chips on the left, clear of indicators tooltips.
-    upsert_after(left, FOCUS_CHIP, ["omarchy.workspaces", "omarchy.menu"])
-    upsert_after(left, MISSION_CHIP, ["focus-now", "omarchy.workspaces", "omarchy.menu"])
+    # Drop deprecated command chips and any misplaced plugin copies so upsert
+    # can place a single heading / tinai in the zoned section.
+    strip_from_layout(layout, LEGACY_CHIP_IDS | {"heading", "tinai"})
+    left = list(layout["left"])
+    center = list(layout["center"])
+    right = list(layout["right"])
 
-    # TN / circadian text after weather (right of clock cluster).
+    # Tinai / eye-comfort Tamil calendar after weather (right of clock cluster).
     upsert_after(
         center,
-        EYE_CHIP,
+        TINAI_CHIP,
         ["omarchy.weather", "omarchy.clock", "omarchy.indicators"],
     )
+
+    layout["left"] = left
+    layout["center"] = center
+    layout["right"] = right
 
     # Update pill out of the dense center cluster when it lives there.
     move_to_section(
@@ -171,6 +168,17 @@ def apply_layout(doc: dict[str, Any]) -> dict[str, Any]:
         to_section="right",
         after_ids=["omarchy.tray"],
     )
+
+    # Heading (focus + mission) on the right for right-hand reach.
+    # Prefer after tray; before system-update / mesh / network clutter.
+    right = list(layout["right"])
+    upsert_after(
+        right,
+        HEADING_CHIP,
+        ["omarchy.tray"],
+        fallback="prepend",
+    )
+    layout["right"] = right
 
     if not bar.get("centerAnchor"):
         bar["centerAnchor"] = "omarchy.clock"
