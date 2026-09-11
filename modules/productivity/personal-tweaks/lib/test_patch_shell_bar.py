@@ -8,7 +8,8 @@ import os
 from pathlib import Path
 
 from patch_shell_bar import (
-    FOCUS_CHIP,
+    HEADING_CHIP,
+    TINAI_CHIP,
     apply,
     apply_layout,
     widget_id,
@@ -43,6 +44,47 @@ STOCK = {
     "plugins": [],
 }
 
+LEGACY = {
+    "version": 1,
+    "bar": {
+        "centerAnchor": "omarchy.clock",
+        "layout": {
+            "left": [
+                {"id": "omarchy.menu"},
+                {"id": "omarchy.workspaces"},
+                {
+                    "id": "focus-now",
+                    "type": "command",
+                    "exec": "focus-now",
+                    "interval": 30,
+                    "onClick": "focus-now picker",
+                    "onRightClick": "focus-now notify",
+                },
+                {
+                    "id": "mission-map",
+                    "type": "command",
+                    "exec": "mm-bar-json",
+                    "interval": 120,
+                    "onClick": "mm-bar-json open",
+                },
+            ],
+            "center": [
+                {"id": "omarchy.indicators"},
+                {"id": "omarchy.clock"},
+                {"id": "omarchy.weather"},
+                {
+                    "id": "eye-comfort",
+                    "type": "command",
+                    "exec": "eye-comfort-theme waybar --plain",
+                    "interval": 60,
+                },
+                {"id": "omarchy.system-update"},
+            ],
+            "right": [{"id": "omarchy.tray"}],
+        },
+    },
+}
+
 
 def section_ids(doc: dict, name: str) -> list[str | None]:
     return [widget_id(entry) for entry in doc["bar"]["layout"][name]]
@@ -53,35 +95,56 @@ def test_stock_layout_zones_chips():
     assert section_ids(doc, "left") == [
         "omarchy.menu",
         "omarchy.workspaces",
-        "focus-now",
-        "mission-map",
     ]
     center = section_ids(doc, "center")
     assert "omarchy.indicators" in center
     assert "omarchy.clock" in center
-    assert "eye-comfort" in center
-    assert center.index("eye-comfort") > center.index("omarchy.weather")
+    assert "tinai" in center
+    assert center.index("tinai") > center.index("omarchy.weather")
     assert "omarchy.system-update" not in center
+    assert "focus-now" not in section_ids(doc, "left")
+    assert "eye-comfort" not in center
     right = section_ids(doc, "right")
+    assert "heading" in right
+    assert right.index("heading") > right.index("omarchy.tray")
     assert "omarchy.system-update" in right
     assert right.index("omarchy.system-update") > right.index("omarchy.tray")
+
+
+def test_removes_legacy_command_chips():
+    doc = apply_layout(json.loads(json.dumps(LEGACY)))
+    left = section_ids(doc, "left")
+    center = section_ids(doc, "center")
+    assert left == ["omarchy.menu", "omarchy.workspaces"]
+    assert "heading" not in left
+    assert "focus-now" not in left
+    assert "mission-map" not in left
+    assert "eye-comfort" not in center
+    assert "tinai" in center
+    heading = next(
+        entry for entry in doc["bar"]["layout"]["right"] if widget_id(entry) == "heading"
+    )
+    assert heading == HEADING_CHIP
+    tinai = next(
+        entry for entry in doc["bar"]["layout"]["center"] if widget_id(entry) == "tinai"
+    )
+    assert tinai == TINAI_CHIP
 
 
 def test_idempotent_refresh_keeps_single_chip():
     first = apply_layout(json.loads(json.dumps(STOCK)))
     second = apply_layout(json.loads(json.dumps(first)))
     assert section_ids(first, "left") == section_ids(second, "left")
-    assert section_ids(first, "center").count("eye-comfort") == 1
-    assert section_ids(second, "center").count("eye-comfort") == 1
-    focus = next(
+    assert section_ids(first, "center").count("tinai") == 1
+    assert section_ids(second, "center").count("tinai") == 1
+    heading = next(
         entry
-        for entry in second["bar"]["layout"]["left"]
-        if widget_id(entry) == "focus-now"
+        for entry in second["bar"]["layout"]["right"]
+        if widget_id(entry) == "heading"
     )
-    assert focus["exec"] == FOCUS_CHIP["exec"]
-    assert focus["type"] == "command"
-    assert focus["onClick"] == FOCUS_CHIP["onClick"]
-    assert focus["onRightClick"] == FOCUS_CHIP["onRightClick"]
+    assert heading == HEADING_CHIP
+    assert "type" not in heading
+    assert "exec" not in heading
 
 
 def test_apply_writes_and_backs_up(tmp_path: Path):
@@ -96,14 +159,16 @@ def test_apply_writes_and_backs_up(tmp_path: Path):
     assert any(line.startswith("patched:") for line in lines)
     assert (backup_root / "last-good" / "shell.json").is_file()
     doc = json.loads(shell.read_text(encoding="utf-8"))
-    assert "mission-map" in section_ids(doc, "left")
-    assert "eye-comfort" in section_ids(doc, "center")
+    assert "heading" in section_ids(doc, "right")
+    assert "heading" not in section_ids(doc, "left")
+    assert "tinai" in section_ids(doc, "center")
 
 
 if __name__ == "__main__":
     import tempfile
 
     test_stock_layout_zones_chips()
+    test_removes_legacy_command_chips()
     test_idempotent_refresh_keeps_single_chip()
     with tempfile.TemporaryDirectory() as temp_dir:
         test_apply_writes_and_backs_up(Path(temp_dir))

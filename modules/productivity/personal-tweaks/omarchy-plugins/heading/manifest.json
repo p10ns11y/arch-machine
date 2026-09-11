@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "heading",
+  "name": "Heading",
+  "version": "2.0.0",
+  "author": "kingsparrow",
+  "license": "MIT",
+  "description": "Focus slot and mission-map apply reminder for the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Heading",
+    "description": "Icon + semantic focus slot; compact apply panel with in-plugin slot picks.",
+    "category": "Productivity",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 30
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 5,
+        "max": 3600,
+        "step": 5,
+        "defaultValue": 30
+      }
+    ]
+  }
+}

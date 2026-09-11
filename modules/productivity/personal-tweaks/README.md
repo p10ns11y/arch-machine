@@ -1,13 +1,14 @@
-# Personal tweaks — heading cluster (Omarchy 4+)
+# Personal tweaks — heading + tinai (Omarchy 4+)
 
-Restore **this operator’s** shell bar chips (focus-now, mission-map, eye-comfort),
-slot picker, 20:00 mission-map timer, and **kanithanj.ai** launch on a new
+Restore **this operator’s** Omarchy bar widgets (heading, tinai), focus slot
+picker, 20:00 mission-map timer, and **kanithanj.ai** launch on a new
 Arch/Omarchy box.
 
-Omarchy 4 replaced Waybar with Quickshell (`omarchy-shell`). Chips are
-`type: command` modules in `~/.config/omarchy/shell.json` (Waybar-style JSON from
-existing CLIs). Do **not** reinstall Waybar. Walker is gone — focus-now uses
-`omarchy-menu-select`.
+Omarchy 4 replaced Waybar with Quickshell (`omarchy-shell`). Prefer
+**bar-widget plugins** under `~/.config/omarchy/plugins/{heading,tinai}/`.
+Legacy `type: command` chips (`focus-now`, `mission-map`, `eye-comfort`) are
+deprecated and removed on apply. Do **not** reinstall Waybar. Walker is gone —
+focus-now uses `omarchy-menu-select`. Mesh stays a separate plugin.
 
 ```bash
 # from arch-machine checkout
@@ -21,19 +22,19 @@ in `~/.config/hypr/bindings.lua`. Needs: `eye-comfort-theme` on PATH; `mission-m
 under `~/dev/agentic-reactor/plugins` (fallback `~/Work/personal/plugins`, or
 `PLUGINS_ROOT`); network for the v2 binary if `kanithanj.ai` is not on PATH yet.
 
-After `omarchy refresh shell`, the theme-set / post-update hooks call
-`apply-shell-bar.sh`. You can also run that script alone.
-**Use `omarchy restart shell` to reload; `refresh` resets to stock.**
+**Never run `omarchy refresh shell`** — it resets to stock. Use
+`omarchy restart shell` after layout changes. Theme-set / post-update hooks call
+`apply-shell-bar.sh` to put plugins back if stock config is restored.
 
 Every apply snapshots `shell.json` to
 `~/.local/share/personal-tweaks/shell-bar-backups/` (timestamp + `last-good`).
 
 Bar zoning (avoids tooltip collision with `omarchy.indicators`):
 
-| Section | Chips |
-|---------|--------|
-| left (after workspaces) | `focus-now`, `mission-map` |
-| center (after weather) | `eye-comfort` |
+| Section | Widgets |
+|---------|---------|
+| left (after workspaces) | `heading` (focus + mission apply) |
+| center (after weather) | `tinai` (eye-comfort Tamil calendar) |
 | right (after tray) | `omarchy.system-update` moved out of center |
 
 ```bash
