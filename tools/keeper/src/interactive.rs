@@ -340,6 +340,8 @@ pub fn run_loop(
                     "remember": st.remember,
                     "storeOffline": st.store_offline,
                     "free": st.free,
+                    "escrowDefaultPath": st.escrow_default_path,
+                    "escrowDefaultExists": st.escrow_default_exists,
                     "note": "healthy only means recover drill worked once — not an open session",
                 }))
                 .map_err(|e| e.to_string())?;
@@ -450,6 +452,10 @@ pub fn run_loop(
                         continue;
                     }
                 };
+                if let Err(e) = crate::store::require_escrow_exists(&esc) {
+                    io.print_line(&format!("error: {e}"))?;
+                    continue;
+                }
                 let val = io.read_secret("Secret value (not echoed): ")?;
                 match put_secret_with_escrow(&root, &esc, &name, &val) {
                     Ok(()) => io.print_line(&format!(r#"{{"ok":true,"name":"{name}"}}"#))?,
@@ -702,6 +708,32 @@ mod tests {
             .output
             .iter()
             .any(|l| l.contains(r#""ok":true"#) && l.contains("viaescrow")));
+    }
+
+    #[test]
+    fn loop_put_escrow_missing_escrow_fails_before_secret_prompt() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("vault");
+        let escrow = dir.path().join("escrow.json");
+        init_vault(&root, "loop-escrow-put-xx", &escrow).unwrap();
+
+        let missing = dir.path().join("missing-escrow.json");
+        let mut io = ScriptedIo::new(
+            vec!["put-escrow viaescrow".into(), "quit".into()],
+            vec!["should-not-be-read".into()],
+        );
+        run_loop(&mut io, root, Some(missing.clone())).unwrap();
+        assert!(
+            io.output
+                .iter()
+                .any(|l| l.contains(&format!("escrow file not found: {}", missing.display()))),
+            "expected clear missing-escrow error, got: {:?}",
+            io.output
+        );
+        assert_eq!(
+            io.secret_i, 0,
+            "secret prompt must not run when escrow path is missing"
+        );
     }
 
     #[test]

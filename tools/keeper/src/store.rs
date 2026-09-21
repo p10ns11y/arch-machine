@@ -212,10 +212,42 @@ pub fn read_secret(root: &Path, name: &str) -> Result<Sealed, StoreError> {
     read_json(&Paths::new(root).secret(name))
 }
 
+/// Loop default / USB staging path under the vault root.
+pub fn default_escrow_pending_path(root: &Path) -> PathBuf {
+    root.join("escrow-PENDING-copy-to-usb.json")
+}
+
+/// Fail fast with a clear operator message before prompting for secrets.
+pub fn require_escrow_exists(path: &Path) -> Result<(), StoreError> {
+    if path.is_file() {
+        Ok(())
+    } else {
+        Err(StoreError::Msg(format!(
+            "escrow file not found: {}",
+            path.display()
+        )))
+    }
+}
+
 pub fn write_escrow(path: &Path, s: &ShareJson) -> Result<(), StoreError> {
     write_json(path, s)
 }
 
+/// Write escrow to the operator path and mirror to the vault-root PENDING staging file.
+pub fn write_escrow_with_pending_mirror(
+    root: &Path,
+    escrow_path: &Path,
+    s: &ShareJson,
+) -> Result<(), StoreError> {
+    write_escrow(escrow_path, s)?;
+    let pending = default_escrow_pending_path(root);
+    if pending != escrow_path {
+        write_escrow(&pending, s)?;
+    }
+    Ok(())
+}
+
 pub fn read_escrow(path: &Path) -> Result<ShareJson, StoreError> {
+    require_escrow_exists(path)?;
     read_json(path)
 }
