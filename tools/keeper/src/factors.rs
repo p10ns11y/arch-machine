@@ -296,6 +296,12 @@ pub fn release_shares_from_confirmations(
             }
             Confirmation::OfflineFile { path } => {
                 // Offline share is carried by the confirmation path itself (file contents).
+                if !path.is_file() {
+                    return Err(FactorError::Msg(format!(
+                        "escrow file not found: {}",
+                        path.display()
+                    )));
+                }
                 let raw = fs::read_to_string(path)?;
                 let sj: crate::crypto::ShareJson = serde_json::from_str(&raw)?;
                 out.push(Share::try_from(sj)?);

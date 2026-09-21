@@ -327,6 +327,7 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
                     "warning: escrow is under $HOME — copy OFF this laptop for real recovery"
                 );
             }
+            crate::store::require_escrow_exists(&escrow).map_err(|e| e.to_string())?;
             let val = resolve_secret_value(value, file)?;
             put_secret_with_escrow(&root, &escrow, &name, &val).map_err(|e| e.to_string())?;
             println!(

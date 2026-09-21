@@ -471,3 +471,88 @@ fn cli_put_escrow_no_passphrase() {
         "escrow-put-payload"
     );
 }
+
+#[test]
+fn cli_put_escrow_missing_escrow_fails_before_secret() {
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("vault-missing-escrow");
+    let escrow = dir.path().join("escrow-real.json");
+    let missing = dir.path().join("missing-escrow.json");
+    let pass = "cli-missing-escrow-pass-xx";
+
+    let init = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "init",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(init.status.success(), "{}", String::from_utf8_lossy(&init.stderr));
+
+    let secret_file = dir.path().join("secret.txt");
+    std::fs::write(&secret_file, "never-read").unwrap();
+    let put = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .args([
+            "put-escrow",
+            "demo",
+            "--file",
+            secret_file.to_str().unwrap(),
+            "--escrow",
+            missing.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(!put.status.success());
+    let err = String::from_utf8_lossy(&put.stderr);
+    assert!(
+        err.contains(&format!("escrow file not found: {}", missing.display())),
+        "stderr: {err}"
+    );
+}
+
+#[test]
+fn init_mirrors_escrow_to_pending_path() {
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("vault-pending");
+    let escrow = dir.path().join("external-escrow.json");
+    let pending = root.join("escrow-PENDING-copy-to-usb.json");
+    let pass = "pending-mirror-pass-xx";
+
+    let init = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "init",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(init.status.success(), "{}", String::from_utf8_lossy(&init.stderr));
+    assert!(escrow.is_file(), "primary escrow should exist");
+    assert!(pending.is_file(), "PENDING mirror should exist after init");
+
+    let st = bin()
+        .args(["status", "--root", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        !st.stdout.is_empty(),
+        "status stdout: {}",
+        String::from_utf8_lossy(&st.stderr)
+    );
+    let body: serde_json::Value = serde_json::from_slice(&st.stdout).expect("status json");
+    assert_eq!(
+        body["escrowDefaultPath"].as_str().unwrap(),
+        pending.to_str().unwrap()
+    );
+    assert_eq!(body["escrowDefaultExists"].as_bool(), Some(true));
+}

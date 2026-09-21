@@ -25,9 +25,10 @@ use crate::factors::{
 // Yubi enroll uses seal_share_for_device + machine_fingerprint above.
 use crate::store::{
     ensure_root, read_canary, read_device_blob, read_meta, read_passphrase_wrap, read_pq_dk_wrap,
-    read_pq_ek, read_secret, read_yubi_blob, write_canary, write_device_blob, write_escrow,
+    read_pq_ek, read_secret, read_yubi_blob, write_canary, write_device_blob,
+    write_escrow_with_pending_mirror,
     write_meta, write_passphrase_wrap, write_pq_dk_wrap, write_pq_ek, write_secret, write_yubi_blob,
-    yubi_blob_exists, Meta, StoreError,
+    yubi_blob_exists, Meta, StoreError, default_escrow_pending_path,
 };
 use crate::yubi::{open_yubi_share_with_backend, seal_share_for_yubi, YubiChallenge, YubiError};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
@@ -103,6 +104,11 @@ pub struct Status {
     pub store_offline: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub free: Option<&'static str>,
+    /// Loop default escrow path under vault root.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub escrow_default_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub escrow_default_exists: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -167,7 +173,7 @@ pub fn init_vault_with_fingerprint(
 
     let wrap = wrap_with_passphrase(&pass_share.data, pass_share.id, passphrase)?;
     write_passphrase_wrap(root, &wrap)?;
-    write_escrow(escrow_path, &ShareJson::from(offline_share))?;
+    write_escrow_with_pending_mirror(root, escrow_path, &ShareJson::from(offline_share))?;
 
     let live;
     let fp: &[u8] = if let Some(f) = device_fingerprint {
@@ -350,7 +356,7 @@ pub fn enroll_yubikey(
 
     let wrap = wrap_with_passphrase(&pass_share.data, pass_share.id, passphrase)?;
     write_passphrase_wrap(root, &wrap)?;
-    write_escrow(escrow_path, &ShareJson::from(offline_share))?;
+    write_escrow_with_pending_mirror(root, escrow_path, &ShareJson::from(offline_share))?;
 
     let fp = machine_fingerprint();
     let dev_blob = seal_share_for_device(device_share, &fp)?;
@@ -594,7 +600,7 @@ pub fn reset_passphrase_with_escrow(
     let device_share = &shares[2];
     let wrap = wrap_with_passphrase(&pass_share.data, pass_share.id, new_passphrase)?;
     write_passphrase_wrap(root, &wrap)?;
-    write_escrow(escrow_path, &ShareJson::from(offline_share))?;
+    write_escrow_with_pending_mirror(root, escrow_path, &ShareJson::from(offline_share))?;
     let fp = machine_fingerprint();
     let dev_blob = seal_share_for_device(device_share, &fp)?;
     write_device_blob(root, &dev_blob)?;
@@ -679,8 +685,11 @@ pub fn status(root: &Path) -> Result<Status, CeremonyError> {
             remember: None,
             store_offline: None,
             free: None,
+            escrow_default_path: Some(default_escrow_pending_path(root).display().to_string()),
+            escrow_default_exists: Some(false),
         }),
         Some(meta) => {
+            let pending = default_escrow_pending_path(root);
             let yubi = yubi_blob_exists(root)
                 || meta.factors.iter().any(|f| f == "yubikey");
             let healthy = meta.drill_proven;
@@ -710,6 +719,8 @@ pub fn status(root: &Path) -> Result<Status, CeremonyError> {
                 } else {
                     "device fingerprint (automatic); optional: enroll-yubikey for strong path"
                 }),
+                escrow_default_path: Some(pending.display().to_string()),
+                escrow_default_exists: Some(pending.is_file()),
             })
         }
     }
@@ -801,7 +812,7 @@ pub fn rebind_device(
 
     let wrap = wrap_with_passphrase(&pass_share.data, pass_share.id, passphrase)?;
     write_passphrase_wrap(root, &wrap)?;
-    write_escrow(escrow_path, &ShareJson::from(offline_share))?;
+    write_escrow_with_pending_mirror(root, escrow_path, &ShareJson::from(offline_share))?;
 
     let live;
     let fp: &[u8] = if let Some(f) = new_fingerprint {
