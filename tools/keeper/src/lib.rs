@@ -2,6 +2,7 @@
 
 pub mod ceremony;
 pub mod cli;
+pub mod custody;
 pub mod crypto;
 pub mod factors;
 pub mod interactive;
