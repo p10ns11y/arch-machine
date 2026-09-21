@@ -1,13 +1,18 @@
-// Tinai panel model — structured fields from eye-comfort-theme waybar JSON.
+// Calendar panel model — structured fields from eye-comfort-theme waybar JSON.
+// Plugin id stays `tinai` for compat; fields are calendar-generic.
 
 function emptyStatus() {
   return {
     text: "…",
     tooltip: "",
     className: "",
+    calendar: "tamil_nadu",
     dateLine: "",
-    tinaiLabel: "",
-    tinaiShort: "Tiṇai",
+    seasonLabel: "",
+    seasonShort: "Calendar",
+    dayPart: "",
+    microStep: "",
+    solarHint: "",
     chipSubtitle: "",
     perum: "",
     ciru: "",
@@ -25,24 +30,25 @@ function emptyStatus() {
 }
 
 function cleanLine(s) {
-  // Strip leading/trailing padding: Braille blank, fullwidth, nbsp, ordinary spaces.
   return String(s || "").replace(/[\u2800\u3000\u00a0\u2000-\u200b\ufeff \t]+$/g, "").replace(/^[\u2800\u3000\u00a0\u2000-\u200b\ufeff \t]+/, "")
 }
 
 function isDecorative(line) {
   var s = cleanLine(line)
   if (!s) return true
-  // Decorative separators made only of box / tilde / equals / dots / underscores.
   return /^[─\-–—=~·•_\s]+$/.test(s)
 }
 
 function sectionKey(line) {
   var s = cleanLine(line).toLowerCase()
-  // Strip trailing fullwidth padding already handled; match headers.
-  if (/^ti[nṇ]ai\b/.test(s) || s === "tiṇai" || s.indexOf("tiṇai") === 0) return "tinai"
-  if (/^po[lḻ]utu\b/.test(s) || s.indexOf("poḻutu") === 0 || s.indexOf("polutu") === 0) return "polutu"
-  if (/^j[aā]mam\b/.test(s) || s.indexOf("jāmam") === 0 || s.indexOf("jamam") === 0) return "jamam"
-  if (/^n[aā][ḻl]ikai\b/.test(s) || s.indexOf("nāḻikai") === 0 || s.indexOf("nalikai") === 0) return "nazhigai"
+  if (/^ti[nṇ]ai\b/.test(s) || s.indexOf("tiṇai") === 0) return "tinai"
+  if (/^po[lḻ]utu\b/.test(s) || s.indexOf("poḻutu") === 0) return "polutu"
+  if (/^j[aā]mam\b/.test(s) || s.indexOf("jāmam") === 0) return "jamam"
+  if (/^n[aā][ḻl]ikai\b/.test(s) || s.indexOf("nāḻikai") === 0) return "nazhigai"
+  if (/^årstid\b/.test(s)) return "season"
+  if (/^realm\b/.test(s)) return "realm"
+  if (/^dag\b/.test(s)) return "daypart"
+  if (/^solar\b/.test(s)) return "solar"
   return ""
 }
 
@@ -66,15 +72,25 @@ function parseWeekDetail(dateLine) {
 
 function parseChipParts(text) {
   var parts = String(text || "").split(/\s*·\s*/)
-  var shortName = cleanLine(parts[0] || "") || "Tiṇai"
+  var shortName = cleanLine(parts[0] || "") || "Calendar"
   var subtitle = ""
   if (parts.length > 1)
     subtitle = parts.slice(1).map(cleanLine).filter(function (p) { return !!p }).join(" · ")
-  return { shortName: shortName, subtitle: subtitle }
+  return { shortName: shortName, subtitle: subtitle, parts: parts.map(cleanLine) }
 }
 
+function parseSeasonDayMicro(chipText, calendar) {
+  var parts = parseChipParts(chipText).parts
+  var season = parts[0] || ""
+  var dayPart = parts[1] || ""
+  var micro = parts[2] || ""
+  if (calendar === "sweden" && micro.indexOf("M") === 0)
+    micro = micro
+  else if (micro.indexOf("N") === 0)
+    micro = micro
+  return { season: season, dayPart: dayPart, microStep: micro }
+}
 
-// Jaamam grid: epoch hour 2, 3h each (matches eye-comfort tamil_schedule).
 function jamamWindow(index) {
   var i = parseInt(index, 10)
   if (!(i >= 1 && i <= 8)) return null
@@ -100,10 +116,13 @@ function parseJamamIndex(line) {
   return m ? parseInt(m[1], 10) : 0
 }
 
-function parseTooltip(tooltip, chipText) {
+function parseTooltip(tooltip, chipText, calendar) {
   var out = {
     dateLine: "",
-    tinaiLabel: "",
+    seasonLabel: "",
+    dayPart: "",
+    microStep: "",
+    solarHint: "",
     perum: "",
     ciru: "",
     jamamSummary: "",
@@ -123,7 +142,6 @@ function parseTooltip(tooltip, chipText) {
     var line = cleanLine(raw)
     if (isDecorative(raw)) continue
 
-    // Theme line (footer)
     if (/^theme\b/i.test(line) || /^eye-comfort/i.test(line)) {
       out.theme = line.replace(/^theme\s+/i, "").trim() || line
       continue
@@ -146,8 +164,34 @@ function parseTooltip(tooltip, chipText) {
       continue
     }
 
-    if (section === "tinai" && !out.tinaiLabel) {
-      out.tinaiLabel = line
+    if (calendar === "sweden") {
+      if (section === "season" && !out.seasonLabel) {
+        out.seasonLabel = stripSectionPrefix(line, ["Årstid", "Årstid  "])
+        continue
+      }
+      if (section === "realm" && !out.perum) {
+        out.perum = stripSectionPrefix(line, ["Realm", "Realm   "])
+        continue
+      }
+      if (section === "daypart") {
+        var dag = stripSectionPrefix(line, ["Dag", "Dag     "])
+        var dm = dag.match(/^(.+?)\s*·\s*(M\d+)/)
+        if (dm) {
+          out.dayPart = dm[1]
+          out.microStep = dm[2]
+        } else {
+          out.dayPart = dag
+        }
+        continue
+      }
+      if (section === "solar" && !out.solarHint) {
+        out.solarHint = stripSectionPrefix(line, ["Solar", "Solar —", "Solar    "])
+        continue
+      }
+    }
+
+    if (section === "tinai" && !out.seasonLabel) {
+      out.seasonLabel = line
       continue
     }
 
@@ -196,12 +240,10 @@ function parseTooltip(tooltip, chipText) {
     if (lab) out.jamamSplits.push(lab)
   }
 
-  // Fallback tinai from chip text first segment.
-  if (!out.tinaiLabel) {
-    var parts = parseChipParts(chipText)
-    if (parts.shortName && parts.shortName !== "Tiṇai")
-      out.tinaiLabel = parts.shortName
-  }
+  var chip = parseSeasonDayMicro(chipText, calendar)
+  if (!out.seasonLabel) out.seasonLabel = chip.season
+  if (!out.dayPart) out.dayPart = chip.dayPart
+  if (!out.microStep) out.microStep = chip.microStep
 
   return out
 }
@@ -223,16 +265,22 @@ function parseWaybarJson(raw) {
   next.text = String(d.text || "").trim() || "…"
   next.tooltip = String(d.tooltip || "")
   next.className = String(d.class || d.alt || "")
+  next.calendar = String(d.calendar || d.alt || "tamil_nadu")
+  if (next.calendar === "tn") next.calendar = "tamil_nadu"
+  if (next.calendar === "se") next.calendar = "sweden"
   next.chipText = next.text
-  next.chipIcon = "󰔏"
+  next.chipIcon = next.calendar === "sweden" ? "󰖟" : "󰔏"
 
   var parts = parseChipParts(next.text)
-  next.tinaiShort = parts.shortName
+  next.seasonShort = parts.shortName
   next.chipSubtitle = parts.subtitle
 
-  var parsed = parseTooltip(next.tooltip, next.text)
+  var parsed = parseTooltip(next.tooltip, next.text, next.calendar)
   next.dateLine = parsed.dateLine
-  next.tinaiLabel = parsed.tinaiLabel
+  next.seasonLabel = parsed.seasonLabel
+  next.dayPart = parsed.dayPart
+  next.microStep = parsed.microStep
+  next.solarHint = parsed.solarHint
   next.perum = parsed.perum
   next.ciru = parsed.ciru
   next.jamamSummary = parsed.jamamSummary

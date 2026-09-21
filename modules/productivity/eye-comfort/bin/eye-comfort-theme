@@ -4,11 +4,12 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Circadian / Tamil Nadu switcher for eye-comfort Omarchy themes.
+Circadian / cultural calendar switcher for eye-comfort Omarchy themes.
 
 Usage:
   eye-comfort-theme [MODE] [flags]
-  eye-comfort-theme tn [flags]
+  eye-comfort-theme tn|se [flags]
+  eye-comfort-theme calendar ID [--lat DEG] [--dry-run]
   eye-comfort-theme status|waybar
 
 MODE (positional, default auto) — circadian:
@@ -22,19 +23,25 @@ MODE (positional, default auto) — circadian:
                                     else plain (Omarchy 4 Quickshell).
                                     Or set EYE_COMFORT_TOOLTIP=plain|pango.
 
-Tamil Nadu (cultural overlay; eye comfort still primary):
-  tn                                Resolve Perum × Siru × Tinai × Nazhigai × Jaamam
+Calendar (cultural overlay; eye comfort still primary):
+  tn                                Tamil Nadu — Perum × Siru × Tinai × Nazhigai × Jaamam
+  se                                Sweden — Årstid × Dagsindelning × realm × mikrosteg
+  calendar tamil_nadu|sweden          Switch active calendar (persists state.json; then apply)
+  calendar america_1776             Stub — disabled (later)
   --tinai NAME                      kurinji|mullai|marutham|neythal|palai
   --lon DEG | --longitude DEG       With --lat: infer tinai (TN coastal/hills/plains)
-  --perum NAME                      Force season (ila_venil|mudhu_venil|kar|kulir|munpani|pinpani)
-  --siru NAME                       Force daily division (vidiyal|kaalai|nanpagal|erpaadu|maalai|yaamam)
-  --nazhigai N                      Force micro-tint step 0–9 within Siru (~24 min each)
+  --perum NAME                      TN: force season (ila_venil|…|pinpani)
+  --siru NAME                       TN: force daily division (vidiyal|…|yaamam)
+  --nazhigai N                      TN: micro-tint step 0–9 within Siru (~24 min)
+  --realm NAME                      SE: asgard|midgard|jotunheim|vanaheim|nifl
+  --arstid NAME                     SE: vinter|var|sommar|host
+  --mikrosteg N                     SE: micro-step 0–5 within dagsindelning
 
 Flags (shared):
   --phase NAME                      Circadian only (overrides positional MODE)
   --hour N                          Local hour 0–23 (also: HOUR=N)
   --minute N                        Local minute 0–59
-  --lat DEG | --latitude DEG        Circadian solar / TN tinai geo (-90..90)
+  --lat DEG | --latitude DEG        Solar phase (circadian / se; Stockholm ≈59.3)
   --indoor | --outdoor              Ambient lighting context
   --ambient auto|indoor|outdoor     Ambient (default: auto)
   --intensity soft|balanced|crisp   Comfort intensity (default: balanced)
@@ -65,6 +72,8 @@ Examples:
   eye-comfort-theme
   eye-comfort-theme --phase dusk --indoor --intensity soft
   eye-comfort-theme tn --tinai neythal
+  eye-comfort-theme se --lat 59.3 --json
+  eye-comfort-theme calendar sweden --lat 59.3
   eye-comfort-theme tn --lat 13.08 --lon 80.27 --json
   eye-comfort-theme tn --siru yaamam --nazhigai 3 --dry-run
   eye-comfort-theme status
@@ -94,6 +103,9 @@ fi
 
 MODE="auto"
 TN_MODE=0
+SE_MODE=0
+CALENDAR_CMD=0
+CALENDAR_ID=""
 DRY=0
 PRINT_ONLY=0
 JSON=0
@@ -107,6 +119,9 @@ TINAI=""
 PERUM=""
 SIRU=""
 NAZHIGAI=""
+REALM=""
+ARSTID=""
+MIKROSTEG=""
 AMBIENT="auto"
 INTENSITY="balanced"
 HIGH_CONTRAST=0
@@ -159,6 +174,18 @@ while [[ $# -gt 0 ]]; do
       NAZHIGAI="${2:-}"; shift 2 ;;
     --nazhigai=*)
       NAZHIGAI="${1#--nazhigai=}"; shift ;;
+    --realm)
+      REALM="${2:-}"; shift 2 ;;
+    --realm=*)
+      REALM="${1#--realm=}"; shift ;;
+    --arstid)
+      ARSTID="${2:-}"; shift 2 ;;
+    --arstid=*)
+      ARSTID="${1#--arstid=}"; shift ;;
+    --mikrosteg)
+      MIKROSTEG="${2:-}"; shift 2 ;;
+    --mikrosteg=*)
+      MIKROSTEG="${1#--mikrosteg=}"; shift ;;
     --hour)
       HOUR_OVERRIDE="${2:-}"; shift 2 ;;
     --hour=*)
@@ -205,9 +232,24 @@ elif ((${#ARGS[@]} > 0)); then
   MODE="${ARGS[0]}"
 fi
 
+if [[ "$MODE" == "calendar" ]]; then
+  CALENDAR_CMD=1
+  MODE="${ARGS[1]:-}"
+  if ((${#ARGS[@]} > 1)); then
+    ARGS=("${ARGS[@]:1}")
+  else
+    ARGS=()
+  fi
+fi
+
 if [[ "$MODE" == "tn" || "$MODE" == "tamil" || "$MODE" == "tamil-nadu" ]]; then
   TN_MODE=1
   MODE="tn"
+fi
+
+if [[ "$MODE" == "se" || "$MODE" == "sweden" ]]; then
+  SE_MODE=1
+  MODE="se"
 fi
 
 STATUS_MODE=0
@@ -223,6 +265,9 @@ fi
 export EC_MODE="$MODE"
 export EC_STATUS="$STATUS_MODE"
 export EC_TN="$TN_MODE"
+export EC_SE="$SE_MODE"
+export EC_CALENDAR_CMD="$CALENDAR_CMD"
+export EC_CALENDAR_ID="$MODE"
 export EC_DRY="$DRY"
 export EC_PRINT_ONLY="$PRINT_ONLY"
 export EC_JSON="$JSON"
@@ -236,6 +281,9 @@ export EC_TINAI="$TINAI"
 export EC_PERUM="$PERUM"
 export EC_SIRU="$SIRU"
 export EC_NAZHIGAI="$NAZHIGAI"
+export EC_REALM="$REALM"
+export EC_ARSTID="$ARSTID"
+export EC_MIKROSTEG="$MIKROSTEG"
 export EC_AMBIENT="$AMBIENT"
 export EC_INTENSITY="$INTENSITY"
 export EC_HIGH_CONTRAST="$HIGH_CONTRAST"
@@ -658,6 +706,18 @@ def _apply_theme_locked(
                 resolved_name = name
                 break
         if wallpaper is None and hint.startswith(
+            ("asgard-", "midgard-", "jotunheim-", "vanaheim-", "nifl-")
+        ):
+            realm_prefix = hint.split("-", 1)[0] + "-"
+            for root in bg_roots:
+                if not root.is_dir():
+                    continue
+                alts = sorted(root.glob(f"{realm_prefix}*-a.jpg"))
+                if alts:
+                    wallpaper = alts[0]
+                    resolved_name = wallpaper.name
+                    break
+        if wallpaper is None and hint.startswith(
             ("kurinji-", "mullai-", "marutham-", "neythal-", "palai-")
         ):
             # Last resort: any tinai-*-a.jpg already installed
@@ -680,7 +740,14 @@ def _apply_theme_locked(
     print(f"active: {active.read_text(encoding='utf-8').strip() if active.is_file() else 'unknown'}")
 
 
-tn_mode = env_bool("EC_TN")
+from calendar_registry import (
+    apply_calendar,
+    calendar_from_state,
+    is_cultural_mode,
+    mode_to_calendar,
+)
+from schedule import PHASES
+
 hour_s = os.environ.get("EC_HOUR", "").strip()
 minute_s = os.environ.get("EC_MINUTE", "").strip()
 lat_s = os.environ.get("EC_LAT", "").strip()
@@ -689,151 +756,108 @@ ambient = os.environ.get("EC_AMBIENT", "auto")
 intensity = os.environ.get("EC_INTENSITY", "balanced")
 dry = env_bool("EC_DRY")
 no_render = env_bool("EC_NO_RENDER")
+state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
+mode = os.environ.get("EC_MODE", "auto").strip().lower()
 
-if tn_mode:
-    from oklch import contrast_ratio as cr
-    from tamil_palette import roles_for_tamil
-    from tamil_schedule import resolve_tamil, state_to_dict as tn_state_to_dict
+if env_bool("EC_CALENDAR_CMD"):
+    mode = os.environ.get("EC_CALENDAR_ID", "").strip().lower()
 
-    kwargs = {}
-    if hour_s != "":
-        kwargs["hour"] = int(hour_s)
-    if minute_s != "":
-        kwargs["minute"] = int(minute_s)
-    if lat_s != "":
-        kwargs["latitude"] = float(lat_s)
-    if lon_s != "":
-        kwargs["longitude"] = float(lon_s)
-    tinai = os.environ.get("EC_TINAI", "").strip()
-    perum = os.environ.get("EC_PERUM", "").strip()
-    siru = os.environ.get("EC_SIRU", "").strip()
-    naz_s = os.environ.get("EC_NAZHIGAI", "").strip()
-    if tinai:
-        kwargs["tinai"] = tinai
-    if perum:
-        kwargs["perum"] = perum
-    if siru:
-        kwargs["siru"] = siru
-    if naz_s != "":
-        kwargs["nazhigai"] = int(naz_s)
-
-    try:
-        state = resolve_tamil(**kwargs)
-    except (ValueError, RuntimeError) as e:
-        print(f"eye-comfort-theme: error: {e}", file=sys.stderr)
-        sys.exit(2)
-
-    amb = ambient if ambient in ("indoor", "outdoor") else "indoor"
-    roles = roles_for_tamil(
-        state.tinai,
-        state.siru,
-        nazhigai=state.nazhigai,
-        ambient=amb,  # type: ignore[arg-type]
-        intensity=intensity,  # type: ignore[arg-type]
-        high_contrast=env_bool("EC_HIGH_CONTRAST"),
-    )
-    contrast = round(cr(roles["foreground"], roles["background"]), 2)
-
-    if os.environ.get("EC_CSS", "0") == "1":
-        sys.stdout.write(css_custom_properties(roles, state.phase))  # type: ignore[arg-type]
-        sys.exit(0)
-
-    payload = tn_state_to_dict(state)
-    payload["roles"] = roles
-    payload["contrast_fg_bg"] = contrast
-    payload["ambient"] = amb
-    payload["intensity"] = intensity
-    payload["motion"] = "reduce" if env_bool("EC_REDUCED_MOTION") else "ok"
-    payload["calendar"] = "tamil_nadu"
-
-    if os.environ.get("EC_JSON", "0") == "1":
-        print(json.dumps(payload, indent=2))
-        sys.exit(0)
-
-    if os.environ.get("EC_PRINT_ONLY", "0") == "1":
-        print(state.theme)
-        sys.exit(0)
-
-    print(
-        f"eye-comfort-theme tn: tinai={state.tinai} siru={state.siru} "
-        f"perum={state.perum} nazhigai={state.nazhigai} "
-        f"jaamam={state.jaamam.current} theme={state.theme} "
-        f"phase={state.phase} tinai_src={state.tinai_source} "
-        f"contrast={contrast}:1"
-    )
-    print(f"scene: {state.scene}")
-
-    state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
-    if state_dir.as_posix():
-        state_path = state_dir / "state.json"
-        if dry:
-            print(f"(dry-run) would write {state_path}")
-        else:
-            try:
-                state_dir.mkdir(parents=True, exist_ok=True)
-                state_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-            except OSError as e:
-                print(f"warn: could not write state file ({e})", file=sys.stderr)
-
-    if dry:
-        print(f"(dry-run) would run: omarchy-theme-set {state.theme}")
-        if not no_render:
-            print(f"(dry-run) would render roles into theme package {state.theme}")
-        sys.exit(0)
-
-    apply_theme(state.theme, roles, state.phase, state.wallpaper_hint, no_render=no_render)
-    sys.exit(0)
-
-# --- circadian path ---
-from schedule import resolve, state_to_dict
-
-mode = os.environ.get("EC_MODE", "auto")
-kwargs = dict(
-    mode=mode,
-    ambient=ambient,  # type: ignore[arg-type]
-    intensity=intensity,  # type: ignore[arg-type]
-    high_contrast=env_bool("EC_HIGH_CONTRAST"),
-    reduced_motion=env_bool("EC_REDUCED_MOTION"),
-    no_dynamic=env_bool("EC_NO_DYNAMIC"),
-)
+apply_kw: dict = {
+    "ambient": ambient,
+    "intensity": intensity,
+    "high_contrast": env_bool("EC_HIGH_CONTRAST"),
+    "reduced_motion": env_bool("EC_REDUCED_MOTION"),
+    "no_dynamic": env_bool("EC_NO_DYNAMIC"),
+    "mode": mode,
+}
 if hour_s != "":
-    kwargs["hour"] = int(hour_s)
+    apply_kw["hour"] = int(hour_s)
 if minute_s != "":
-    kwargs["minute"] = int(minute_s)
+    apply_kw["minute"] = int(minute_s)
 if lat_s != "":
-    kwargs["latitude"] = float(lat_s)
+    apply_kw["latitude"] = float(lat_s)
+if lon_s != "":
+    apply_kw["longitude"] = float(lon_s)
+for env_key, kw in (
+    ("EC_TINAI", "tinai"),
+    ("EC_PERUM", "perum"),
+    ("EC_SIRU", "siru"),
+    ("EC_REALM", "realm"),
+    ("EC_ARSTID", "arstid"),
+):
+    val = os.environ.get(env_key, "").strip()
+    if val:
+        apply_kw[kw] = val
+naz_s = os.environ.get("EC_NAZHIGAI", "").strip()
+if naz_s != "":
+    apply_kw["nazhigai"] = int(naz_s)
+mik_s = os.environ.get("EC_MIKROSTEG", "").strip()
+if mik_s != "":
+    apply_kw["mikrosteg"] = int(mik_s)
+
+if env_bool("EC_TN"):
+    calendar = "tamil_nadu"
+elif env_bool("EC_SE"):
+    calendar = "sweden"
+elif env_bool("EC_CALENDAR_CMD"):
+    calendar = mode_to_calendar(mode, state_dir=state_dir if state_dir.as_posix() else None)
+elif is_cultural_mode(mode):
+    calendar = mode_to_calendar(mode, state_dir=state_dir if state_dir.as_posix() else None)
+elif mode in ("auto", ""):
+    calendar = calendar_from_state(state_dir if state_dir.as_posix() else None)
+elif mode in PHASES or mode in ("day", "light", "dark", "night"):
+    calendar = "circadian"
+else:
+    calendar = mode_to_calendar(mode, state_dir=state_dir if state_dir.as_posix() else None)
+
+if calendar == "circadian":
+    apply_kw["mode"] = mode if mode not in ("auto", "") else "auto"
 
 try:
-    state = resolve(**kwargs)
+    result = apply_calendar(calendar, **apply_kw)
 except (ValueError, RuntimeError) as e:
     print(f"eye-comfort-theme: error: {e}", file=sys.stderr)
     sys.exit(2)
 
+payload = dict(result.payload)
+payload["motion"] = "reduce" if env_bool("EC_REDUCED_MOTION") else "ok"
+
 if os.environ.get("EC_CSS", "0") == "1":
-    sys.stdout.write(css_custom_properties(state.roles, state.phase))
+    sys.stdout.write(css_custom_properties(result.roles, result.phase))
     sys.exit(0)
 
 if os.environ.get("EC_JSON", "0") == "1":
-    print(json.dumps(state_to_dict(state), indent=2))
+    print(json.dumps(payload, indent=2))
     sys.exit(0)
 
 if os.environ.get("EC_PRINT_ONLY", "0") == "1":
-    print(state.theme)
+    print(result.theme)
     sys.exit(0)
 
-print(
-    f"eye-comfort-theme: phase={state.phase} theme={state.theme} "
-    f"ambient={state.ambient} intensity={state.intensity} "
-    f"source={state.source} contrast={state.contrast_fg_bg}:1 "
-    f"cct≈{state.cct_k}K"
-)
-print(f"scene: {state.scene}")
+if calendar == "tamil_nadu":
+    print(
+        f"eye-comfort-theme tn: tinai={payload.get('tinai')} siru={payload.get('siru')} "
+        f"perum={payload.get('perum')} nazhigai={payload.get('nazhigai')} "
+        f"jaamam={payload.get('jaamam', {}).get('current')} theme={result.theme} "
+        f"phase={result.phase} contrast={result.contrast_fg_bg}:1"
+    )
+elif calendar == "sweden":
+    print(
+        f"eye-comfort-theme se: arstid={payload.get('arstid')} realm={payload.get('realm')} "
+        f"phase={result.phase} mikrosteg={payload.get('mikrosteg')} "
+        f"lat={payload.get('latitude')} theme={result.theme} "
+        f"solar={payload.get('solar_hint')} contrast={result.contrast_fg_bg}:1"
+    )
+else:
+    print(
+        f"eye-comfort-theme: phase={result.phase} theme={result.theme} "
+        f"ambient={payload.get('ambient')} intensity={payload.get('intensity')} "
+        f"contrast={result.contrast_fg_bg}:1"
+    )
+print(f"scene: {result.scene}")
 
-state_dir = Path(os.environ.get("EC_STATE_DIR", "")).expanduser()
 if state_dir.as_posix():
     state_path = state_dir / "state.json"
-    payload = state_to_dict(state)
-    payload["motion"] = "reduce" if state.reduced_motion else "ok"
     if dry:
         print(f"(dry-run) would write {state_path}")
     else:
@@ -844,10 +868,10 @@ if state_dir.as_posix():
             print(f"warn: could not write state file ({e})", file=sys.stderr)
 
 if dry:
-    print(f"(dry-run) would run: omarchy-theme-set {state.theme}")
+    print(f"(dry-run) would run: omarchy-theme-set {result.theme}")
     if not no_render:
-        print(f"(dry-run) would render roles into theme package {state.theme}")
+        print(f"(dry-run) would render roles into theme package {result.theme}")
     sys.exit(0)
 
-apply_theme(state.theme, state.roles, state.phase, state.wallpaper_hint, no_render=no_render)
+apply_theme(result.theme, result.roles, result.phase, result.wallpaper_hint, no_render=no_render)
 PY

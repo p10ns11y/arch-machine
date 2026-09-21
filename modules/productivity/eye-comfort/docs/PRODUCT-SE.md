@@ -1,7 +1,7 @@
 # Product — Eye Comfort · Sweden overlay (**planned**)
 
-> **Status:** backlog only (SN-EC-SE). No packages or CLI yet. Parent: [PRODUCT.md](./PRODUCT.md).  
-> Calendar seam first: SN-EC-CAL. Kickoff after TN-stable registry.
+> **Status:** v1 landed (SN-EC-SE). Parent: [PRODUCT.md](./PRODUCT.md).  
+> Calendar seam: SN-EC-CAL. Design: [DESIGN-SE.md](./DESIGN-SE.md).
 
 ## Register
 
@@ -46,11 +46,12 @@ Parent anti-references, plus:
 
 `eye-comfort-se-{asgard,midgard,jotunheim,vanaheim,nifl}` (or landskap ids at kickoff).
 
-## CLI (future)
+## CLI
 
 ```bash
 eye-comfort-theme se --lat 59.3 --json
-# calendar: sweden
+eye-comfort-theme calendar sweden --lat 59.3
+# calendar: sweden in state.json (default = last value; no TZ geo-guess)
 ```
 
 ## Accessibility

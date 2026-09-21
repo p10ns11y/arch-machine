@@ -95,7 +95,7 @@ link_backgrounds() {
 echo "eye-comfort install → $OMARCHY_THEMES"
 run mkdir -p "$OMARCHY_THEMES" "$LOCAL_BIN" "$LOCAL_LIB"
 
-for f in PALETTE.md PRODUCT.md DESIGN.md DESIGN-TN.md PRODUCT-TN.md \
+for f in PALETTE.md PRODUCT.md DESIGN.md DESIGN-TN.md DESIGN-SE.md PRODUCT-TN.md \
   PRODUCT-SE.md PRODUCT-US.md PRODUCT-IN.md; do
   if [[ -f "$DOCS_SRC/$f" ]]; then
     run cp -a "$DOCS_SRC/$f" "$OMARCHY_THEMES/$f"
@@ -113,7 +113,9 @@ fi
 
 for t in eye-comfort-dark eye-comfort-light eye-comfort-dawn eye-comfort-dusk \
          eye-comfort-tn-kurinji eye-comfort-tn-mullai eye-comfort-tn-marutham \
-         eye-comfort-tn-neythal eye-comfort-tn-palai; do
+         eye-comfort-tn-neythal eye-comfort-tn-palai \
+         eye-comfort-se-asgard eye-comfort-se-midgard eye-comfort-se-jotunheim \
+         eye-comfort-se-vanaheim eye-comfort-se-nifl; do
   if [[ -d "$THEMES_SRC/$t" ]]; then
     run mkdir -p "$OMARCHY_THEMES/$t"
     if (( DRY )); then
@@ -136,7 +138,9 @@ if [[ -d "$OMARCHY_THEMES/eye-comfort-light" ]]; then
 fi
 # TN wallpaper READMEs (and any future JPGs)
 for t in eye-comfort-tn-kurinji eye-comfort-tn-mullai eye-comfort-tn-marutham \
-         eye-comfort-tn-neythal eye-comfort-tn-palai; do
+         eye-comfort-tn-neythal eye-comfort-tn-palai \
+         eye-comfort-se-asgard eye-comfort-se-midgard eye-comfort-se-jotunheim \
+         eye-comfort-se-vanaheim eye-comfort-se-nifl; do
   if [[ -d "$THEMES_SRC/$t/backgrounds" ]]; then
     if (( DRY )); then
       echo "DRY: rsync $t backgrounds"
@@ -164,6 +168,7 @@ else
   rsync -a "$LIB_SRC/" "$LOCAL_LIB/"
   chmod +x "$LOCAL_LIB/test_schedule.py" 2>/dev/null || true
   chmod +x "$LOCAL_LIB/test_tamil_schedule.py" 2>/dev/null || true
+  chmod +x "$LOCAL_LIB/test_sweden_schedule.py" 2>/dev/null || true
   chmod +x "$LOCAL_LIB/test_timer_mutex.py" 2>/dev/null || true
 fi
 WRAP_SRC="$SCRIPT_DIR/wrappers"
@@ -245,6 +250,9 @@ fi
 if [[ -f "$LOCAL_LIB/test_tamil_schedule.py" ]] && (( ! DRY )); then
   PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_tamil_schedule.py"
 fi
+if [[ -f "$LOCAL_LIB/test_sweden_schedule.py" ]] && (( ! DRY )); then
+  PYTHONPATH="$LOCAL_LIB" python3 "$LOCAL_LIB/test_sweden_schedule.py"
+fi
 if [[ -f "$LOCAL_LIB/test_timer_mutex.py" ]] && (( ! DRY )); then
   # Mutex test lives next to install.sh units; run from module tree if present
   MUTEX_TEST="$SCRIPT_DIR/lib/test_timer_mutex.py"
@@ -294,9 +302,10 @@ if [[ -n "$SET_MODE" ]]; then
 fi
 
 echo "done."
-echo "  Prefer: eye-comfort-theme [auto|dawn|light|dusk|dark|tn]  (live render + state.json)"
+echo "  Prefer: eye-comfort-theme [auto|dawn|light|dusk|dark|tn|se]  (live render + state.json)"
 echo "  Circadian: eye-comfort-theme [--help]"
-echo "  Tamil calendrical: eye-comfort-theme tn [--tinai …] [--help]"
+echo "  Tamil: eye-comfort-theme tn [--tinai …]  ·  Sweden: eye-comfort-theme se --lat 59.3"
+echo "  Calendar switch: eye-comfort-theme calendar tamil_nadu|sweden"
 echo "  Bare Omarchy (no live render): omarchy-theme-set eye-comfort-{dawn,light,dusk,dark}"
 echo "  Bare Omarchy TN: omarchy-theme-set eye-comfort-tn-{kurinji,mullai,marutham,neythal,palai}"
 echo "  Cycle wallpaper: omarchy theme bg next"

@@ -18,7 +18,8 @@ hyprctl reload   # if focus-now bind was new
 ```
 
 Installs `~/.local/bin/focus-now` (Season / CSH / SON / DBT) and Super+Ctrl+semicolon
-in `~/.config/hypr/bindings.lua`. Needs: `eye-comfort-theme` on PATH; `mission-map`
+in `~/.config/hypr/bindings.lua`. Needs: `eye-comfort-theme` on PATH (`tn` vs `se --lat 59.3`;
+panel switcher sets `state.json` calendar); `mission-map`
 under `~/dev/agentic-reactor/plugins` (fallback `~/Work/personal/plugins`, or
 `PLUGINS_ROOT`); network for the v2 binary if `kanithanj.ai` is not on PATH yet.
 
@@ -34,7 +35,7 @@ Bar zoning (avoids tooltip collision with `omarchy.indicators`):
 | Section | Widgets |
 |---------|---------|
 | left (after workspaces) | `heading` (focus + mission apply) |
-| center (after weather) | `tinai` (eye-comfort Tamil calendar) |
+| center (after weather) | `tinai` (eye-comfort calendar: TN · SE · US later) |
 | right (after tray) | `omarchy.system-update` moved out of center |
 
 ```bash
