@@ -319,6 +319,9 @@ keeper yubi-probe   # must reject solo Yubi
 | Rebind device | `rebind --escrow PATH` |
 | Yubi enroll / strong get | `enroll-yubikey --escrow PATH` · `get NAME --yubi` |
 | Solo-Yubi check | `yubi-probe` |
+| Escrow custody distribute | `custody distribute --escrow PATH --owner-alias grok-bot --holder laptop-1=local:…` |
+
+See `docs/KEEPER-ESCROW-CUSTODY.md` for peer layout and laws 8–10 (opaque bytes only, no passphrase co-ship, reachability gate).
 
 ### Environment
 

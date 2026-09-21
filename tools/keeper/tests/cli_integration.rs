@@ -1,5 +1,6 @@
 //! Dual CLI runs: simple any-2-of-3 + escrow get without passphrase.
 
+use std::fs;
 use std::process::Command;
 use tempfile::tempdir;
 
@@ -555,4 +556,131 @@ fn init_mirrors_escrow_to_pending_path() {
         pending.to_str().unwrap()
     );
     assert_eq!(body["escrowDefaultExists"].as_bool(), Some(true));
+}
+
+#[test]
+fn custody_distribute_happy_path_opaque_bytes() {
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("vault-custody");
+    let escrow = dir.path().join("owner-escrow.json");
+    let pass = "custody-dist-pass-xx";
+    let holder_home = dir.path().join("holder-laptop-1");
+    fs::create_dir_all(&holder_home).unwrap();
+
+    let init = bin()
+        .env("KEEPER_PASSPHRASE", pass)
+        .args([
+            "init",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--root",
+            root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(init.status.success(), "{}", String::from_utf8_lossy(&init.stderr));
+
+    let raw = fs::read(&escrow).unwrap();
+
+    let dist = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .env_remove("KEEPER_PASSPHRASE_FILE")
+        .args([
+            "custody",
+            "distribute",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--owner-alias",
+            "grok-bot",
+            "--holder",
+            &format!("laptop-1=local:{}", holder_home.display()),
+            "--verify-complete",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        dist.status.success(),
+        "distribute: {}",
+        String::from_utf8_lossy(&dist.stderr)
+    );
+    let body: serde_json::Value =
+        serde_json::from_slice(&dist.stdout).expect("distribute json");
+    assert_eq!(body["ok"].as_bool(), Some(true));
+    assert_eq!(body["copied"].as_array().unwrap().len(), 1);
+
+    let dest = holder_home
+        .join("keeper-escrow")
+        .join("peers")
+        .join("grok-bot")
+        .join("keeper-escrow.json");
+    let on_holder = fs::read(&dest).unwrap();
+    assert_eq!(on_holder, raw);
+    let peer_json: serde_json::Value = serde_json::from_slice(&on_holder).unwrap();
+    assert!(peer_json.get("id").is_some());
+    assert!(peer_json.get("data").is_some());
+    assert!(
+        peer_json.get("ciphertext").is_none(),
+        "holder must receive opaque ShareJson only, not sealed secrets"
+    );
+}
+
+#[test]
+fn custody_distribute_refuses_passphrase_co_ship() {
+    let dir = tempdir().unwrap();
+    let escrow = dir.path().join("escrow.json");
+    let holder_home = dir.path().join("holder");
+    fs::create_dir_all(&holder_home).unwrap();
+    fs::write(&escrow, r#"{"id":1,"data":"dGVzdA=="}"#).unwrap();
+
+    let dist = bin()
+        .env("KEEPER_PASSPHRASE", "must-not-travel")
+        .args([
+            "custody",
+            "distribute",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--owner-alias",
+            "grok-bot",
+            "--holder",
+            &format!("laptop-1=local:{}", holder_home.display()),
+        ])
+        .output()
+        .unwrap();
+    assert!(!dist.status.success());
+    let err = String::from_utf8_lossy(&dist.stderr);
+    assert!(err.contains("KEEPER_PASSPHRASE"));
+}
+
+#[test]
+fn custody_distribute_skips_offline_without_hitl() {
+    let dir = tempdir().unwrap();
+    let escrow = dir.path().join("escrow.json");
+    fs::write(&escrow, r#"{"id":1,"data":"dGVzdA=="}"#).unwrap();
+    let offline = dir.path().join("does-not-exist-yet");
+
+    let dist = bin()
+        .env_remove("KEEPER_PASSPHRASE")
+        .args([
+            "custody",
+            "distribute",
+            "--escrow",
+            escrow.to_str().unwrap(),
+            "--owner-alias",
+            "grok-bot",
+            "--holder",
+            &format!("mac-mini=local:{}", offline.display()),
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(dist.status.code(), Some(2));
+    let body: serde_json::Value =
+        serde_json::from_slice(&dist.stdout).expect("distribute json");
+    assert_eq!(body["ok"].as_bool(), Some(false));
+    assert_eq!(body["skipped"].as_array().unwrap().len(), 1);
+    assert!(
+        body["skipped"][0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("offline")
+    );
 }

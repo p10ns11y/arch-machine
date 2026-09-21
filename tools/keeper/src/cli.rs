@@ -1,5 +1,8 @@
 //! CLI for keeper. Passphrase via env/file or interactive non-echo prompts (never argv).
 
+use crate::custody::{
+    distribute_escrow, load_custody_map, parse_holder_spec, DistributeOpts, HolderSpec,
+};
 use crate::ceremony::{
     change_passphrase, drill, enroll_yubikey, get_secret, get_secret_with_escrow,
     get_secret_yubi_device, get_secret_yubi_escrow, init_vault, list_secret_names, put_secret,
@@ -158,6 +161,39 @@ pub enum Commands {
         slot: u8,
         #[arg(long, env = "KEEPER_ROOT")]
         root: Option<PathBuf>,
+    },
+    /// Escrow custody operations (peer distribute — opaque bytes only)
+    Custody {
+        #[command(subcommand)]
+        cmd: CustodyCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CustodyCommands {
+    /// Push owner escrow bytes to peer holders (`~/keeper-escrow/peers/<owner>/keeper-escrow.json`).
+    ///
+    /// Laws: never co-ship passphrase; copy only when both endpoints alive or `--hitl-approve-offline`;
+    /// escrow alone does not unlock named secrets on the holder (second factor still required).
+    Distribute {
+        /// Owner escrow file (opaque ShareJson — not vault secrets)
+        #[arg(long)]
+        escrow: PathBuf,
+        /// Vault owner alias (laptop-1 | laptop-2 | mac-mini | grok-bot)
+        #[arg(long)]
+        owner_alias: String,
+        /// Holder spec: `alias=local:/holder/home` or `alias=ssh:user@host`
+        #[arg(long = "holder")]
+        holders: Vec<String>,
+        /// Optional custody map JSON (merges holders for owner_alias)
+        #[arg(long)]
+        map: Option<PathBuf>,
+        /// One-shot operator approval to copy when holder reachability check fails
+        #[arg(long)]
+        hitl_approve_offline: bool,
+        /// After distribute, verify every holder has matching escrow (post-rebind checklist)
+        #[arg(long)]
+        verify_complete: bool,
     },
 }
 
@@ -534,6 +570,47 @@ fn run_inner(cli: Cli) -> Result<ExitCode, String> {
                 }
             }
         }
+        Some(Commands::Custody { cmd }) => match cmd {
+            CustodyCommands::Distribute {
+                escrow,
+                owner_alias,
+                holders,
+                map,
+                hitl_approve_offline,
+                verify_complete,
+            } => {
+                let mut holder_specs: Vec<HolderSpec> = holders
+                    .iter()
+                    .map(|h| parse_holder_spec(h))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|e| e.to_string())?;
+                if let Some(map_path) = map {
+                    let cm = load_custody_map(&map_path).map_err(|e| e.to_string())?;
+                    if let Some(entry) = cm.owners.get(&owner_alias) {
+                        holder_specs.extend(entry.holders.clone());
+                    }
+                }
+                if holder_specs.is_empty() {
+                    return Err(
+                        "at least one --holder or --map entry for owner_alias is required".into(),
+                    );
+                }
+                let res = distribute_escrow(&DistributeOpts {
+                    escrow_path: escrow,
+                    owner_alias,
+                    holders: holder_specs,
+                    hitl_approve_offline,
+                    verify_complete,
+                })
+                .map_err(|e| e.to_string())?;
+                println!("{}", serde_json::to_string_pretty(&res).unwrap());
+                Ok(if res.ok {
+                    ExitCode::SUCCESS
+                } else {
+                    ExitCode::from(2)
+                })
+            }
+        },
     }
 }
 
