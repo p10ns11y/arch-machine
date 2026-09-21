@@ -14,6 +14,8 @@ from pathlib import Path
 
 from palette import Phase, css_custom_properties, roles_for_phase
 from render import write_theme_package
+from sweden_palette import canonical_phase_for_realm, roles_for_sweden
+from sweden_schedule import REALM, REALM_THEME
 from tamil_palette import canonical_phase_for_tinai, roles_for_tamil
 from tamil_schedule import TINAI, TINAI_THEME
 
@@ -27,6 +29,9 @@ PACKAGE_PHASE: dict[str, Phase] = {
 
 # Tamil Nadu tinai packages (landscape identity; Siru live-renders luminance)
 PACKAGE_TN: dict[str, str] = {TINAI_THEME[t]: t for t in TINAI}
+
+# Sweden saga realm packages (årstid live-renders inside identity)
+PACKAGE_SE: dict[str, str] = {REALM_THEME[r]: r for r in REALM}
 
 # All schedule phases for CSS token mirrors (morning/afternoon share light package)
 CSS_PHASES: tuple[Phase, ...] = (
@@ -53,6 +58,7 @@ def tokens_css_path() -> Path:
 def generate_one(name: str, dest: Path) -> None:
     icons = dest / "icons.theme"
     is_tn = name in PACKAGE_TN
+    is_se = name in PACKAGE_SE
     if is_tn:
         tinai = PACKAGE_TN[name]  # type: ignore[assignment]
         phase, siru = canonical_phase_for_tinai(tinai)  # type: ignore[arg-type]
@@ -60,6 +66,16 @@ def generate_one(name: str, dest: Path) -> None:
             tinai,  # type: ignore[arg-type]
             siru,
             nazhigai=4,
+            ambient="indoor",
+            intensity="balanced",
+        )
+    elif is_se:
+        realm = PACKAGE_SE[name]  # type: ignore[assignment]
+        phase, mikrosteg = canonical_phase_for_realm(realm)  # type: ignore[arg-type]
+        roles = roles_for_sweden(
+            realm,  # type: ignore[arg-type]
+            phase,
+            mikrosteg=mikrosteg,
             ambient="indoor",
             intensity="balanced",
         )
@@ -76,7 +92,7 @@ def generate_one(name: str, dest: Path) -> None:
     # TN packages are live-rendered across dark Siru (dusk/night). Do not commit
     # light.mode from a light canonical bake — stale light.mode → Yazi/Ghostty
     # mismatch on dark applies. Live eye-comfort-theme sets light.mode correctly.
-    if is_tn:
+    if is_tn or is_se:
         stale = dest / "light.mode"
         if stale.exists():
             stale.unlink()
@@ -144,7 +160,7 @@ def generate_roles_json(dest: Path | None = None) -> Path:
 
 
 def all_package_names() -> list[str]:
-    return list(PACKAGE_PHASE.keys()) + list(PACKAGE_TN.keys())
+    return list(PACKAGE_PHASE.keys()) + list(PACKAGE_TN.keys()) + list(PACKAGE_SE.keys())
 
 
 def generate_all(root: Path) -> None:
@@ -155,6 +171,8 @@ def generate_all(root: Path) -> None:
         generate_one(name, dest)
         if name in PACKAGE_PHASE:
             print(f"generated {name} ← {PACKAGE_PHASE[name]}")
+        elif name in PACKAGE_SE:
+            print(f"generated {name} ← realm={PACKAGE_SE[name]}")
         else:
             print(f"generated {name} ← tinai={PACKAGE_TN[name]}")
     css = generate_phases_css()
@@ -181,7 +199,7 @@ def check_all(root: Path) -> int:
             generate_one(name, dest)
             for fname in HOST_FILES:
                 # TN: light.mode is render-time only (never committed).
-                if fname == "light.mode" and name in PACKAGE_TN:
+                if fname == "light.mode" and (name in PACKAGE_TN or name in PACKAGE_SE):
                     if (src / fname).exists():
                         drifts.append(
                             f"{name}/{fname}: must not be committed "

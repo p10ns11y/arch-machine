@@ -1,8 +1,10 @@
-# Omarchy Tiṇai (2.0)
+# Omarchy Tiṇai (2.1) — calendar chip
 
-**BarWidget + Panel** views (heading-style split). Chip: landscape icon + waybar
-text (e.g. `󰔏 Marutam · Naṇpakal · N3`). Panel: structured Tamil time —
-DATE / TIṆAI / POḺUTU / JĀMAM / NĀḺIKAI — plus **Notify**. No raw tooltip dump.
+**Plugin id stays `tinai`** for compat. Bar + panel are **calendar-generic**:
+season · day-part · micro-step (TN: tiṇai · ciṟu · Nāḻikai; SE: årstid · dagsindelning · mikrosteg).
+
+Panel **calendar switcher**: `tamil_nadu` · `sweden` · `america_1776` (disabled, later).
+Runs `eye-comfort-theme calendar …` — no second Sweden plugin.
 
 ```bash
 rsync -a --delete ./ ~/.config/omarchy/plugins/tinai/
@@ -10,7 +12,7 @@ omarchy plugin validate ~/.config/omarchy/plugins/tinai
 omarchy restart shell   # never refresh
 ```
 
-Requires `~/.local/bin/eye-comfort-theme` and
-`~/.local/lib/eye-comfort/waybar/tn-status.sh`.
+Requires `~/.local/bin/eye-comfort-theme`. Active calendar = last `calendar` in
+`~/.config/eye-comfort/state.json`. Sweden: `eye-comfort-theme se --lat 59.3`.
 
-Clicks: left toggle · right notify · middle refresh. Enter in panel = notify.
+Clicks: left toggle · right notify · middle refresh.

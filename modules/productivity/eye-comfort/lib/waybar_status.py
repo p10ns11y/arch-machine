@@ -1,7 +1,8 @@
-"""Waybar / notify / Omarchy-shell payloads for eye-comfort (TN + circadian).
+"""Waybar / notify / Omarchy-shell payloads for eye-comfort (calendar-generic).
 
 Compact bar text; rich tooltip acts as the lightweight “extra widget”.
 Reads last apply from state.json when present; live-resolves clock fields.
+Routes by ``state.calendar`` (tamil_nadu · sweden · circadian).
 
 Waybar GTK tooltips accept Pango markup. Omarchy 4 Quickshell command-module
 tooltips are plain text — tags render literally — so default is auto: Pango
@@ -116,11 +117,24 @@ def load_state(path: Optional[Path] = None) -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _is_tn(state: Dict[str, Any]) -> bool:
-    if state.get("calendar") == "tamil_nadu":
-        return True
+def _calendar_id(state: Dict[str, Any]) -> str:
+    cal = str(state.get("calendar") or "").strip()
+    if cal:
+        return cal
     theme = str(state.get("theme") or "")
-    return theme.startswith("eye-comfort-tn-")
+    if theme.startswith("eye-comfort-tn-"):
+        return "tamil_nadu"
+    if theme.startswith("eye-comfort-se-"):
+        return "sweden"
+    return "circadian"
+
+
+def _is_tn(state: Dict[str, Any]) -> bool:
+    return _calendar_id(state) == "tamil_nadu"
+
+
+def _is_sweden(state: Dict[str, Any]) -> bool:
+    return _calendar_id(state) == "sweden"
 
 
 def _pango_esc(text: str) -> str:
@@ -614,6 +628,7 @@ def tn_waybar_payload(
         except (TypeError, ValueError):
             pass
 
+    kwargs["now"] = now
     tn = resolve_tamil(**kwargs)
     # Compact bar: ISO 15919 Title Case · N{ordinal} (1-based). Storage stays 0-based.
     text = (
@@ -630,7 +645,83 @@ def tn_waybar_payload(
         "tooltip": tooltip,
         "class": f"eye-comfort-tn eye-comfort-{tn.siru}",
         "alt": "tn",
+        "calendar": "tamil_nadu",
         "percentage": tn.nazhigai * 10,
+    }
+
+
+def se_waybar_payload(
+    *,
+    state: Optional[Dict[str, Any]] = None,
+    now: Optional[datetime] = None,
+    plain_tooltip: Optional[bool] = None,
+) -> Dict[str, Any]:
+    """Sweden bar: season · day-part · mikrosteg; optional one-line solar hint."""
+    from sweden_schedule import (
+        ARSTID_DISPLAY,
+        PHASE_DISPLAY,
+        REALM_DISPLAY,
+        resolve_sweden,
+    )
+
+    st = state if state is not None else load_state()
+    now = now or datetime.now()
+    kwargs: Dict[str, Any] = {"hour": now.hour, "minute": now.minute}
+    lat = st.get("latitude")
+    if lat is not None:
+        try:
+            kwargs["latitude"] = float(lat)
+        except (TypeError, ValueError):
+            pass
+    realm = st.get("realm")
+    if isinstance(realm, str) and realm.strip():
+        kwargs["realm"] = realm
+
+    kwargs["now"] = now
+    se = resolve_sweden(**kwargs)
+    text = (
+        f"{ARSTID_DISPLAY[se.arstid]} · {PHASE_DISPLAY[se.phase]} · "
+        f"M{se.mikrosteg + 1}"
+    )
+    use_plain = wants_pango_tooltip() is False if plain_tooltip is None else plain_tooltip
+    date = _date_line(now)
+    if use_plain:
+        tooltip = "\n".join(
+            [
+                date,
+                "─" * 24,
+                f"Årstid   {ARSTID_DISPLAY[se.arstid]}",
+                f"Realm    {REALM_DISPLAY[se.realm]}",
+                f"Dag      {PHASE_DISPLAY[se.phase]} · M{se.mikrosteg + 1}",
+                f"Solar    {se.solar_hint}",
+                "─" * 24,
+                f"Theme  {se.theme}",
+            ]
+        )
+    else:
+        activate_pango_surface(st)
+        tooltip = "\n".join(
+            [
+                "",
+                _accent_b(_pango_esc(date)),
+                "",
+                f"<b>Årstid</b>  {_pango_esc(ARSTID_DISPLAY[se.arstid])}",
+                f"<b>Realm</b>   {_pango_esc(REALM_DISPLAY[se.realm])}",
+                f"<b>Dag</b>     {_pango_esc(PHASE_DISPLAY[se.phase])} · M{se.mikrosteg + 1}",
+                _soft(f"Solar — {_pango_esc(se.solar_hint)}"),
+                "",
+                _muted("Theme"),
+                f"  {_muted(_pango_esc(se.theme))}",
+                "",
+            ]
+        )
+    return {
+        "text": text,
+        "tooltip": tooltip,
+        "class": f"eye-comfort-se eye-comfort-{se.phase}",
+        "alt": "se",
+        "calendar": "sweden",
+        "percentage": se.mikrosteg * (100 // 6),
     }
 
 
@@ -680,6 +771,7 @@ def circadian_waybar_payload(
         "tooltip": tooltip,
         "class": f"eye-comfort eye-comfort-{phase}",
         "alt": "circadian",
+        "calendar": "circadian",
     }
 
 
@@ -691,22 +783,21 @@ def waybar_payload(
     plain_tooltip: Optional[bool] = None,
 ) -> Dict[str, Any]:
     st = load_state(state_path)
-    if force_tn or _is_tn(st) or not st:
-        try:
-            return tn_waybar_payload(
-                state=st, now=now, plain_tooltip=plain_tooltip
-            )
-        except (ValueError, RuntimeError) as e:
-            err_markup = f"eye-comfort waybar error: {_pango_esc(e)}"
-            return {
-                "text": "eye-comfort?",
-                "tooltip": finalize_tooltip(err_markup, plain=plain_tooltip),
-                "class": "eye-comfort-error",
-                "alt": "error",
-            }
-    return circadian_waybar_payload(
-        st, now=now, plain_tooltip=plain_tooltip
-    )
+    cal = _calendar_id(st)
+    try:
+        if force_tn or cal == "tamil_nadu":
+            return tn_waybar_payload(state=st, now=now, plain_tooltip=plain_tooltip)
+        if cal == "sweden":
+            return se_waybar_payload(state=st, now=now, plain_tooltip=plain_tooltip)
+        return circadian_waybar_payload(st, now=now, plain_tooltip=plain_tooltip)
+    except (ValueError, RuntimeError) as e:
+        err_markup = f"eye-comfort waybar error: {_pango_esc(e)}"
+        return {
+            "text": "eye-comfort?",
+            "tooltip": finalize_tooltip(err_markup, plain=plain_tooltip),
+            "class": "eye-comfort-error",
+            "alt": "error",
+        }
 
 
 def status_text(*, state_path: Optional[Path] = None, now: Optional[datetime] = None) -> str:

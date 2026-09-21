@@ -28,10 +28,14 @@ Panel {
 
   readonly property string chipText: status.chipText || "…"
   readonly property string chipIcon: status.chipIcon || "󰔏"
-  readonly property string tinaiShort: status.tinaiShort || "Tiṇai"
+  readonly property string calendar: status.calendar || "tamil_nadu"
+  readonly property string seasonShort: status.seasonShort || "Calendar"
   readonly property string chipSubtitle: status.chipSubtitle || ""
   readonly property string dateLine: status.dateLine || ""
-  readonly property string tinaiLabel: status.tinaiLabel || ""
+  readonly property string seasonLabel: status.seasonLabel || ""
+  readonly property string dayPart: status.dayPart || ""
+  readonly property string microStep: status.microStep || ""
+  readonly property string solarHint: status.solarHint || ""
   readonly property string perum: status.perum || ""
   readonly property string ciru: status.ciru || ""
   readonly property string jamamSummary: status.jamamSummary || ""
@@ -41,7 +45,6 @@ Panel {
   readonly property var nazhigaiDetails: status.nazhigaiDetails || []
   readonly property string themeName: status.theme || ""
   readonly property string weekDetail: status.weekDetail || ""
-  // Weather-compat: BarWidget chips often read `.label`
   readonly property string label: chipText
 
   function open() {
@@ -95,6 +98,14 @@ Panel {
 
   function runNotify() {
     runDetached(root.notifyScript + " notify")
+  }
+
+  function switchCalendar(calId, extraArgs) {
+    var args = extraArgs || ""
+    if (calId === "sweden" && args.indexOf("--lat") < 0)
+      args = "--lat 59.3 " + args
+    runDetached(root.statusBin + " calendar " + calId + " " + args)
+    Qt.callLater(root.refresh)
   }
 
   IpcHandler {
@@ -161,8 +172,8 @@ Panel {
 
         PanelHero {
           width: parent.width
-          title: root.tinaiShort
-          meta: root.chipSubtitle || "TIṆAI"
+          title: root.seasonShort
+          meta: root.chipSubtitle || root.calendar.toUpperCase()
           detail: root.weekDetail
           foreground: root.foreground
           fontFamily: root.fontFamily
@@ -192,6 +203,38 @@ Panel {
         PanelSeparator { foreground: root.foreground }
 
         PanelSectionHeader {
+          text: "CALENDAR"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+        }
+        Row {
+          spacing: Style.space(8)
+          Button {
+            text: "Tamil Nadu"
+            enabled: root.calendar !== "tamil_nadu"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+            bordered: true
+            onClicked: root.switchCalendar("tamil_nadu")
+          }
+          Button {
+            text: "Sweden"
+            enabled: root.calendar !== "sweden"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+            bordered: true
+            onClicked: root.switchCalendar("sweden")
+          }
+          Button {
+            text: "America (later)"
+            enabled: false
+            foreground: root.dim
+            fontFamily: root.fontFamily
+            bordered: true
+          }
+        }
+
+        PanelSectionHeader {
           text: "DATE"
           foreground: root.foreground
           fontFamily: root.fontFamily
@@ -207,13 +250,13 @@ Panel {
         }
 
         PanelSectionHeader {
-          text: "TIṆAI"
+          text: root.calendar === "sweden" ? "ÅRSTID" : "SEASON"
           foreground: root.foreground
           fontFamily: root.fontFamily
         }
         Text {
           width: parent.width
-          text: root.tinaiLabel || "—"
+          text: root.seasonLabel || "—"
           color: root.foreground
           font.family: root.fontFamily
           font.pixelSize: Style.font.bodySmall
@@ -222,12 +265,54 @@ Panel {
         }
 
         PanelSectionHeader {
+          text: "DAY-PART"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+        }
+        Text {
+          width: parent.width
+          text: root.dayPart || "—"
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+          wrapMode: Text.Wrap
+          elide: Text.ElideRight
+        }
+
+        PanelSectionHeader {
+          text: "MICRO-STEP"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+        }
+        Text {
+          width: parent.width
+          text: root.microStep || "—"
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+          wrapMode: Text.Wrap
+          elide: Text.ElideRight
+        }
+
+        Text {
+          width: parent.width
+          visible: root.solarHint !== ""
+          text: "Solar — " + root.solarHint
+          color: root.dim
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          wrapMode: Text.Wrap
+        }
+
+        PanelSectionHeader {
+          visible: root.calendar === "tamil_nadu"
           text: "POḺUTU"
           foreground: root.foreground
           fontFamily: root.fontFamily
         }
         Text {
           width: parent.width
+          visible: root.calendar === "tamil_nadu"
           text: root.perum || "—"
           color: root.foreground
           font.family: root.fontFamily
@@ -237,6 +322,7 @@ Panel {
         }
         Text {
           width: parent.width
+          visible: root.calendar === "tamil_nadu"
           text: root.ciru || "—"
           color: root.foreground
           font.family: root.fontFamily
@@ -246,12 +332,14 @@ Panel {
         }
 
         PanelSectionHeader {
+          visible: root.calendar === "tamil_nadu" && root.jamamSummary !== ""
           text: "JĀMAM"
           foreground: root.foreground
           fontFamily: root.fontFamily
         }
         Text {
           width: parent.width
+          visible: root.calendar === "tamil_nadu" && root.jamamSummary !== ""
           text: root.jamamSummary || "—"
           color: root.foreground
           font.family: root.fontFamily
@@ -260,7 +348,7 @@ Panel {
           elide: Text.ElideRight
         }
         Repeater {
-          model: root.jamamSplits
+          model: root.calendar === "tamil_nadu" ? root.jamamSplits : []
           delegate: Text {
             required property var modelData
             width: column.width
@@ -272,7 +360,7 @@ Panel {
           }
         }
         Repeater {
-          model: root.jamamDetails
+          model: root.calendar === "tamil_nadu" ? root.jamamDetails : []
           delegate: Text {
             required property var modelData
             width: column.width
@@ -285,12 +373,14 @@ Panel {
         }
 
         PanelSectionHeader {
+          visible: root.calendar === "tamil_nadu" && root.nazhigaiSummary !== ""
           text: "NĀḺIKAI"
           foreground: root.foreground
           fontFamily: root.fontFamily
         }
         Text {
           width: parent.width
+          visible: root.calendar === "tamil_nadu" && root.nazhigaiSummary !== ""
           text: root.nazhigaiSummary || "—"
           color: root.foreground
           font.family: root.fontFamily
@@ -299,7 +389,7 @@ Panel {
           elide: Text.ElideRight
         }
         Repeater {
-          model: root.nazhigaiDetails
+          model: root.calendar === "tamil_nadu" ? root.nazhigaiDetails : []
           delegate: Text {
             required property var modelData
             width: column.width

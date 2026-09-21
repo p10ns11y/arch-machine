@@ -231,8 +231,7 @@ def test_waybar_payload():
         now=datetime(2026, 7, 14, 10, 0),
         plain_tooltip=False,
     )
-    assert " · " in p2["text"]
-    assert p2["alt"] in ("tn", "error")
+    assert p2["alt"] in ("circadian", "error")
 
     # Screenshot case: index 1 → bar N2, first nāḻikai over
     p3 = tn_waybar_payload(
