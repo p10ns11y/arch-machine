@@ -17,7 +17,7 @@ jobs:
   guardian-soft:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
 
       - name: shellcheck (excluding legacy)
         run: |
@@ -57,7 +57,7 @@ jobs:
   eye-comfort:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - name: Schedule unit tests
         run: make eye-comfort-test
       - name: Generated package SoT check
@@ -67,7 +67,7 @@ jobs:
   keeper:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (tools/keeper)
         run: cargo test --manifest-path tools/keeper/Cargo.toml
@@ -76,7 +76,7 @@ jobs:
   archy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (tools/archy)
         run: make archy-test
@@ -86,7 +86,7 @@ jobs:
   groxy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v7.0.0
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.0
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (tools/groxy)
         run: make groxy-test
